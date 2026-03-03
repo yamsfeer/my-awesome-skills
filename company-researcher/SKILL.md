@@ -1,265 +1,281 @@
 ---
 name: company-researcher
-description: Research and analyze companies globally, both listed and private. First determine if the company is listed, then apply the appropriate analytical framework. For listed companies: use SEC EDGAR, financial statements, market data. For private companies: use融资数据、用户数据、行业报告. Use when you need to understand a company's business model, financial health, ownership structure, or investment merits.
+description: 在全球范围内研究和分析上市公司和非上市公司。首先确定公司是否上市，然后应用相应的分析框架。对于上市公司：使用美国证券交易委员会 EDGAR 数据库、财务报表、市场数据。对于非上市公司：使用融资数据、用户数据、行业报告。当您需要了解公司的商业模式、财务状况、所有权结构或投资价值时使用。
 ---
 
-# Company Research Method (Listed & Private)
+# 公司研究方法（上市与非上市）
 
-## Step 0: First - Determine If Listed
+## 第0步：首先-确定是否上市
 
-**Before researching, answer this question first:**
+**在研究之前，先回答这个问题：**
 
-| Question | If YES → | If NO → |
-|----------|----------|---------|
-| Is the company publicly traded? | Use **Part A** (Listed Company) | Use **Part B** (Private Company) |
+| 问题 | 如果是 → | 如果不是 → |
+| ------------------------------- | ------------------------------- | -------------------------------- |
+| 该公司是上市公司吗？ | 使用 **A部分**（上市公司） | 使用 **B部分**（非上市公司） |
 
-**How to check:**
-- Search "[公司名] stock code" or "[公司名] 股票代码"
-- Check major exchanges: SEC, 港交所, 巨潮
-- Look for: ticker symbols (AAPL), stock codes (600519), IPO dates
+**如何检查：**
 
----
-
-## Part A: Listed Company Analysis
-
-**Use this for companies on major exchanges (NYSE, NASDAQ, 港交所, A股, etc.)**
-
-### Step A1: Find Financial Data
-
-| Market | Source | Key Documents |
-|--------|--------|---------------|
-| **US** | SEC EDGAR (https://www.sec.gov/edgar/) | 10-K (annual), 10-Q (quarterly), 8-K (events) |
-| **China A-Share** | 巨潮资讯 (http://www.cninfo.com.cn/) | 年报、季报、公告 |
-| **Hong Kong** | HKEXnews (https://www.hkexnews.hk/) | 年报、财报摘要、股东通函 |
-| **Taiwan** | TPEx (https://www.tpex.org.tw/) | 财务报表、年报 |
-
-Quick access:
-- Yahoo Finance: `https://finance.yahoo.com/quote/{TICKER}`
-- 东方财富: `https://www.eastmoney.com/`
-
-### Step A2: Analyze Three Financial Statements
-
-**Balance Sheet**:
-```
-Assets = Liabilities + Equity
-```
-Key ratios:
-- Debt ratio = Total Liabilities / Total Assets (<60% healthy)
-- Current ratio = Current Assets / Current Liabilities (>1.5 healthy)
-
-**Income Statement**:
-```
-Revenue - Costs = Gross Profit
-Gross Profit - Expenses = Operating Profit
-Operating Profit - Interest/Tax = Net Income
-```
-Key metrics:
-- Revenue growth rate (should be >10%)
-- Net profit margin (>10% healthy)
-- Gross margin (>50% for software)
-
-**Cash Flow Statement**:
-```
-Operating CF + Investing CF + Financing CF = Net Cash Change
-```
-Key indicators:
-- Operating CF positive = healthy
-- Free cash flow = Operating CF - CapEx
-
-### Step A3: Key Ratios for Listed Companies
-
-| Ratio | Formula | Healthy Range |
-|-------|---------|---------------|
-| Debt ratio | Liabilities / Assets | <60% |
-| Current ratio | Current Assets / Current Liabilities | >1.5 |
-| Gross margin | Gross Profit / Revenue | Software >50% |
-| Net margin | Net Income / Revenue | >10% |
-| Revenue growth | (This Year - Last Year) / Last Year | >10% |
-| PE ratio | Price / EPS | Industry dependent |
-| ROE | Net Income / Shareholders' Equity | >15% |
-
-### Step A4: Ownership Analysis
-
-Check in annual report/proxy statement:
-- Major shareholders (institutions, founders, state-owned)
-- Management compensation and stock ownership
-- Related party transactions
-- Shareholder rights, voting power
-
-### Step A5: Stock Performance
-
-| Metric | Where to Find |
-|--------|---------------|
-| Historical price | Yahoo Finance, Bloomberg |
-| Market cap | SEC filings, Yahoo Finance |
-| Trading volume | Exchange websites |
-| Analyst ratings | Seeking Alpha, Morningstar |
+- 搜索"[公司名] 股票代码"或"[公司名] 股票代码"
+- 查看主要交易所：美国证券交易委员会、港交所、巨潮
+- 查找：股票代码（如AAPL）、股票代码（如600519）、IPO日期
 
 ---
 
-## Part B: Private Company Analysis
+## A部分：上市公司分析
 
-**Use this for startups, pre-IPO companies, unlisted businesses**
+**适用于在主要交易所上市的公司（纽交所、纳斯达克、港交所、A股等）**
 
-### Step B1: Find Alternative Data Sources
+### 步骤A1：查找财务数据
 
-**For Chinese private companies:**
+| 市场 | 来源 | 关键文件 |
+| ----------------- | -------------------------------------- | --------------------------------------------- |
+| **美国** | 美国证券交易委员会 EDGAR (https://www.sec.gov/edgar/) | 10-K（年报）、10-Q（季报）、8-K（重大事项） |
+| **中国A股** | 巨潮资讯 (http://www.cninfo.com.cn/) | 年报、季报、公告 |
+| **香港** | 港交所披露易 (https://www.hkexnews.hk/) | 年报、财报摘要、股东通函 |
+| **台湾** | 柜买中心 (https://www.tpex.org.tw/) | 财务报表、年报 |
 
-| Information Type | Sources |
-|-----------------|---------|
-| **融资信息** | 36氪 (https://36kr.com/), 虎嗅 (https://www.huxiu.com/), 天眼查 (https://www.tianyancha.com/), 企查查 (https://www.qcc.com/) |
-| **用户数据** | QuestMobile, 艾瑞咨询, SimilarWeb, 七麦数据 |
-| **行业报告** | 艾瑞咨询, 易观分析, 麦肯锡, 波士顿咨询 |
-| **创始人背景** | LinkedIn, 知乎, 36氪人物专访 |
+快速访问：
 
-**For global private companies:**
+- 雅虎财经：`https://finance.yahoo.com/quote/{TICKER}`
+- 东方财富：`https://www.eastmoney.com/`
 
-| Information Type | Sources |
-|-----------------|---------|
-| **融资信息** | Crunchbase (https://www.crunchbase.com/), PitchBook, CB Insights |
-| **用户/增长** | SimilarWeb, App Annie, Sensor Tower |
-| **媒体报道** | TechCrunch, 36Kr, The Information |
+### 步骤A2：分析三大财务报表
 
-### Step B2: Product & Business Analysis
+**资产负债表**：
 
-**Core questions (no financial statements needed):**
+```
+资产 = 负债 + 所有者权益
+```
 
-| Question | What to Look For |
-|----------|------------------|
-| What does the product do? | Download app, experience firsthand |
-| Who are the customers? | B2B, B2C, government? |
-| What's the revenue model? | Subscription, transaction fee, advertising? |
-| What's the market position? | Leader, follower, niche player? |
-| What's the differentiation? | Technology, brand, network effects? |
+关键比率：
 
-### Step B3: Growth Metrics (Instead of Financials)
+- 负债率 = 总负债 / 总资产（<60%为健康）
+- 流动比率 = 流动资产 / 流动负债（>1.5为健康）
 
-| Metric | What It Tells You |
-|--------|-------------------|
-| **User growth rate** | Product-market fit |
-| **DAU/MAU ratio** | User engagement |
-| **Revenue growth** | Business traction (if available) |
-| **GMV** | E-commerce scale |
-| **Retention rate** | Product stickiness |
+**利润表**：
 
-**Where to find:**
+```
+收入 - 成本 = 毛利润
+毛利润 - 费用 = 营业利润
+营业利润 - 利息/税收 = 净利润
+```
+
+关键指标：
+
+- 收入增长率（应>10%）
+- 净利润率（>10%为健康）
+- 毛利率（软件行业>50%）
+
+**现金流量表**：
+
+```
+经营活动现金流 + 投资活动现金流 + 筹资活动现金流 = 现金净变动
+```
+
+关键指标：
+
+- 经营活动现金流为正 = 健康
+- 自由现金流 = 经营活动现金流 - 资本支出
+
+### 步骤A3：上市公司关键比率
+
+| 比率 | 公式 | 健康范围 |
+| -------------- | ------------------------------------ | ------------------ |
+| 负债率 | 负债 / 资产 | <60% |
+| 流动比率 | 流动资产 / 流动负债 | >1.5 |
+| 毛利率 | 毛利润 / 收入 | 软件行业>50% |
+| 净利率 | 净利润 / 收入 | >10% |
+| 收入增长率 |（今年 - 去年）/ 去年 | >10% |
+| 市盈率 | 股价 / 每股收益 | 因行业而异 |
+| 净资产收益率 | 净利润 / 股东权益 | >15% |
+
+### 步骤A4：所有权分析
+
+在年报/委托书中检查：
+
+- 主要股东（机构、创始人、国有）
+- 管理层薪酬和股票所有权
+- 关联交易
+- 股东权利、投票权
+
+### 步骤A5：股票表现
+
+| 指标 | 查找位置 |
+| ---------------- | -------------------------- |
+| 历史价格 | 雅虎财经、彭博 |
+| 市值 | 美国证券交易委员会文件、雅虎财经 |
+| 交易量 | 交易所网站 |
+| 分析师评级 | Seeking Alpha、晨星 |
+
+---
+
+## B部分：非上市公司分析
+
+**适用于初创公司、IPO前公司、非上市企业**
+
+### 步骤B1：查找替代数据源
+
+**对于中国非上市公司：**
+
+| 信息类型 | 来源 |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **融资信息** | 36氪 (https://36kr.com/)、虎嗅 (https://www.huxiu.com/)、天眼查 (https://www.tianyancha.com/)、企查查 (https://www.qcc.com/) |
+| **用户数据** | QuestMobile、艾瑞咨询、SimilarWeb、七麦数据 |
+| **行业报告** | 艾瑞咨询、易观分析、麦肯锡、波士顿咨询 |
+| **创始人背景** | LinkedIn、知乎、36氪人物专访 |
+
+**对于全球非上市公司：**
+
+| 信息类型 | 来源 |
+| ---------------- | ---------------------------------------------------------------- |
+| **融资信息** | Crunchbase (https://www.crunchbase.com/)、PitchBook、CB Insights |
+| **用户/增长** | SimilarWeb、App Annie、Sensor Tower |
+| **媒体报道** | TechCrunch、36Kr、The Information |
+
+### 步骤B2：产品与业务分析
+
+**核心问题（无需财务报表）：**
+
+| 问题 | 寻找什么 |
+| --------------------------- | ------------------------------------------- |
+| 产品做什么？ | 下载应用，亲身体验 |
+| 客户是谁？ | B2B、B2C、政府？ |
+| 收入模式是什么？ | 订阅、交易费、广告？ |
+| 市场地位如何？ | 领导者、跟随者、利基玩家？ |
+| 差异化优势是什么？ | 技术、品牌、网络效应？ |
+
+### 步骤B3：增长指标（替代财务数据）
+
+| 指标 | 告诉您什么 |
+| -------------------- | -------------------------------- |
+| **用户增长率** | 产品市场契合度 |
+| **日活跃用户/月活跃用户比率** | 用户参与度 |
+| **收入增长** | 业务吸引力（如有） |
+| **商品交易总额** | 电商规模 |
+| **留存率** | 产品粘性 |
+
+**查找位置：**
+
 - 融资公告（通常披露关键指标）
 - 媒体报道（引用官方数据）
-- 第三方数据（QuestMobile, SimilarWeb）
+- 第三方数据（QuestMobile、SimilarWeb）
 
-### Step B4: Funding Analysis
+### 步骤B4：融资分析
 
-**Key questions:**
+**关键问题：**
 
-| Question | Why It Matters |
-|----------|----------------|
-| How much raised? | Runway, ability to execute |
-| Who invested? | Signal from smart money |
-| At what valuation? | Deal terms, investor confidence |
-| How many rounds? | Stage of company |
-| When last raised? | Burn rate, next funding need |
+| 问题 | 为什么重要 |
+| ------------------ | ------------------------------- |
+| 融资了多少？ | 资金跑道、执行能力 |
+| 谁投资的？ | 聪明钱的信号 |
+| 估值多少？ | 交易条款、投资者信心 |
+| 多少轮融资？ | 公司阶段 |
+| 最近何时融资？ | 烧钱率、下次融资需求 |
 
-**Funding data sources:**
+**融资数据来源：**
+
 - 36氪、虎嗅融资报道
 - 天眼查/企查查融资信息
 - Crunchbase、PitchBook
 
-### Step B5: Team Analysis
+### 步骤B5：团队分析
 
-**For private companies, team matters more:**
+**对于非上市公司，团队更重要：**
 
-| Factor | What to Assess |
-|--------|----------------|
-| **Founder background** | Education, previous companies, track record |
-| **Core team** | Technical vs business balance |
-| **Advisory board** | Industry connections, credibility |
-| **Team size & structure** | Execution capability |
-| **Key hires** | Senior talent acquisition |
+| 因素 | 评估内容 |
+| ------------------------- | ------------------------------------------- |
+| **创始人背景** | 教育背景、前公司、过往记录 |
+| **核心团队** | 技术与商业的平衡 |
+| **顾问委员会** | 行业人脉、信誉 |
+| **团队规模与结构** | 执行能力 |
+| **关键招聘** | 高级人才引进 |
 
-**Sources:** LinkedIn, 36Kr interviews, news articles
+**来源：** LinkedIn、36Kr采访、新闻文章
 
-### Step B6: Competitive Landscape
+### 步骤B6：竞争格局
 
-**Analysis framework:**
+**分析框架：**
 
 ```
-Market Size
-├── Total Addressable Market (TAM)
-├── Serviceable Available Market (SAM)
-└── Serviceable Obtainable Market (SOM)
+市场规模
+├── 总可寻址市场（TAM）
+├── 可服务可用市场（SAM）
+└── 可获得服务市场（SOM）
 
-Competition
-├── Direct competitors
-├── Indirect competitors
-├── Potential entrants (big tech)
-└── This company → Position? Differentiation?
+竞争
+├── 直接竞争对手
+├── 间接竞争对手
+├── 潜在进入者（科技巨头）
+└── 该公司 → 地位？差异化？
 ```
 
 ---
 
-## Quick Comparison: Listed vs Private
+## 快速对比：上市与非上市
 
-| Dimension | Listed Company | Private Company |
-|-----------|---------------|-----------------|
-| **Primary data** | Financial statements | Growth metrics, funding |
-| **Data source** | SEC/监管文件 | 媒体报道, 第三方数据 |
-| **Financial health** | Quantitative (ratios) | Qualitative (burn rate, runway) |
-| **Ownership** | Public filings | 融资公告, 天眼查 |
-| **Valuation** | Market cap (public) | Last round valuation |
-| **Key risk** | Financial distress | Funding dry-up, execution |
-
----
-
-## The 6-Question Checklist (Both Types)
-
-Answer these for any company:
-
-1. **What does the company do?** (Product, customers, model)
-2. **Who controls it?** (Owners, investors, governance)
-3. **Is it performing well?** (Financials OR growth metrics)
-4. **What's the recent news?** (Funding, product, scandal)
-5. **What's the competitive position?** (Market share, differentiation)
-6. **Why is the current situation happening?** (Root cause analysis)
+| 维度 | 上市公司 | 非上市公司 |
+| -------------------- | --------------------- | ------------------------------- |
+| **主要数据** | 财务报表 | 增长指标、融资 |
+| **数据来源** | 美国证券交易委员会/监管文件 | 媒体报道、第三方数据 |
+| **财务健康** | 定量（比率） | 定性（烧钱率、资金跑道） |
+| **所有权** | 公开文件 | 融资公告、天眼查 |
+| **估值** | 市值（公开） | 上一轮融资估值 |
+| **关键风险** | 财务困境 | 资金枯竭、执行失败 |
 
 ---
 
-## Key Ratios Quick Reference
+## 6问题检查清单（适用于两种类型）
 
-| Ratio | Formula | Healthy Range |
-|-------|---------|---------------|
-| Debt ratio | Liabilities / Assets | <60% |
-| Current ratio | Current Assets / Current Liabilities | >1.5 |
-| Gross margin | Gross Profit / Revenue | Software >50% |
-| Net margin | Net Income / Revenue | >10% |
-| Revenue growth | YoY growth rate | >10% |
-| CAC | Sales & Marketing / New Customers | < LTV |
-| LTV | (ARPU × Gross Margin) / Churn | > 3× CAC |
+为任何公司回答这些问题：
 
----
-
-## Data Sources Reference
-
-### Listed Company Data
-
-See [DATA_SOURCES.md](DATA_SOURCES.md) for:
-- SEC EDGAR search guide
-- 巨潮资讯 search guide
-- HKEXnews search guide
-- Financial data aggregators
-
-### Private Company Data
-
-See [PRIVATE_COMPANY_DATA.md](PRIVATE_COMPANY_DATA.md) for:
-- Chinese startup data sources
-- Global startup data sources
-- Team research methods
-- Competitive analysis frameworks
+1. **公司做什么？**（产品、客户、模式）
+2. **谁控制它？**（所有者、投资者、治理）
+3. **表现如何？**（财务状况或增长指标）
+4. **最近有什么新闻？**（融资、产品、丑闻）
+5. **竞争地位如何？**（市场份额、差异化）
+6. **当前情况为何发生？**（根本原因分析）
 
 ---
 
-## Case Studies
+## 关键比率快速参考
 
-For practical examples, see:
-- [GRIDSUM_CASE_STUDY.md](GRIDSUM_CASE_STUDY.md) - Listed company going private analysis
-- Kimi/Moonshot AI - Private company analysis (in your notes)
+| 比率 | 公式 | 健康范围 |
+| -------------- | ------------------------------------ | ------------- |
+| 负债率 | 负债 / 资产 | <60% |
+| 流动比率 | 流动资产 / 流动负债 | >1.5 |
+| 毛利率 | 毛利润 / 收入 | 软件行业>50% |
+| 净利率 | 净利润 / 收入 | >10% |
+| 收入增长率 | 同比增长率 | >10% |
+| 客户获取成本 | 销售与营销 / 新客户 | < 生命周期价值 |
+| 生命周期价值 |（每用户平均收入 × 毛利率）/ 流失率 | > 3× 客户获取成本 |
 
+---
+
+## 数据源参考
+
+### 上市公司数据
+
+参见 [DATA_SOURCES.md](references/DATA_SOURCES.md) 了解：
+
+- 美国证券交易委员会 EDGAR 搜索指南
+- 巨潮资讯搜索指南
+- 港交所披露易搜索指南
+- 财务数据聚合器
+
+### 非上市公司数据
+
+参见 [PRIVATE_COMPANY_DATA.md](references/PRIVATE_COMPANY_DATA.md) 了解：
+
+- 中国初创公司数据源
+- 全球初创公司数据源
+- 团队研究方法
+- 竞争分析框架
+
+---
+
+## 案例研究
+
+实用示例，参见：
+
+- [GRIDSUM_CASE_STUDY.md](references/GRIDSUM_CASE_STUDY.md) - 上市公司私有化分析
+- Kimi/Moonshot AI - 非上市公司分析（在您的笔记中）

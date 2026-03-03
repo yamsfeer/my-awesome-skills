@@ -1,10 +1,10 @@
-# Private Company Data Sources
+# 非上市公司数据源
 
-## Chinese Private Companies
+## 中国非上市公司
 
 ### 融资信息
 
-| Source | URL | What You Get |
+| 来源 | 网址 | 获取内容 |
 |--------|-----|--------------|
 | **36氪** | https://36kr.com/ | 融资新闻、独家专访、行业分析 |
 | **虎嗅** | https://www.huxiu.com/ | 深度报道、创业公司分析 |
@@ -14,7 +14,7 @@
 
 ### 用户/增长数据
 
-| Source | URL | What You Get |
+| 来源 | 网址 | 获取内容 |
 |--------|-----|--------------|
 | **QuestMobile** | https://www.questmobile.com.cn/ | APP活跃度、用户画像、行业报告 |
 | **艾瑞咨询** | https://www.iresearch.com.cn/ | 行业报告、市场规模、竞争分析 |
@@ -25,7 +25,7 @@
 
 ### 创始人/团队背景
 
-| Source | URL | What You Get |
+| 来源 | 网址 | 获取内容 |
 |--------|-----|--------------|
 | **LinkedIn** | https://www.linkedin.com/ | 职业经历、教育背景、人脉网络 |
 | **知乎** | https://www.zhihu.com/ | 创始人问答、观点输出 |
@@ -34,7 +34,7 @@
 
 ### 行业报告
 
-| Source | URL | What You Get |
+| 来源 | 网址 | 获取内容 |
 |--------|-----|--------------|
 | **艾瑞咨询** | https://www.iresearch.com.cn/ | 互联网行业报告 |
 | **易观分析** | https://www.analysys.cn/ | 行业分析报告 |
@@ -44,11 +44,11 @@
 
 ---
 
-## Global Private Companies
+## 全球非上市公司
 
 ### 融资信息
 
-| Source | URL | What You Get |
+| 来源 | 网址 | 获取内容 |
 |--------|-----|--------------|
 | **Crunchbase** | https://www.crunchbase.com/ | 全球创业公司融资数据库 |
 | **PitchBook** | https://pitchbook.com/ | 私募市场数据、估值分析 |
@@ -58,7 +58,7 @@
 
 ### 用户/增长数据
 
-| Source | URL | What You Get |
+| 来源 | 网址 | 获取内容 |
 |--------|-----|--------------|
 | **SimilarWeb** | https://www.similarweb.com/ | 网站/APP流量分析 |
 | **App Annie** | https://www.appannie.com/ | APP排名、下载量、收入 |
@@ -67,7 +67,7 @@
 
 ### 创始人/团队背景
 
-| Source | URL | What You Get |
+| 来源 | 网址 | 获取内容 |
 |--------|-----|--------------|
 | **LinkedIn** | https://www.linkedin.com/ | 职业经历、教育背景 |
 | **Crunchbase People** | Crunchbase搜索人物 | 创始人背景、之前创业 |
@@ -76,162 +76,162 @@
 
 ---
 
-## Research Methods for Private Companies
+## 非上市公司研究方法
 
-### Method 1: Product Experience
+### 方法1：产品体验
 
-1. **Download the app** or use the service
-2. **Map the core features** and user journey
-3. **Identify the value proposition** - what problem does it solve?
-4. **Compare with competitors** - what's different?
-5. **Assess the UX** - is it easy to use?
+1. **下载应用**或使用服务
+2. **绘制核心功能**和用户旅程
+3. **识别价值主张** - 它解决了什么问题？
+4. **与竞争对手比较** - 有什么不同？
+5. **评估用户体验** - 是否易于使用？
 
-### Method 2: Funding Analysis
+### 方法2：融资分析
 
-1. **Find all funding rounds** (天眼查, Crunchbase, 36Kr)
-2. **Calculate total raised** and latest valuation
-3. **Identify investors** - are there marquee names? (Sequoia, Hillhouse, Tencent)
-4. **Calculate ownership** - how much did investors get?
-5. **Assess burn rate** - how long can they operate?
+1. **查找所有融资轮次**（天眼查、Crunchbase、36Kr）
+2. **计算总融资额**和最新估值
+3. **识别投资者** - 是否有知名机构？（红杉、高瓴、腾讯）
+4. **计算股权比例** - 投资者获得了多少？
+5. **评估烧钱率** - 他们能运营多久？
 
-### Method 3: Team Due Diligence
+### 方法3：团队尽职调查
 
-1. **Check LinkedIn** for founder backgrounds
-2. **Search for previous companies** - did they succeed before?
-3. **Look for red flags** - frequent job changes, unexplained gaps
-4. **Check university** - strong technical backgrounds?
-5. **Search news** for any controversies
+1. **查看LinkedIn**了解创始人背景
+2. **搜索之前的公司** - 他们以前成功过吗？
+3. **寻找危险信号** - 频繁跳槽、无法解释的空档期
+4. **检查大学背景** - 是否有强大的技术背景？
+5. **搜索新闻**寻找任何争议
 
-### Method 4: Competitive Landscape
+### 方法4：竞争格局
 
-1. **Identify direct competitors** - who solves the same problem?
-2. **Identify indirect competitors** - alternative solutions
-3. **Assess market position** - leader, follower, or niche?
-4. **Analyze moats** - technology, brand, network effects, switching costs
-5. **Map the ecosystem** - partners, customers, suppliers
+1. **识别直接竞争对手** - 谁解决同样的问题？
+2. **识别间接竞争对手** - 替代解决方案
+3. **评估市场地位** - 领导者、跟随者还是利基市场？
+4. **分析护城河** - 技术、品牌、网络效应、转换成本
+5. **绘制生态系统** - 合作伙伴、客户、供应商
 
-### Method 5: User/Market Research
+### 方法5：用户/市场研究
 
-1. **Check app store reviews** - what do users like/dislike?
-2. **Search Reddit/社交媒体** - real user opinions
-3. **Look for第三方数据** - QuestMobile, SimilarWeb
-4. **Read行业报告** - market size, growth rate, trends
-5. **Check for patents** - IP protection
+1. **查看应用商店评论** - 用户喜欢/不喜欢什么？
+2. **搜索Reddit/社交媒体** - 真实用户意见
+3. **寻找第三方数据** - QuestMobile、SimilarWeb
+4. **阅读行业报告** - 市场规模、增长率、趋势
+5. **检查专利** - 知识产权保护
 
 ---
 
-## Key Metrics for Private Companies
+## 非上市公司关键指标
 
-| Metric | What It Measures | Where to Find |
+| 指标 | 衡量内容 | 查找位置 |
 |--------|------------------|---------------|
-| **GMV** | E-commerce volume | Company announcements |
-| **DAU/MAU** | Engagement ratio | Company or third-party data |
-| **Retention rate** | User stickiness | Company or Apptopia |
-| **ARPU** | Revenue per user | Company or analyst estimates |
-| **CAC** | Customer acquisition cost | Company (if disclosed) |
-| **LTV** | Lifetime value | Calculated or estimated |
-| **Net Promoter Score** | User satisfaction | Survey data |
+| **商品交易总额** | 电商交易量 | 公司公告 |
+| **日活跃用户/月活跃用户** | 参与度比率 | 公司或第三方数据 |
+| **留存率** | 用户粘性 | 公司或Apptopia |
+| **每用户平均收入** | 每用户收入 | 公司或分析师估算 |
+| **客户获取成本** | 获客成本 | 公司（如披露） |
+| **生命周期价值** | 生命周期价值 | 计算或估算 |
+| **净推荐值** | 用户满意度 | 调查数据 |
 
 ---
 
-## Red Flags to Watch For
+## 需要注意的危险信号
 
-### Team Red Flags
-- No technical founder
-- High turnover in key roles
-- Founder conflicts or departures
-- Weak advisory board
+### 团队危险信号
+- 没有技术联合创始人
+- 关键岗位人员流动率高
+- 创始人冲突或离职
+- 顾问委员会薄弱
 
-### Business Red Flags
-- Declining user growth
-- High churn rate
-- Dependence on a single customer
-- Unsustainable unit economics
+### 业务危险信号
+- 用户增长下滑
+- 高流失率
+- 依赖单一客户
+- 不可持续的单位经济模型
 
-### Financial Red Flags
-- Obscured financials
-- Unusual related party transactions
-- Rapid valuation increases without clear rationale
-- Key investor departures
+### 财务危险信号
+- 财务数据模糊
+- 异常的关联交易
+- 估值快速上涨但缺乏明确理由
+- 主要投资者退出
 
-### Market Red Flags
-- Declining addressable market
-- New regulatory threats
-- Strong incumbent competitors
-- Technology disruption risk
+### 市场危险信号
+- 可寻址市场萎缩
+- 新的监管威胁
+- 强大的现有竞争对手
+- 技术颠覆风险
 
 ---
 
-## Valuation Methods for Private Companies
+## 非上市公司估值方法
 
-| Method | When to Use | Formula |
+| 方法 | 何时使用 | 公式 |
 |--------|-------------|---------|
-| **Revenue Multiple** | SaaS companies | Revenue × Multiple (typically 5-20× for private) |
-| **DCF** | Cash flow positive | Discount future cash flows |
-| **Comparable Transactions** | M&A context | Look at recent acquisitions in sector |
-| **Berkus Method** | Early stage | $0.5M-$1.5M at each milestone |
-| **Risk Factor Summation** | Early stage | Base value ± risk adjustments |
+| **收入倍数** | SaaS公司 | 收入 × 倍数（非上市公司通常为5-20倍） |
+| **现金流折现** | 现金流为正 | 折现未来现金流 |
+| **可比交易** | 并购背景 | 查看行业内近期收购 |
+| **Berkus方法** | 早期阶段 | 每个里程碑500万-1500万美元 |
+| **风险因素叠加** | 早期阶段 | 基础价值 ± 风险调整 |
 
-### Quick Valuation Check
+### 快速估值检查
 
-For Chinese AI startups (as of 2024):
-| Stage | Typical Valuation |
+对于中国AI初创公司（截至2024年）：
+| 阶段 | 典型估值 |
 |-------|------------------|
-| Seed | $10M-$30M |
-| Series A | $50M-$150M |
-| Series B | $150M-$500M |
-| Series C+ | $500M+ |
+| 种子轮 | 1000万-3000万美元 |
+| A轮 | 5000万-1.5亿美元 |
+| B轮 | 1.5亿-5亿美元 |
+| C轮及以后 | 5亿美元以上 |
 
-For generative AI companies (premium):
-| Stage | Typical Valuation |
+对于生成式AI公司（溢价）：
+| 阶段 | 典型估值 |
 |-------|------------------|
-| Series A | $200M-$500M |
-| Series B | $500M-$1B+ |
+| A轮 | 2亿-5亿美元 |
+| B轮 | 5亿-10亿美元以上 |
 
 ---
 
-## Due Diligence Checklist for Private Companies
+## 非上市公司尽职调查清单
 
-### Before Investing
+### 投资前
 
-- [ ] Product demo and personal experience
-- [ ] Founder interviews and reference checks
-- [ ] Customer references (talk to 3-5 customers)
-- [ ] Competitive analysis and market sizing
-- [ ] Financial model review (if available)
-- [ ] Cap table and investor terms review
-- [ ] Legal and compliance review
-- [ ] IP and technology assessment
-- [ ] Key person risk evaluation
+- [ ] 产品演示和个人体验
+- [ ] 创始人面试和背景调查
+- [ ] 客户参考（与3-5个客户交谈）
+- [ ] 竞争分析和市场规模
+- [ ] 财务模型审查（如有）
+- [ ] 股权表和投资者条款审查
+- [ ] 法律和合规审查
+- [ ] 知识产权和技术评估
+- [ ] 关键人员风险评估
 
-### Questions to Ask Management
+### 向管理层提问
 
-1. What is the core problem you're solving?
-2. How do you acquire customers and at what cost?
-3. What's your unit economics?
-4. Who are your main competitors and what's your differentiation?
-5. What's the path to profitability?
-6. What are the key risks and how are you mitigating them?
-7. What will you do with this capital?
-8. What are the milestones for the next 18 months?
+1. 你们解决的核心问题是什么？
+2. 如何获取客户，成本是多少？
+3. 你们的单位经济模型是什么？
+4. 主要竞争对手是谁，差异化优势是什么？
+5. 盈利路径是什么？
+6. 关键风险是什么，如何缓解？
+7. 这笔资金将用于什么？
+8. 未来18个月的里程碑是什么？
 
 ---
 
-## Useful Search Queries
+## 有用的搜索查询
 
-### For Finding Information
+### 查找信息
 ```
-"公司名 融资" (funding news)
-"公司名 用户数" (user metrics)
-"公司名 创始人" (founder background)
-"公司名 竞品" (competitors)
-"公司名 裁员" (redundancy/red flags)
+"公司名 融资"（融资新闻）
+"公司名 用户数"（用户指标）
+"公司名 创始人"（创始人背景）
+"公司名 竞品"（竞争对手）
+"公司名 裁员"（裁员/危险信号）
 ```
 
-### For Deep Dives
+### 深度挖掘
 ```
-"行业名 市场规模 2024" (market size)
-"行业名 竞争格局" (competitive landscape)
-"公司名 财报" (financials)
-"公司名 估值" (valuation)
+"行业名 市场规模 2024"（市场规模）
+"行业名 竞争格局"（竞争格局）
+"公司名 财报"（财务数据）
+"公司名 估值"（估值）
 ```

@@ -1,67 +1,67 @@
-# Color Palette & Brand Style
+# 调色板与品牌样式
 
-**This is the single source of truth for all colors and brand-specific styles.** To customize diagrams for your own brand, edit this file — everything else in the skill is universal.
+**这是所有颜色和品牌特定样式的唯一真实来源。** 要自定义图表以符合你自己的品牌，请编辑此文件——技能中的其他所有内容都是通用的。
 
 ---
 
-## Shape Colors (Semantic)
+## 形状颜色（语义化）
 
-Colors encode meaning, not decoration. Each semantic purpose has a fill/stroke pair.
+颜色编码含义，而非装饰。每个语义目的都有一对填充/描边颜色。
 
-| Semantic Purpose | Fill | Stroke |
+| 语义目的 | 填充 | 描边 |
 |------------------|------|--------|
-| Primary/Neutral | `#3b82f6` | `#1e3a5f` |
-| Secondary | `#60a5fa` | `#1e3a5f` |
-| Tertiary | `#93c5fd` | `#1e3a5f` |
-| Start/Trigger | `#fed7aa` | `#c2410c` |
-| End/Success | `#a7f3d0` | `#047857` |
-| Warning/Reset | `#fee2e2` | `#dc2626` |
-| Decision | `#fef3c7` | `#b45309` |
+| 主要/中性 | `#3b82f6` | `#1e3a5f` |
+| 次要 | `#60a5fa` | `#1e3a5f` |
+| 第三 | `#93c5fd` | `#1e3a5f` |
+| 开始/触发 | `#fed7aa` | `#c2410c` |
+| 结束/成功 | `#a7f3d0` | `#047857` |
+| 警告/重置 | `#fee2e2` | `#dc2626` |
+| 决策 | `#fef3c7` | `#b45309` |
 | AI/LLM | `#ddd6fe` | `#6d28d9` |
-| Inactive/Disabled | `#dbeafe` | `#1e40af` (use dashed stroke) |
-| Error | `#fecaca` | `#b91c1c` |
+| 非活动/禁用 | `#dbeafe` | `#1e40af`（使用虚线描边） |
+| 错误 | `#fecaca` | `#b91c1c` |
 
-**Rule**: Always pair a darker stroke with a lighter fill for contrast.
+**规则**：始终将较深的描边与较浅的填充配对以获得对比。
 
 ---
 
-## Text Colors (Hierarchy)
+## 文本颜色（层次结构）
 
-Use color on free-floating text to create visual hierarchy without containers.
+在自由浮动文本上使用颜色创建视觉层次，无需容器。
 
-| Level | Color | Use For |
+| 层级 | 颜色 | 用于 |
 |-------|-------|---------|
-| Title | `#1e40af` | Section headings, major labels |
-| Subtitle | `#3b82f6` | Subheadings, secondary labels |
-| Body/Detail | `#64748b` | Descriptions, annotations, metadata |
-| On light fills | `#374151` | Text inside light-colored shapes |
-| On dark fills | `#ffffff` | Text inside dark-colored shapes |
+| 标题 | `#1e40af` | 区域标题、主要标签 |
+| 副标题 | `#3b82f6` | 副标题、次要标签 |
+| 正文/细节 | `#64748b` | 描述、注释、元数据 |
+| 浅色填充上的文本 | `#374151` | 浅色形状内的文本 |
+| 深色填充上的文本 | `#ffffff` | 深色形状内的文本 |
 
 ---
 
-## Evidence Artifact Colors
+## 证据工件颜色
 
-Used for code snippets, data examples, and other concrete evidence inside technical diagrams.
+用于技术图表中的代码片段、数据示例和其他具体证据。
 
-| Artifact | Background | Text Color |
+| 工件 | 背景 | 文本颜色 |
 |----------|-----------|------------|
-| Code snippet | `#1e293b` | Syntax-colored (language-appropriate) |
-| JSON/data example | `#1e293b` | `#22c55e` (green) |
+| 代码片段 | `#1e293b` | 语法着色（适合语言） |
+| JSON/数据示例 | `#1e293b` | `#22c55e`（绿色） |
 
 ---
 
-## Default Stroke & Line Colors
+## 默认描边与线条颜色
 
-| Element | Color |
+| 元素 | 颜色 |
 |---------|-------|
-| Arrows | Use the stroke color of the source element's semantic purpose |
-| Structural lines (dividers, trees, timelines) | Primary stroke (`#1e3a5f`) or Slate (`#64748b`) |
-| Marker dots (fill + stroke) | Primary fill (`#3b82f6`) |
+| 箭头 | 使用源元素语义目的的描边颜色 |
+| 结构线（分隔线、树、时间线） | 主要描边（`#1e3a5f`）或 Slate（`#64748b`） |
+| 标记点（填充 + 描边） | 主要填充（`#3b82f6`） |
 
 ---
 
-## Background
+## 背景
 
-| Property | Value |
+| 属性 | 值 |
 |----------|-------|
-| Canvas background | `#ffffff` |
+| 画布背景 | `#ffffff` |

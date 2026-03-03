@@ -1,34 +1,34 @@
-# Excalidraw Diagram Skill
+# Excalidraw 图表技能
 
-A coding agent skill that generates beautiful and practical Excalidraw diagrams from natural language descriptions. Not just boxes-and-arrows - diagrams that **argue visually**.
+一个编码代理技能，可以从自然语言描述生成美观实用的 Excalidraw 图表。不仅仅是框和箭头——而是能够**进行可视化论证**的图表。
 
-Compatible with any coding agent that supports skills. For agents that read from `.claude/skills/` (like [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and [OpenCode](https://github.com/nicepkg/OpenCode)), just drop it in and go.
+兼容任何支持技能的编码代理。对于从 `.claude/skills/` 读取的代理（如 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 和 [OpenCode](https://github.com/nicepkg/OpenCode)），只需放入即可使用。
 
-## What Makes This Different
+## 与众不同之处
 
-- **Diagrams that argue, not display.** Every shape/group of shapes mirrors the concept it represents — fan-outs for one-to-many, timelines for sequences, convergence for aggregation. No uniform card grids.
-- **Evidence artifacts.** As an example, technical diagrams include real code snippets and actual JSON payloads.
-- **Built-in visual validation.** A Playwright-based render pipeline lets the agent see its own output, catch layout issues (overlapping text, misaligned arrows, unbalanced spacing), and fix them in a loop before delivering.
-- **Brand-customizable.** All colors and brand styles live in a single file (`references/color-palette.md`). Swap it out and every diagram follows your palette.
+- **图表进行论证，而非仅仅展示。** 每个形状/形状组都镜像它所代表的概念——扇出表示一对多，时间线表示序列，汇聚表示聚合。没有统一的卡片网格。
+- **证据工件。** 例如，技术图表包含真实的代码片段和实际的 JSON 载荷。
+- **内置视觉验证。** 基于 Playwright 的渲染管道让代理看到自己的输出，捕捉布局问题（重叠文本、箭头错位、间距不平衡），并在交付前在循环中修复它们。
+- **品牌可定制。** 所有颜色和品牌样式存在于单个文件（`references/color-palette.md`）中。替换它，每个图表都遵循你的调色板。
 
-## Installation
+## 安装
 
-Clone or download this repo, then copy it into your project's `.claude/skills/` directory:
+克隆或下载此仓库，然后将其复制到你项目的 `.claude/skills/` 目录：
 
 ```bash
 git clone https://github.com/coleam00/excalidraw-diagram-skill.git
 cp -r excalidraw-diagram-skill .claude/skills/excalidraw-diagram
 ```
 
-## Setup
+## 设置
 
-The skill includes a render pipeline that lets the agent visually validate its diagrams. There are two ways to set it up:
+该技能包含一个渲染管道，让代理可以视觉验证其图表。有两种设置方式：
 
-**Option A: Ask your coding agent (easiest)**
+**选项 A：询问你的编码代理（最简单）**
 
-Just tell your agent: *"Set up the Excalidraw diagram skill renderer by following the instructions in SKILL.md."* It will run the commands for you.
+只需告诉你的代理：*"按照 SKILL.md 中的说明设置 Excalidraw 图表技能渲染器。"* 它会为你运行命令。
 
-**Option B: Manual**
+**选项 B：手动**
 
 ```bash
 cd .claude/skills/excalidraw-diagram/references
@@ -36,28 +36,28 @@ uv sync
 uv run playwright install chromium
 ```
 
-## Usage
+## 使用
 
-Ask your coding agent to create a diagram:
+让你的编码代理创建图表：
 
-> "Create an Excalidraw diagram showing how the AG-UI protocol streams events from an AI agent to a frontend UI"
+> "创建一个 Excalidraw 图表，展示 AG-UI 协议如何将事件从 AI 代理流式传输到前端 UI"
 
-The skill handles the rest — concept mapping, layout, JSON generation, rendering, and visual validation.
+技能会处理其余部分——概念映射、布局、JSON 生成、渲染和视觉验证。
 
-## Customize Colors
+## 自定义颜色
 
-Edit `references/color-palette.md` to match your brand. Everything else in the skill is universal design methodology.
+编辑 `references/color-palette.md` 以匹配你的品牌。技能中的其他所有内容都是通用的设计方法论。
 
-## File Structure
+## 文件结构
 
 ```
 excalidraw-diagram/
-  SKILL.md                          # Design methodology + workflow
+  SKILL.md                          # 设计方法论 + 工作流程
   references/
-    color-palette.md                # Brand colors (edit this to customize)
-    element-templates.md            # JSON templates for each element type
-    json-schema.md                  # Excalidraw JSON format reference
-    render_excalidraw.py            # Render .excalidraw to PNG
-    render_template.html            # Browser template for rendering
-    pyproject.toml                  # Python dependencies (playwright)
+    color-palette.md                # 品牌颜色（编辑此文件以自定义）
+    element-templates.md            # 每种元素类型的 JSON 模板
+    json-schema.md                  # Excalidraw JSON 格式参考
+    render_excalidraw.py            # 将 .excalidraw 渲染为 PNG
+    render_template.html            # 用于渲染的浏览器模板
+    pyproject.toml                  # Python 依赖（playwright）
 ```

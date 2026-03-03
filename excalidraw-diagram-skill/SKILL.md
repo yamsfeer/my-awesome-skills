@@ -1,281 +1,281 @@
 ---
 name: excalidraw-diagram-skill
-description: Create Excalidraw diagram JSON files that make visual arguments. Use when the user wants to visualize workflows, architectures, or concepts.
+description: 创建用于可视化论证的 Excalidraw 图表 JSON 文件。当用户想要可视化工作流、架构或概念时使用此技能。
 ---
 
-# Excalidraw Diagram Creator
+# Excalidraw 图表创建器
 
-Generate `.excalidraw` JSON files that **argue visually**, not just display information.
+生成 `.excalidraw` JSON 文件，用于**可视化论证**，而非仅仅展示信息。
 
-**Setup:** If the user asks you to set up this skill (renderer, dependencies, etc.), see `README.md` for instructions.
+**设置：** 如果用户要求你设置此技能（渲染器、依赖等），请参阅 `README.md` 中的说明。
 
-## Customization
+## 自定义
 
-**All colors and brand-specific styles live in one file:** `references/color-palette.md`. Read it before generating any diagram and use it as the single source of truth for all color choices — shape fills, strokes, text colors, evidence artifact backgrounds, everything.
+**所有颜色和品牌特定样式都存在于一个文件中：** `references/color-palette.md`。在生成任何图表之前阅读它，并将其作为所有颜色选择的唯一真实来源——包括形状填充、描边、文本颜色、证据工件背景等。
 
-To make this skill produce diagrams in your own brand style, edit `color-palette.md`. Everything else in this file is universal design methodology and Excalidraw best practices.
-
----
-
-## Core Philosophy
-
-**Diagrams should ARGUE, not DISPLAY.**
-
-A diagram isn't formatted text. It's a visual argument that shows relationships, causality, and flow that words alone can't express. The shape should BE the meaning.
-
-**The Isomorphism Test**: If you removed all text, would the structure alone communicate the concept? If not, redesign.
-
-**The Education Test**: Could someone learn something concrete from this diagram, or does it just label boxes? A good diagram teaches—it shows actual formats, real event names, concrete examples.
+要使此技能生成符合你自己品牌风格的图表，请编辑 `color-palette.md`。此文件中的其他所有内容都是通用的设计方法论和 Excalidraw 最佳实践。
 
 ---
 
-## Depth Assessment (Do This First)
+## 核心理念
 
-Before designing, determine what level of detail this diagram needs:
+**图表应该进行论证，而非仅仅展示。**
 
-### Simple/Conceptual Diagrams
+图表不是格式化的文本。它是一种视觉论证，展示文字 alone 无法表达的关系、因果关系和流程。形状本身就应该成为意义。
 
-Use abstract shapes when:
+**同构测试**：如果移除所有文本，结构本身是否能传达概念？如果不能，请重新设计。
 
-- Explaining a mental model or philosophy
-- The audience doesn't need technical specifics
-- The concept IS the abstraction (e.g., "separation of concerns")
-
-### Comprehensive/Technical Diagrams
-
-Use concrete examples when:
-
-- Diagramming a real system, protocol, or architecture
-- The diagram will be used to teach or explain (e.g., YouTube video)
-- The audience needs to understand what things actually look like
-- You're showing how multiple technologies integrate
-
-**For technical diagrams, you MUST include evidence artifacts** (see below).
+**教育测试**：有人能从这张图表中学到具体的东西吗，还是它只是在标注框？一张好的图表能够教学——它展示实际的格式、真实的事件名称、具体的例子。
 
 ---
 
-## Research Mandate (For Technical Diagrams)
+## 深度评估（首先执行）
 
-**Before drawing anything technical, research the actual specifications.**
+在设计之前，确定这张图表需要什么样的详细程度：
 
-If you're diagramming a protocol, API, or framework:
+### 简单/概念性图表
 
-1. Look up the actual JSON/data formats
-2. Find the real event names, method names, or API endpoints
-3. Understand how the pieces actually connect
-4. Use real terminology, not generic placeholders
+在以下情况使用抽象形状：
 
-Bad: "Protocol" → "Frontend"
-Good: "AG-UI streams events (RUN_STARTED, STATE_DELTA, A2UI_UPDATE)" → "CopilotKit renders via createA2UIMessageRenderer()"
+- 解释心智模型或哲学
+- 受众不需要技术细节
+- 概念本身就是抽象（例如，"关注点分离"）
 
-**Research makes diagrams accurate AND educational.**
+### 全面/技术性图表
+
+在以下情况使用具体例子：
+
+- 为真实系统、协议或架构绘制图表
+- 图表将用于教学或解释（例如，YouTube 视频）
+- 受众需要理解事物的实际外观
+- 展示多种技术如何集成
+
+**对于技术图表，你必须包含证据工件**（见下文）。
 
 ---
 
-## Evidence Artifacts
+## 研究要求（针对技术图表）
 
-Evidence artifacts are concrete examples that prove your diagram is accurate and help viewers learn. Include them in technical diagrams.
+**在绘制任何技术内容之前，研究实际的规范。**
 
-**Types of evidence artifacts** (choose what's relevant to your diagram):
+如果你正在为协议、API 或框架绘制图表：
 
-| Artifact Type            | When to Use                                | How to Render                                                                         |
+1. 查找实际的 JSON/数据格式
+2. 找到真实的事件名称、方法名称或 API 端点
+3. 理解各个部分实际如何连接
+4. 使用真实的术语，而非通用的占位符
+
+坏的示例："协议" → "前端"
+好的示例："AG-UI 流式传输事件（RUN_STARTED, STATE_DELTA, A2UI_UPDATE）" → "CopilotKit 通过 createA2UIMessageRenderer() 渲染"
+
+**研究使图表准确且具有教育意义。**
+
+---
+
+## 证据工件
+
+证据工件是具体的例子，证明你的图表是准确的，并帮助观众学习。在技术图表中包含它们。
+
+**证据工件类型**（选择与你的图表相关的）：
+
+| 工件类型 | 何时使用 | 如何渲染 |
 | ------------------------ | ------------------------------------------ | ------------------------------------------------------------------------------------- |
-| **Code snippets**        | APIs, integrations, implementation details | Dark rectangle + syntax-colored text (see color palette for evidence artifact colors) |
-| **Data/JSON examples**   | Data formats, schemas, payloads            | Dark rectangle + colored text (see color palette)                                     |
-| **Event/step sequences** | Protocols, workflows, lifecycles           | Timeline pattern (line + dots + labels)                                               |
-| **UI mockups**           | Showing actual output/results              | Nested rectangles mimicking real UI                                                   |
-| **Real input content**   | Showing what goes IN to a system           | Rectangle with sample content visible                                                 |
-| **API/method names**     | Real function calls, endpoints             | Use actual names from docs, not placeholders                                          |
+| **代码片段** | API、集成、实现细节 | 深色矩形 + 语法着色文本（参见调色板中的证据工件颜色） |
+| **数据/JSON 示例** | 数据格式、模式、载荷 | 深色矩形 + 彩色文本（参见调色板） |
+| **事件/步骤序列** | 协议、工作流、生命周期 | 时间线模式（线 + 点 + 标签） |
+| **UI 模型** | 展示实际输出/结果 | 嵌套矩形模拟真实 UI |
+| **真实输入内容** | 展示进入系统的数据 | 带有可见示例内容的矩形 |
+| **API/方法名称** | 真实的函数调用、端点 | 使用文档中的实际名称，而非占位符 |
 
-**Example**: For a diagram about a streaming protocol, you might show:
+**示例**：对于关于流式协议的图表，你可以展示：
 
-- The actual event names from the spec (not just "Event 1", "Event 2")
-- A code snippet showing how to connect
-- What the streamed data actually looks like
+- 规范中的实际事件名称（而非只是"事件 1"、"事件 2"）
+- 展示如何连接的代码片段
+- 流式数据的实际样子
 
-**Example**: For a diagram about a data transformation pipeline:
+**示例**：对于关于数据转换管道的图表：
 
-- Show sample input data (actual format, not "Input")
-- Show sample output data (actual format, not "Output")
-- Show intermediate states if relevant
+- 展示示例输入数据（实际格式，而非"输入"）
+- 展示示例输出数据（实际格式，而非"输出"）
+- 如有相关，展示中间状态
 
-The key principle: **show what things actually look like**, not just what they're called.
+关键原则：**展示事物的实际样子**，而非只是它们的名称。
 
 ---
 
-## Multi-Zoom Architecture
+## 多缩放层级架构
 
-Comprehensive diagrams operate at multiple zoom levels simultaneously. Think of it like a map that shows both the country borders AND the street names.
+全面的图表同时在多个缩放层级上操作。把它想象成一张既显示国家边界又显示街道名称的地图。
 
-### Level 1: Summary Flow
+### 层级 1：摘要流程
 
-A simplified overview showing the full pipeline or process at a glance. Often placed at the top or bottom of the diagram.
+简化的概述，一眼展示完整的管道或流程。通常放置在图表的顶部或底部。
 
-_Example_: `Input → Processing → Output` or `Client → Server → Database`
+_示例_：`输入 → 处理 → 输出` 或 `客户端 → 服务器 → 数据库`
 
-### Level 2: Section Boundaries
+### 层级 2：区域边界
 
-Labeled regions that group related components. These create visual "rooms" that help viewers understand what belongs together.
+标记的区域将相关组件分组。这些创建视觉"房间"，帮助观众理解什么属于一起。
 
-_Example_: Grouping by responsibility (Backend / Frontend), by phase (Setup / Execution / Cleanup), or by team (User / System / External)
+_示例_：按职责分组（后端 / 前端）、按阶段分组（设置 / 执行 / 清理）或按团队分组（用户 / 系统 / 外部）
 
-### Level 3: Detail Inside Sections
+### 层级 3：区域内的细节
 
-Evidence artifacts, code snippets, and concrete examples within each section. This is where the educational value lives.
+每个区域内的证据工件、代码片段和具体例子。这是教育价值所在。
 
-_Example_: Inside a "Backend" section, you might show the actual API response format, not just a box labeled "API Response"
+_示例_：在"后端"区域内，你可以展示实际的 API 响应格式，而非只是一个标有"API 响应"的框
 
-**For comprehensive diagrams, aim to include all three levels.** The summary gives context, the sections organize, and the details teach.
+**对于全面的图表， aim 包含所有三个层级。** 摘要提供上下文，区域进行组织，细节进行教学。
 
-### Bad vs Good
+### 坏与好的对比
 
-| Bad (Displaying)              | Good (Arguing)                                     |
+| 坏的（展示） | 好的（论证） |
 | ----------------------------- | -------------------------------------------------- |
-| 5 equal boxes with labels     | Each concept has a shape that mirrors its behavior |
-| Card grid layout              | Visual structure matches conceptual structure      |
-| Icons decorating text         | Shapes that ARE the meaning                        |
-| Same container for everything | Distinct visual vocabulary per concept             |
-| Everything in a box           | Free-floating text with selective containers       |
+| 5 个带标签的等大小框 | 每个概念都有一个镜像其行为形状 |
+| 卡片网格布局 | 视觉结构与概念结构匹配 |
+| 装饰文本的图标 | 形状本身就是意义 |
+| 所有东西都一样的容器 | 每个概念都有不同的视觉词汇 |
+| 所有东西都在框里 | 自由浮动的文本与选择性容器 |
 
-### Simple vs Comprehensive (Know Which You Need)
+### 简单与全面（知道你需要哪种）
 
-| Simple Diagram                                 | Comprehensive Diagram                                     |
+| 简单图表 | 全面图表 |
 | ---------------------------------------------- | --------------------------------------------------------- |
-| Generic labels: "Input" → "Process" → "Output" | Specific: shows what the input/output actually looks like |
-| Named boxes: "API", "Database", "Client"       | Named boxes + examples of actual requests/responses       |
-| "Events" or "Messages" label                   | Timeline with real event/message names from the spec      |
-| "UI" or "Dashboard" rectangle                  | Mockup showing actual UI elements and content             |
-| ~30 seconds to explain                         | ~2-3 minutes of teaching content                          |
-| Viewer learns the structure                    | Viewer learns the structure AND the details               |
+| 通用标签："输入" → "处理" → "输出" | 具体：展示输入/输出实际的样子 |
+| 命名框："API"、"数据库"、"客户端" | 命名框 + 实际请求/响应的示例 |
+| "事件"或"消息"标签 | 带有规范中真实事件/消息名称的时间线 |
+| "UI"或"仪表板"矩形 | 显示实际 UI 元素和内容的模型 |
+| ~30 秒解释 | ~2-3 分钟教学内容 |
+| 观众学习结构 | 观众学习结构和细节 |
 
-**Simple diagrams** are fine for abstract concepts, quick overviews, or when the audience already knows the details. **Comprehensive diagrams** are needed for technical architectures, tutorials, educational content, or when you want the diagram itself to teach.
+**简单图表**适用于抽象概念、快速概述或当受众已经知道细节时。**全面图表**适用于技术架构、教程、教育内容或当你希望图表本身进行教学时。
 
 ---
 
-## Container vs. Free-Floating Text
+## 容器与自由浮动文本
 
-**Not every piece of text needs a shape around it.** Default to free-floating text. Add containers only when they serve a purpose.
+**不是每个文本片段都需要周围的形状。** 默认使用自由浮动文本。仅在它们有目的时才添加容器。
 
-| Use a Container When...                                   | Use Free-Floating Text When...                |
+| 使用容器当... | 使用自由浮动文本当... |
 | --------------------------------------------------------- | --------------------------------------------- |
-| It's the focal point of a section                         | It's a label or description                   |
-| It needs visual grouping with other elements              | It's supporting detail or metadata            |
-| Arrows need to connect to it                              | It describes something nearby                 |
-| The shape itself carries meaning (decision diamond, etc.) | Typography alone creates sufficient hierarchy |
-| It represents a distinct "thing" in the system            | It's a section title, subtitle, or annotation |
+| 它是一个区域的焦点 | 它是一个标签或描述 |
+| 它需要与其他元素进行视觉分组 | 它是支持细节或元数据 |
+| 箭头需要连接到它 | 它描述附近的东西 |
+| 形状本身携带意义（决策菱形等） | 排版本身创造了足够的层次结构 |
+| 它代表系统中不同的"事物" | 它是区域标题、副标题或注释 |
 
-**Typography as hierarchy**: Use font size, weight, and color to create visual hierarchy without boxes. A 28px title doesn't need a rectangle around it.
+**排版作为层次结构**：使用字体大小、粗细和颜色创建视觉层次，无需框。一个 28px 的标题不需要周围的矩形。
 
-**The container test**: For each boxed element, ask "Would this work as free-floating text?" If yes, remove the container.
+**容器测试**：对于每个带框的元素，问"这作为自由浮动文本能工作吗？"如果是，移除容器。
 
 ---
 
-## Design Process (Do This BEFORE Generating JSON)
+## 设计流程（在生成 JSON 之前执行）
 
-### Step 0: Assess Depth Required
+### 步骤 0：评估所需深度
 
-Before anything else, determine if this needs to be:
+首先，确定这需要：
 
-- **Simple/Conceptual**: Abstract shapes, labels, relationships (mental models, philosophies)
-- **Comprehensive/Technical**: Concrete examples, code snippets, real data (systems, architectures, tutorials)
+- **简单/概念性**：抽象形状、标签、关系（心智模型、哲学）
+- **全面/技术性**：具体例子、代码片段、真实数据（系统、架构、教程）
 
-**If comprehensive**: Do research first. Look up actual specs, formats, event names, APIs.
+**如果是全面的**：首先进行研究。查找实际规范、格式、事件名称、API。
 
-### Step 1: Understand Deeply
+### 步骤 1：深入理解
 
-Read the content. For each concept, ask:
+阅读内容。对于每个概念，问：
 
-- What does this concept **DO**? (not what IS it)
-- What relationships exist between concepts?
-- What's the core transformation or flow?
-- **What would someone need to SEE to understand this?** (not just read about)
+- 这个概念**做什么**？（不是它是什么）
+- 概念之间存在什么关系？
+- 核心转换或流程是什么？
+- **有人需要看到什么才能理解这个？**（而非只是阅读）
 
-### Step 2: Map Concepts to Patterns
+### 步骤 2：将概念映射到模式
 
-For each concept, find the visual pattern that mirrors its behavior:
+对于每个概念，找到镜像其行为的视觉模式：
 
-| If the concept...               | Use this pattern                                   |
+| 如果概念... | 使用此模式 |
 | ------------------------------- | -------------------------------------------------- |
-| Spawns multiple outputs         | **Fan-out** (radial arrows from center)            |
-| Combines inputs into one        | **Convergence** (funnel, arrows merging)           |
-| Has hierarchy/nesting           | **Tree** (lines + free-floating text)              |
-| Is a sequence of steps          | **Timeline** (line + dots + free-floating labels)  |
-| Loops or improves continuously  | **Spiral/Cycle** (arrow returning to start)        |
-| Is an abstract state or context | **Cloud** (overlapping ellipses)                   |
-| Transforms input to output      | **Assembly line** (before → process → after)       |
-| Compares two things             | **Side-by-side** (parallel with contrast)          |
-| Separates into phases           | **Gap/Break** (visual separation between sections) |
+| 产生多个输出 | **扇出**（从中心辐射的箭头） |
+| 将输入合并为一个 | **汇聚**（漏斗、箭头合并） |
+| 有层次/嵌套 | **树**（线 + 自由浮动文本） |
+| 是一系列步骤 | **时间线**（线 + 点 + 自由浮动标签） |
+| 循环或持续改进 | **螺旋/循环**（返回起点的箭头） |
+| 是抽象状态或上下文 | **云**（重叠的椭圆） |
+| 将输入转换为输出 | **流水线**（之前 → 处理 → 之后） |
+| 比较两件事 | **并排**（平行对比） |
+| 分为阶段 | **间隙/中断**（区域之间的视觉分离） |
 
-### Step 3: Ensure Variety
+### 步骤 3：确保多样性
 
-For multi-concept diagrams: **each major concept must use a different visual pattern**. No uniform cards or grids.
+对于多概念图表：**每个主要概念必须使用不同的视觉模式**。不要统一卡片或网格。
 
-### Step 4: Sketch the Flow
+### 步骤 4：草拟流程
 
-Before JSON, mentally trace how the eye moves through the diagram. There should be a clear visual story.
+在 JSON 之前，在心理上追踪眼睛如何穿过图表。应该有一个清晰的视觉故事。
 
-### Step 5: Generate JSON
+### 步骤 5：生成 JSON
 
-Only now create the Excalidraw elements. **See below for how to handle large diagrams.**
+现在才创建 Excalidraw 元素。**参见下文如何处理大型图表。**
 
-### Step 6: Render & Validate (MANDATORY)
+### 步骤 6：渲染与验证（强制）
 
-After generating the JSON, you MUST run the render-view-fix loop until the diagram looks right. This is not optional — see the **Render & Validate** section below for the full process.
-
----
-
-## Large / Comprehensive Diagram Strategy
-
-**For comprehensive or technical diagrams, you MUST build the JSON one section at a time.** Do NOT attempt to generate the entire file in a single pass. This is a hard constraint — Claude Code has a ~32,000 token output limit per response, and a comprehensive diagram easily exceeds that in one shot. Even if it didn't, generating everything at once leads to worse quality. Section-by-section is better in every way.
-
-### The Section-by-Section Workflow
-
-**Phase 1: Build each section**
-
-1. **Create the base file** with the JSON wrapper (`type`, `version`, `appState`, `files`) and the first section of elements.
-2. **Add one section per edit.** Each section gets its own dedicated pass — take your time with it. Think carefully about the layout, spacing, and how this section connects to what's already there.
-3. **Use descriptive string IDs** (e.g., `"trigger_rect"`, `"arrow_fan_left"`) so cross-section references are readable.
-4. **Namespace seeds by section** (e.g., section 1 uses 100xxx, section 2 uses 200xxx) to avoid collisions.
-5. **Update cross-section bindings** as you go. When a new section's element needs to bind to an element from a previous section (e.g., an arrow connecting sections), edit the earlier element's `boundElements` array at the same time.
-
-**Phase 2: Review the whole**
-
-After all sections are in place, read through the complete JSON and check:
-
-- Are cross-section arrows bound correctly on both ends?
-- Is the overall spacing balanced, or are some sections cramped while others have too much whitespace?
-- Do IDs and bindings all reference elements that actually exist?
-
-Fix any alignment or binding issues before rendering.
-
-**Phase 3: Render & validate**
-
-Now run the render-view-fix loop from the Render & Validate section. This is where you'll catch visual issues that aren't obvious from JSON — overlaps, clipping, imbalanced composition.
-
-### Section Boundaries
-
-Plan your sections around natural visual groupings from the diagram plan. A typical large diagram might split into:
-
-- **Section 1**: Entry point / trigger
-- **Section 2**: First decision or routing
-- **Section 3**: Main content (hero section — may be the largest single section)
-- **Section 4-N**: Remaining phases, outputs, etc.
-
-Each section should be independently understandable: its elements, internal arrows, and any cross-references to adjacent sections.
-
-### What NOT to Do
-
-- **Don't generate the entire diagram in one response.** You will hit the output token limit and produce truncated, broken JSON. Even if the diagram is small enough to fit, splitting into sections produces better results.
-- **Don't use a coding agent** to generate the JSON. The agent won't have sufficient context about the skill's rules, and the coordination overhead negates any benefit.
-- **Don't write a Python generator script.** The templating and coordinate math seem helpful but introduce a layer of indirection that makes debugging harder. Hand-crafted JSON with descriptive IDs is more maintainable.
+生成 JSON 后，你必须运行渲染-查看-修复循环，直到图表看起来正确。这不是可选的——参见下面的**渲染与验证**部分了解完整流程。
 
 ---
 
-## Visual Pattern Library
+## 大型/全面图表策略
 
-### Fan-Out (One-to-Many)
+**对于全面或技术图表，你必须一次构建一个部分的 JSON。** 不要试图在一次传递中生成整个文件。这是一个硬性约束——Claude Code 每次响应的输出限制约为 32,000 个 token，一个全面的图表很容易在一次传递中超过这个限制。即使没有，一次生成所有内容也会导致质量更差。分部分构建在各方面都更好。
 
-Central element with arrows radiating to multiple targets. Use for: sources, PRDs, root causes, central hubs.
+### 分部分工作流程
+
+**阶段 1：构建每个部分**
+
+1. **创建基础文件**，包含 JSON 包装器（`type`、`version`、`appState`、`files`）和第一部分元素。
+2. **每次编辑添加一个部分。** 每个部分都有自己的专用传递——慢慢来。仔细考虑布局、间距，以及这个部分如何与已有的内容连接。
+3. **使用描述性字符串 ID**（例如 `"trigger_rect"`、`"arrow_fan_left"`），使跨部分引用可读。
+4. **按部分命名空间种子**（例如，第 1 部分使用 100xxx，第 2 部分使用 200xxx）以避免冲突。
+5. **更新跨部分绑定**。当新部分的元素需要绑定到之前部分的元素时（例如，连接部分的箭头），同时编辑早期元素的 `boundElements` 数组。
+
+**阶段 2：审查整体**
+
+在所有部分就位后，通读完整的 JSON 并检查：
+
+- 跨部分箭头是否正确绑定在两端？
+- 整体间距是否平衡，还是有些部分拥挤而其他部分空白太多？
+- ID 和绑定是否都引用实际存在的元素？
+
+在渲染前修复任何对齐或绑定问题。
+
+**阶段 3：渲染与验证**
+
+现在运行来自渲染与验证部分的渲染-查看-修复循环。这是你将在 JSON 中不明显的地方发现视觉问题——重叠、裁剪、不平衡的构图。
+
+### 区域边界
+
+根据图表计划中的自然视觉分组规划你的部分。一个典型的大型图表可能分为：
+
+- **第 1 部分**：入口点 / 触发器
+- **第 2 部分**：第一个决策或路由
+- **第 3 部分**：主要内容（主区域——可能是最大的单个部分）
+- **第 4-N 部分**：剩余阶段、输出等
+
+每个部分应该独立可理解：它的元素、内部箭头，以及任何与相邻部分的交叉引用。
+
+### 不该做什么
+
+- **不要在一个响应中生成整个图表。** 你会达到输出 token 限制并产生截断的、损坏的 JSON。即使图表足够小可以容纳，分成部分也会产生更好的结果。
+- **不要使用编码代理**生成 JSON。代理不会有足够的关于技能规则的上下文，协调开销抵消了任何好处。
+- **不要编写 Python 生成器脚本**。模板和坐标数学似乎有帮助，但引入了一层间接，使调试更难。具有描述性 ID 的手工 JSON 更易维护。
+
+---
+
+## 视觉模式库
+
+### 扇出（一对多）
+
+中心元素带有辐射到多个目标的箭头。用于：源、PRD、根本原因、中心枢纽。
 
 ```
         ○
@@ -285,9 +285,9 @@ Central element with arrows radiating to multiple targets. Use for: sources, PRD
         ○
 ```
 
-### Convergence (Many-to-One)
+### 汇聚（多对一）
 
-Multiple inputs merging through arrows to single output. Use for: aggregation, funnels, synthesis.
+多个输入通过箭头合并到单个输出。用于：聚合、漏斗、综合。
 
 ```
   ○ ↘
@@ -295,9 +295,9 @@ Multiple inputs merging through arrows to single output. Use for: aggregation, f
   ○ ↗
 ```
 
-### Tree (Hierarchy)
+### 树（层次结构）
 
-Parent-child branching with connecting lines and free-floating text (no boxes needed). Use for: file systems, org charts, taxonomies.
+父子分支，用连接线和自由浮动文本（不需要框）。用于：文件系统、组织架构图、分类。
 
 ```
   label
@@ -307,11 +307,11 @@ Parent-child branching with connecting lines and free-floating text (no boxes ne
   └── label
 ```
 
-Use `line` elements for the trunk and branches, free-floating text for labels.
+使用 `line` 元素作为树干和分支，自由浮动文本作为标签。
 
-### Spiral/Cycle (Continuous Loop)
+### 螺旋/循环（连续循环）
 
-Elements in sequence with arrow returning to start. Use for: feedback loops, iterative processes, evolution.
+带箭头返回起点的顺序元素。用于：反馈循环、迭代过程、演进。
 
 ```
   □ → □
@@ -319,38 +319,38 @@ Elements in sequence with arrow returning to start. Use for: feedback loops, ite
   □ ← □
 ```
 
-### Cloud (Abstract State)
+### 云（抽象状态）
 
-Overlapping ellipses with varied sizes. Use for: context, memory, conversations, mental states.
+大小各异的重叠椭圆。用于：上下文、内存、对话、心理状态。
 
-### Assembly Line (Transformation)
+### 流水线（转换）
 
-Input → Process Box → Output with clear before/after. Use for: transformations, processing, conversion.
+输入 → 处理框 → 输出，有清晰的前后对比。用于：转换、处理、转换。
 
 ```
   ○○○ → [PROCESS] → □□□
   chaos              order
 ```
 
-### Side-by-Side (Comparison)
+### 并排（比较）
 
-Two parallel structures with visual contrast. Use for: before/after, options, trade-offs.
+两个带视觉对比的平行结构。用于：前后对比、选项、权衡。
 
-### Gap/Break (Separation)
+### 间隙/中断（分离）
 
-Visual whitespace or barrier between sections. Use for: phase changes, context resets, boundaries.
+区域之间的视觉空白或障碍。用于：阶段变化、上下文重置、边界。
 
-### Lines as Structure
+### 线条作为结构
 
-Use lines (type: `line`, not arrows) as primary structural elements instead of boxes:
+使用线条（类型：`line`，不是箭头）作为主要结构元素，而非框：
 
-- **Timelines**: Vertical or horizontal line with small dots (10-20px ellipses) at intervals, free-floating labels beside each dot
-- **Tree structures**: Vertical trunk line + horizontal branch lines, with free-floating text labels (no boxes needed)
-- **Dividers**: Thin dashed lines to separate sections
-- **Flow spines**: A central line that elements relate to, rather than connecting boxes
+- **时间线**：垂直或水平线，间隔有小点（10-20px 椭圆），每个点旁边有自由浮动标签
+- **树结构**：垂直树干线 + 水平分支线，带自由浮动文本标签（不需要框）
+- **分隔线**：分隔区域的细虚线
+- **流程主干**：元素关联的中心线，而非连接框
 
 ```
-Timeline:           Tree:
+时间线：           树：
   ●─── Label 1        │
   │                   ├── item
   ●─── Label 2        │   ├── sub
@@ -358,117 +358,117 @@ Timeline:           Tree:
   ●─── Label 3        └── item
 ```
 
-Lines + free-floating text often creates a cleaner result than boxes + contained text.
+线条 + 自由浮动文本通常比框 + 包含文本创建更干净的结果。
 
 ---
 
-## Shape Meaning
+## 形状含义
 
-Choose shape based on what it represents—or use no shape at all:
+根据形状代表什么来选择形状——或根本不使用形状：
 
-| Concept Type                  | Shape                         | Why                          |
+| 概念类型 | 形状 | 原因 |
 | ----------------------------- | ----------------------------- | ---------------------------- |
-| Labels, descriptions, details | **none** (free-floating text) | Typography creates hierarchy |
-| Section titles, annotations   | **none** (free-floating text) | Font size/weight is enough   |
-| Markers on a timeline         | small `ellipse` (10-20px)     | Visual anchor, not container |
-| Start, trigger, input         | `ellipse`                     | Soft, origin-like            |
-| End, output, result           | `ellipse`                     | Completion, destination      |
-| Decision, condition           | `diamond`                     | Classic decision symbol      |
-| Process, action, step         | `rectangle`                   | Contained action             |
-| Abstract state, context       | overlapping `ellipse`         | Fuzzy, cloud-like            |
-| Hierarchy node                | lines + text (no boxes)       | Structure through lines      |
+| 标签、描述、细节 | **无**（自由浮动文本） | 排版创建层次结构 |
+| 区域标题、注释 | **无**（自由浮动文本） | 字体大小/粗细足够 |
+| 时间线上的标记 | 小 `ellipse`（10-20px） | 视觉锚点，非容器 |
+| 开始、触发、输入 | `ellipse` | 柔和，原点般 |
+| 结束、输出、结果 | `ellipse` | 完成、目的地 |
+| 决策、条件 | `diamond` | 经典决策符号 |
+| 过程、动作、步骤 | `rectangle` | 包含的动作 |
+| 抽象状态、上下文 | 重叠 `ellipse` | 模糊、云状 |
+| 层次节点 | 线 + 文本（无框） | 通过线条构建结构 |
 
-**Rule**: Default to no container. Add shapes only when they carry meaning. Aim for <30% of text elements to be inside containers.
-
----
-
-## Color as Meaning
-
-Colors encode information, not decoration. Every color choice should come from `references/color-palette.md` — the semantic shape colors, text hierarchy colors, and evidence artifact colors are all defined there.
-
-**Key principles:**
-
-- Each semantic purpose (start, end, decision, AI, error, etc.) has a specific fill/stroke pair
-- Free-floating text uses color for hierarchy (titles, subtitles, details — each at a different level)
-- Evidence artifacts (code snippets, JSON examples) use their own dark background + colored text scheme
-- Always pair a darker stroke with a lighter fill for contrast
-
-**Do not invent new colors.** If a concept doesn't fit an existing semantic category, use Primary/Neutral or Secondary.
+**规则**：默认无容器。仅当它们携带意义时才添加形状。目标 <30% 的文本元素在容器内。
 
 ---
 
-## Modern Aesthetics
+## 颜色作为含义
 
-For clean, professional diagrams:
+颜色编码信息，而非装饰。每个颜色选择都应该来自 `references/color-palette.md` —— 语义形状颜色、文本层次颜色和证据工件颜色都在那里定义。
 
-### Roughness
+**关键原则：**
 
-- `roughness: 0` — Clean, crisp edges. Use for modern/technical diagrams.
-- `roughness: 1` — Hand-drawn, organic feel. Use for brainstorming/informal diagrams.
+- 每个语义目的（开始、结束、决策、AI、错误等）都有特定的填充/描边对
+- 自由浮动文本使用颜色进行层次（标题、副标题、细节——每个在不同层级）
+- 证据工件（代码片段、JSON 示例）使用它们自己的深色背景 + 彩色文本方案
+- 始终将较深的描边与较浅的填充配对以获得对比
 
-**Default to 0** for most professional use cases.
-
-### Stroke Width
-
-- `strokeWidth: 1` — Thin, elegant. Good for lines, dividers, subtle connections.
-- `strokeWidth: 2` — Standard. Good for shapes and primary arrows.
-- `strokeWidth: 3` — Bold. Use sparingly for emphasis (main flow line, key connections).
-
-### Opacity
-
-**Always use `opacity: 100` for all elements.** Use color, size, and stroke width to create hierarchy instead of transparency.
-
-### Small Markers Instead of Shapes
-
-Instead of full shapes, use small dots (10-20px ellipses) as:
-
-- Timeline markers
-- Bullet points
-- Connection nodes
-- Visual anchors for free-floating text
+**不要发明新颜色。** 如果一个概念不符合现有语义类别，使用 Primary/Neutral 或 Secondary。
 
 ---
 
-## Layout Principles
+## 现代美学
 
-### Hierarchy Through Scale
+对于干净、专业的图表：
 
-- **Hero**: 300×150 - visual anchor, most important
-- **Primary**: 180×90
-- **Secondary**: 120×60
-- **Small**: 60×40
+### 粗糙度
 
-### Whitespace = Importance
+- `roughness: 0` —— 干净、清晰的边缘。用于现代/技术图表。
+- `roughness: 1` —— 手绘、有机感。用于头脑风暴/非正式图表。
 
-The most important element has the most empty space around it (200px+).
+**默认使用 0** 用于大多数专业用例。
 
-### Flow Direction
+### 描边宽度
 
-Guide the eye: typically left→right or top→bottom for sequences, radial for hub-and-spoke.
+- `strokeWidth: 1` —— 细、优雅。适用于线条、分隔线、微妙的连接。
+- `strokeWidth: 2` —— 标准。适用于形状和主要箭头。
+- `strokeWidth: 3` —— 粗。谨慎用于强调（主线、关键连接）。
 
-### Connections Required
+### 不透明度
 
-Position alone doesn't show relationships. If A relates to B, there must be an arrow.
+**所有元素始终使用 `opacity: 100`。** 使用颜色、大小和描边宽度创建层次，而非透明度。
+
+### 小标记替代形状
+
+使用小点（10-20px 椭圆）作为：
+
+- 时间线标记
+- 项目符号
+- 连接节点
+- 自由浮动文本的视觉锚点
 
 ---
 
-## Text Rules
+## 布局原则
 
-**CRITICAL**: The JSON `text` property contains ONLY readable words.
+### 通过缩放实现层次
+
+- **主视觉**：300×150 - 视觉锚点，最重要
+- **主要**：180×90
+- **次要**：120×60
+- **小型**：60×40
+
+### 空白 = 重要性
+
+最重要的元素周围有最多的空白（200px+）。
+
+### 流向
+
+引导眼睛：通常是左→右或上→下用于序列，径向用于中心辐射。
+
+### 需要连接
+
+位置 alone 不显示关系。如果 A 与 B 相关，必须有箭头。
+
+---
+
+## 文本规则
+
+**关键**：JSON `text` 属性只包含可读的单词。
 
 ```json
 {
   "id": "myElement1",
-  "text": "Start",
-  "originalText": "Start"
+  "text": "开始",
+  "originalText": "开始"
 }
 ```
 
-Settings: `fontSize: 16`, `fontFamily: 3`, `textAlign: "center"`, `verticalAlign: "middle"`
+设置：`fontSize: 16`、`fontFamily: 3`、`textAlign: "center"`、`verticalAlign: "middle"`
 
 ---
 
-## JSON Structure
+## JSON 结构
 
 ```json
 {
@@ -484,75 +484,75 @@ Settings: `fontSize: 16`, `fontFamily: 3`, `textAlign: "center"`, `verticalAlign
 }
 ```
 
-## Element Templates
+## 元素模板
 
-See `references/element-templates.md` for copy-paste JSON templates for each element type (text, line, dot, rectangle, arrow). Pull colors from `references/color-palette.md` based on each element's semantic purpose.
+参见 `references/element-templates.md` 获取每种元素类型（文本、线条、点、矩形、箭头）的复制粘贴 JSON 模板。根据每个元素的语义目的从 `references/color-palette.md` 提取颜色。
 
 ---
 
-## Render & Validate (MANDATORY)
+## 渲染与验证（强制）
 
-You cannot judge a diagram from JSON alone. After generating or editing the Excalidraw JSON, you MUST render it to PNG, view the image, and fix what you see — in a loop until it's right. This is a core part of the workflow, not a final check.
+你无法仅从 JSON 判断图表。生成或编辑 Excalidraw JSON 后，你必须将其渲染为 PNG，查看图像，并修复你看到的内容——在一个循环中直到正确。这是工作流程的核心部分，而非最终检查。
 
-### How to Render
+### 如何渲染
 
 ```bash
 cd .claude/skills/excalidraw-diagram/references && uv run python render_excalidraw.py <path-to-file.excalidraw>
 ```
 
-This outputs a PNG next to the `.excalidraw` file. Then use the **Read tool** on the PNG to actually view it.
+这会在 `.excalidraw` 文件旁边输出一个 PNG。然后使用 **Read 工具**在 PNG 上实际查看它。
 
-### The Loop
+### 循环
 
-After generating the initial JSON, run this cycle:
+生成初始 JSON 后，运行此循环：
 
-**1. Render & View** — Run the render script, then Read the PNG.
+**1. 渲染与查看** —— 运行渲染脚本，然后读取 PNG。
 
-**2. Audit against your original vision** — Before looking for bugs, compare the rendered result to what you designed in Steps 1-4. Ask:
+**2. 根据原始愿景审计** —— 在查找错误之前，将渲染结果与你在步骤 1-4 中设计的进行比较。问：
 
-- Does the visual structure match the conceptual structure you planned?
-- Does each section use the pattern you intended (fan-out, convergence, timeline, etc.)?
-- Does the eye flow through the diagram in the order you designed?
-- Is the visual hierarchy correct — hero elements dominant, supporting elements smaller?
-- For technical diagrams: are the evidence artifacts (code snippets, data examples) readable and properly placed?
+- 视觉结构是否与你计划的概念结构匹配？
+- 每个部分是否使用了你预期的模式（扇出、汇聚、时间线等）？
+- 眼睛是否按照你设计的顺序流经图表？
+- 视觉层次是否正确——主视觉元素占主导，支持元素较小？
+- 对于技术图表：证据工件（代码片段、数据示例）是否可读且放置正确？
 
-**3. Check for visual defects:**
+**3. 检查视觉缺陷：**
 
-- Text clipped by or overflowing its container
-- Text or shapes overlapping other elements
-- Arrows crossing through elements instead of routing around them
-- Arrows landing on the wrong element or pointing into empty space
-- Labels floating ambiguously (not clearly anchored to what they describe)
-- Uneven spacing between elements that should be evenly spaced
-- Sections with too much whitespace next to sections that are too cramped
-- Text too small to read at the rendered size
-- Overall composition feels lopsided or unbalanced
+- 文本被容器裁剪或溢出
+- 文本或形状与其他元素重叠
+- 箭头穿过元素而非绕过它们
+- 箭头落在错误的元素上或指向空白空间
+- 标签浮动不明确（不清楚锚定到它们描述的内容）
+- 应该均匀间距的元素之间间距不均匀
+- 空白太多的区域与太拥挤的区域相邻
+- 文本在渲染尺寸下太小无法阅读
+- 整体构图感觉倾斜或不平衡
 
-**4. Fix** — Edit the JSON to address everything you found. Common fixes:
+**4. 修复** —— 编辑 JSON 以解决你发现的 everything。常见修复：
 
-- Widen containers when text is clipped
-- Adjust `x`/`y` coordinates to fix spacing and alignment
-- Add intermediate waypoints to arrow `points` arrays to route around elements
-- Reposition labels closer to the element they describe
-- Resize elements to rebalance visual weight across sections
+- 文本裁剪时加宽容器
+- 调整 `x`/`y` 坐标以修复间距和对齐
+- 向箭头 `points` 数组添加中间路点以绕过元素
+- 将标签重新定位到更接近它们描述的元素
+- 调整元素大小以重新平衡各区域的视觉权重
 
-**5. Re-render & re-view** — Run the render script again and Read the new PNG.
+**5. 重新渲染与重新查看** —— 再次运行渲染脚本并读取新的 PNG。
 
-**6. Repeat** — Keep cycling until the diagram passes both the vision check (Step 2) and the defect check (Step 3). Typically takes 2-4 iterations. Don't stop after one pass just because there are no critical bugs — if the composition could be better, improve it.
+**6. 重复** —— 继续循环直到图表通过愿景检查（步骤 2）和缺陷检查（步骤 3）。通常需要 2-4 次迭代。不要在一次通过后停止，仅仅因为没有关键错误——如果构图可以更好，改进它。
 
-### When to Stop
+### 何时停止
 
-The loop is done when:
+循环完成当：
 
-- The rendered diagram matches the conceptual design from your planning steps
-- No text is clipped, overlapping, or unreadable
-- Arrows route cleanly and connect to the right elements
-- Spacing is consistent and the composition is balanced
-- You'd be comfortable showing it to someone without caveats
+- 渲染图表与计划步骤中的概念设计匹配
+- 没有文本被裁剪、重叠或无法阅读
+- 箭头路由干净并连接到正确的元素
+- 间距一致且构图平衡
+- 你会放心地把它展示给某人，无需免责声明
 
-### First-Time Setup
+### 首次设置
 
-If the render script hasn't been set up yet:
+如果渲染脚本尚未设置：
 
 ```bash
 cd .claude/skills/excalidraw-diagram/references
@@ -562,49 +562,49 @@ uv run playwright install chromium
 
 ---
 
-## Quality Checklist
+## 质量检查清单
 
-### Depth & Evidence (Check First for Technical Diagrams)
+### 深度与证据（首先检查技术图表）
 
-1. **Research done**: Did you look up actual specs, formats, event names?
-2. **Evidence artifacts**: Are there code snippets, JSON examples, or real data?
-3. **Multi-zoom**: Does it have summary flow + section boundaries + detail?
-4. **Concrete over abstract**: Real content shown, not just labeled boxes?
-5. **Educational value**: Could someone learn something concrete from this?
+1. **已完成研究**：你是否查找了实际规范、格式、事件名称？
+2. **证据工件**：是否有代码片段、JSON 示例或真实数据？
+3. **多缩放**：是否有摘要流程 + 区域边界 + 细节？
+4. **具体而非抽象**：展示的是真实内容，而非只是带标签的框？
+5. **教育价值**：有人能从中学到具体的东西吗？
 
-### Conceptual
+### 概念性
 
-6. **Isomorphism**: Does each visual structure mirror its concept's behavior?
-7. **Argument**: Does the diagram SHOW something text alone couldn't?
-8. **Variety**: Does each major concept use a different visual pattern?
-9. **No uniform containers**: Avoided card grids and equal boxes?
+6. **同构**：每个视觉结构是否镜像其概念的行为？
+7. **论证**：图表是否展示了文本 alone 无法展示的东西？
+8. **多样性**：每个主要概念是否使用不同的视觉模式？
+9. **无统一容器**：避免了卡片网格和等大小框？
 
-### Container Discipline
+### 容器规范
 
-10. **Minimal containers**: Could any boxed element work as free-floating text instead?
-11. **Lines as structure**: Are tree/timeline patterns using lines + text rather than boxes?
-12. **Typography hierarchy**: Are font size and color creating visual hierarchy (reducing need for boxes)?
+10. **最小容器**：任何带框的元素能否作为自由浮动文本工作？
+11. **线条作为结构**：树/时间线模式是否使用线条 + 文本而非框？
+12. **排版层次**：字体大小和颜色是否创建视觉层次（减少对框的需求）？
 
-### Structural
+### 结构性
 
-13. **Connections**: Every relationship has an arrow or line
-14. **Flow**: Clear visual path for the eye to follow
-15. **Hierarchy**: Important elements are larger/more isolated
+13. **连接**：每个关系都有箭头或线条
+14. **流程**：眼睛跟随的清晰视觉路径
+15. **层次**：重要元素更大/更孤立
 
-### Technical
+### 技术性
 
-16. **Text clean**: `text` contains only readable words
-17. **Font**: `fontFamily: 3`
-18. **Roughness**: `roughness: 0` for clean/modern (unless hand-drawn style requested)
-19. **Opacity**: `opacity: 100` for all elements (no transparency)
-20. **Container ratio**: <30% of text elements should be inside containers
+16. **文本干净**：`text` 只包含可读的单词
+17. **字体**：`fontFamily: 3`
+18. **粗糙度**：`roughness: 0` 用于干净/现代（除非请求手绘风格）
+19. **不透明度**：所有元素 `opacity: 100`（无透明度）
+20. **容器比例**：<30% 的文本元素应该在容器内
 
-### Visual Validation (Render Required)
+### 视觉验证（需要渲染）
 
-21. **Rendered to PNG**: Diagram has been rendered and visually inspected
-22. **No text overflow**: All text fits within its container
-23. **No overlapping elements**: Shapes and text don't overlap unintentionally
-24. **Even spacing**: Similar elements have consistent spacing
-25. **Arrows land correctly**: Arrows connect to intended elements without crossing others
-26. **Readable at export size**: Text is legible in the rendered PNG
-27. **Balanced composition**: No large empty voids or overcrowded regions
+21. **渲染为 PNG**：图表已被渲染并视觉检查
+22. **无文本溢出**：所有文本都适合其容器
+23. **无重叠元素**：形状和文本不意外重叠
+24. **均匀间距**：相似元素有一致间距
+25. **箭头着陆正确**：箭头连接到预期元素而不交叉其他元素
+26. **在导出尺寸下可读**：文本在渲染的 PNG 中清晰可读
+27. **平衡构图**：没有大的空白或过度拥挤的区域

@@ -1,164 +1,164 @@
-# Data Sources for Company Research
+# 公司研究数据源
 
-## SEC EDGAR (US Listed Companies)
+## 美国证券交易委员会 EDGAR（美国上市公司）
 
-**Website**: https://www.sec.gov/edgar/
+**网站**：https://www.sec.gov/edgar/
 
-### Essential Documents
+### 必备文件
 
-| Document | Code | Frequency | Content |
+| 文件 | 代码 | 频率 | 内容 |
 |----------|------|-----------|---------|
-| Annual Report | 10-K | Yearly | Full financial data, management discussion |
-| Quarterly Report | 10-Q | Quarterly | Quarterly financial statements |
-| Current Report | 8-K | Event-driven | Material events, urgent disclosures |
-| Foreign Report | 6-K | Quarterly | Foreign company quarterly report |
-| Proxy Statement | 14A | Yearly | Management compensation, voting, governance |
+| 年报 | 10-K | 每年 | 完整财务数据、管理层讨论 |
+| 季报 | 10-Q | 每季度 | 季度财务报表 |
+| 当期报告 | 8-K | 事件驱动 | 重大事件、紧急披露 |
+| 外国公司报告 | 6-K | 每季度 | 外国公司季度报告 |
+| 代理声明 | 14A | 每年 | 管理层薪酬、投票、公司治理 |
 
-### Search Steps
+### 搜索步骤
 
-1. Go to SEC EDGAR
-2. Search by company name or stock code (e.g., "Gridsum" or "GSUM")
-3. Click "Filings" to see all documents
-4. Download PDF from "Documents" tab
+1. 访问美国证券交易委员会 EDGAR
+2. 按公司名称或股票代码搜索（如"Gridsum"或"GSUM"）
+3. 点击"Filings"查看所有文件
+4. 从"Documents"标签下载PDF
 
-### Direct Link Format
+### 直接链接格式
 
 ```
 https://www.sec.gov/Archives/edgar/data/{CIK}/{accession-number}/{filename}
 ```
 
-Example: https://www.sec.gov/Archives/edgar/data/1647338/000119312519117186/d733161d20f.htm
+示例：https://www.sec.gov/Archives/edgar/data/1647338/000119312519117186/d733161d20f.htm
 
 ---
 
-## Chinese Companies Data Sources
+## 中国公司数据源
 
-### 巨潮资讯 (Official)
+### 巨潮资讯（官方）
 
-**Website**: http://www.cninfo.com.cn/
+**网站**：http://www.cninfo.com.cn/
 
-- Search by stock code or company name
-- Download annual reports (年度报告), interim reports (中期报告)
-- Find announcements (公告)
+- 按股票代码或公司名称搜索
+- 下载年报（年度报告）、中期报告（中期报告）
+- 查找公告（公告）
 
-### 东方财富 (Easy Finance)
+### 东方财富（易用财经）
 
-**Website**: https://www.eastmoney.com/
+**网站**：https://www.eastmoney.com/
 
-- Financial data in tables
-- Industry comparison tools
-- Analyst reports
+- 表格形式的财务数据
+- 行业比较工具
+- 分析师报告
 
-### Wind (Professional)
+### Wind（专业版）
 
-**Website**: https://www.wind.com.cn/
+**网站**：https://www.wind.com.cn/
 
-- Professional terminal (paid)
-- Comprehensive data
-- Analyst research
-
----
-
-## Hong Kong Listed Companies
-
-### HKEXnews
-
-**Website**: https://www.hkexnews.hk/
-
-- Annual reports (年报)
-- Interim reports (中期报告)
-- Shareholder circulars
+- 专业终端（付费）
+- 综合数据
+- 分析师研究
 
 ---
 
-## Financial Data Aggregators
+## 香港上市公司
 
-### Yahoo Finance
+### 港交所披露易
 
-**Website**: https://finance.yahoo.com/
+**网站**：https://www.hkexnews.hk/
 
-- Quote page: `https://finance.yahoo.com/quote/{TICKER}`
-- Financials: `https://finance.yahoo.com/quote/{TICKER}/financials`
-- Balance Sheet: `https://finance.yahoo.com/quote/{TICKER}/balance-sheet`
-- Cash Flow: `https://finance.yahoo.com/quote/{TICKER}/cash-flow`
+- 年报（年报）
+- 中期报告（中期报告）
+- 股东通函
+
+---
+
+## 财务数据聚合器
+
+### 雅虎财经
+
+**网站**：https://finance.yahoo.com/
+
+- 报价页面：`https://finance.yahoo.com/quote/{TICKER}`
+- 财务数据：`https://finance.yahoo.com/quote/{TICKER}/financials`
+- 资产负债表：`https://finance.yahoo.com/quote/{TICKER}/balance-sheet`
+- 现金流量：`https://finance.yahoo.com/quote/{TICKER}/cash-flow`
 
 ### Barchart
 
-**Website**: https://www.barchart.com/
+**网站**：https://www.barchart.com/
 
-- Quick financial summary
-- Annual/quarterly data tables
-- Historical data
+- 快速财务摘要
+- 年度/季度数据表
+- 历史数据
 
 ### MarketWatch
 
-**Website**: https://www.marketwatch.com/
+**网站**：https://www.marketwatch.com/
 
-- Financial data
-- Analyst ratings
-- Company profile
+- 财务数据
+- 分析师评级
+- 公司概况
 
 ---
 
-## Third-Party Analysis
+## 第三方分析
 
 ### Seeking Alpha
 
-**Website**: https://seekingalpha.com/
+**网站**：https://seekingalpha.com/
 
-- User-generated analysis
-- Earnings call transcripts
-- Article comments and discussions
+- 用户生成的分析
+- 财报电话会议记录
+- 文章评论和讨论
 
 ### Motley Fool
 
-**Website**: https://www.fool.com/
+**网站**：https://www.fool.com/
 
-- Long-term investment analysis
-- Stock recommendations
-- Educational content
+- 长期投资分析
+- 股票推荐
+- 教育内容
 
 ### Special Situation Investments
 
-**Website**: https://www.specialsituationinvestments.com/
+**网站**：https://www.specialsituationinvestments.com/
 
-- Special situations (spin-offs, bankruptcies, going private)
-- Merger arbitrage
-- Distressed debt
+- 特殊情况（分拆、破产、私有化）
+- 并购套利
+- 困境债务
 
 ---
 
-## News and Press Releases
+## 新闻和新闻稿
 
 ### PR Newswire
 
-**Website**: https://www.prnewswire.com/
+**网站**：https://www.prnewswire.com/
 
-- Official company press releases
-- Industry announcements
+- 官方公司新闻稿
+- 行业公告
 
 ### Reuters
 
-**Website**: https://www.reuters.com/
+**网站**：https://www.reuters.com/
 
-- Business news
-- Company analysis
-- Industry reports
+- 商业新闻
+- 公司分析
+- 行业报告
 
-### 36氪 (Chinese Tech)
+### 36氪（中国科技）
 
-**Website**: https://36kr.com/
+**网站**：https://36kr.com/
 
-- Chinese technology companies
-- Startups and innovation
-- Industry trends
+- 中国科技公司
+- 初创公司和创新
+- 行业趋势
 
 ---
 
-## Verification Tips
+## 验证技巧
 
-1. **Always check the source**: Prefer official filings over news articles
-2. **Cross-reference**: Use multiple sources to verify key facts
-3. **Check dates**: Ensure data is current and relevant
-4. **Read the footnotes**: Important details are often in notes and disclaimers
-5. **Look for trends**: Don't just check one year, look at 3-5 year trends
+1. **始终检查来源**：优先官方文件而非新闻报道
+2. **交叉验证**：使用多个来源验证关键事实
+3. **检查日期**：确保数据是最新且相关的
+4. **阅读脚注**：重要细节通常在注释和免责声明中
+5. **寻找趋势**：不要只检查一年，要看3-5年趋势

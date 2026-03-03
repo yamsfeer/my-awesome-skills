@@ -1,364 +1,364 @@
-# Agent Browser - Complete Command Reference
+# 代理浏览器 - 完整命令参考
 
-Complete reference for all agent-browser commands with detailed examples.
+所有 agent-browser 命令的完整参考，包含详细示例。
 
-## Table of Contents
+## 目录
 
-- [Navigation](#navigation)
-- [Page Interaction](#page-interaction)
-- [Mouse Control](#mouse-control)
-- [Keyboard](#keyboard)
-- [Get Info](#get-info)
-- [Check State](#check-state)
-- [Capture](#capture)
-- [Find Elements](#find-elements)
-- [Wait](#wait)
-- [Browser Settings](#browser-settings)
-- [Cookies & Storage](#cookies--storage)
-- [Network](#network)
-- [Tabs & Windows](#tabs--windows)
-- [Frames](#frames)
-- [Dialogs](#dialogs)
-- [Debug](#debug)
-- [Sessions](#sessions)
-- [Options](#options)
+- [导航](#导航)
+- [页面交互](#页面交互)
+- [鼠标控制](#鼠标控制)
+- [键盘](#键盘)
+- [获取信息](#获取信息)
+- [检查状态](#检查状态)
+- [截图](#截图)
+- [查找元素](#查找元素)
+- [等待](#等待)
+- [浏览器设置](#浏览器设置)
+- [Cookie 与存储](#cookie-与存储)
+- [网络](#网络)
+- [标签页与窗口](#标签页与窗口)
+- [框架](#框架)
+- [对话框](#对话框)
+- [调试](#调试)
+- [会话](#会话)
+- [选项](#选项)
 
 ---
 
-## Navigation
+## 导航
 
 ### open
 ```bash
 agent-browser open <url>
-agent-browser goto <url>      # alias
-agent-browser navigate <url>   # alias
+agent-browser goto <url>      # 别名
+agent-browser navigate <url>   # 别名
 ```
 
-Navigate to a URL. Opens a new browser instance if none exists.
+导航到 URL。如果不存在浏览器实例，则打开一个新的。
 
 ### back
 ```bash
 agent-browser back
 ```
 
-Go back in browser history.
+在浏览器历史中返回。
 
 ### forward
 ```bash
 agent-browser forward
 ```
 
-Go forward in browser history.
+在浏览器历史中前进。
 
 ### reload
 ```bash
 agent-browser reload
 ```
 
-Reload the current page.
+重新加载当前页面。
 
 ### close
 ```bash
 agent-browser close
-agent-browser quit   # alias
-agent-browser exit  # alias
+agent-browser quit   # 别名
+agent-browser exit  # 别名
 ```
 
-Close the browser and end the session.
+关闭浏览器并结束会话。
 
 ---
 
-## Page Interaction
+## 页面交互
 
 ### click
 ```bash
 agent-browser click <selector>
-agent-browser click @e2              # using ref
-agent-browser click "#submit"        # CSS selector
-agent-browser click "text=Submit"    # text selector
+agent-browser click @e2              # 使用引用
+agent-browser click "#submit"        # CSS 选择器
+agent-browser click "text=提交"      # 文本选择器
 ```
 
-Click an element.
+点击一个元素。
 
 ### dblclick
 ```bash
 agent-browser dblclick <selector>
 ```
 
-Double-click an element.
+双击一个元素。
 
 ### focus
 ```bash
 agent-browser focus <selector>
 ```
 
-Focus an element.
+聚焦一个元素。
 
 ### type
 ```bash
 agent-browser type <selector> <text>
 ```
 
-Type text into an element without clearing first.
+在元素中输入文本，不清空原有内容。
 
 ### fill
 ```bash
 agent-browser fill <selector> <text>
 ```
 
-Clear the element and then fill with text.
+清空元素并用文本填写。
 
 ### press
 ```bash
 agent-browser press <key>
-agent-browser key <key>   # alias
+agent-browser key <key>   # 别名
 ```
 
-Press a keyboard key. Common keys: `Enter`, `Tab`, `Escape`, `Backspace`, `ArrowDown`, `Control+a`, `Meta+c`.
+按键盘键。常用键：`Enter`, `Tab`, `Escape`, `Backspace`, `ArrowDown`, `Control+a`, `Meta+c`。
 
 ### hover
 ```bash
 agent-browser hover <selector>
 ```
 
-Hover over an element.
+悬停在元素上。
 
 ### select
 ```bash
 agent-browser select <selector> <value>
 ```
 
-Select an option from a dropdown.
+从下拉框中选择一个选项。
 
 ### check
 ```bash
 agent-browser check <selector>
 ```
 
-Check a checkbox.
+勾选复选框。
 
 ### uncheck
 ```bash
 agent-browser uncheck <selector>
 ```
 
-Uncheck a checkbox.
+取消勾选复选框。
 
 ---
 
-## Mouse Control
+## 鼠标控制
 
 ### mouse move
 ```bash
 agent-browser mouse move <x> <y>
 ```
 
-Move mouse to coordinates.
+将鼠标移动到坐标位置。
 
 ### mouse down
 ```bash
 agent-browser mouse down [button]   # left, right, middle
 ```
 
-Press mouse button (default: left).
+按下鼠标按钮（默认：左键）。
 
 ### mouse up
 ```bash
 agent-browser mouse up [button]
 ```
 
-Release mouse button.
+释放鼠标按钮。
 
 ### mouse wheel
 ```bash
 agent-browser mouse wheel <dy> [dx]
 ```
 
-Scroll mouse wheel.
+滚动鼠标滚轮。
 
 ---
 
-## Keyboard
+## 键盘
 
 ### keydown
 ```bash
 agent-browser keydown <key>
 ```
 
-Hold a key down.
+按住一个键。
 
 ### keyup
 ```bash
 agent-browser keyup <key>
 ```
 
-Release a held key.
+释放按住的键。
 
 ---
 
-## Get Info
+## 获取信息
 
 ### get text
 ```bash
 agent-browser get text <selector>
 ```
 
-Get text content of an element.
+获取元素的文本内容。
 
 ### get html
 ```bash
 agent-browser get html <selector>
 ```
 
-Get innerHTML of an element.
+获取元素的 innerHTML。
 
 ### get value
 ```bash
 agent-browser get value <selector>
 ```
 
-Get value of an input element.
+获取输入元素的值。
 
 ### get attr
 ```bash
 agent-browser get attr <selector> <attribute>
 ```
 
-Get attribute value (e.g., `href`, `src`, `data-id`).
+获取属性值（例如 `href`, `src`, `data-id`）。
 
 ### get title
 ```bash
 agent-browser get title
 ```
 
-Get page title.
+获取页面标题。
 
 ### get url
 ```bash
 agent-browser get url
 ```
 
-Get current URL.
+获取当前 URL。
 
 ### get count
 ```bash
 agent-browser get count <selector>
 ```
 
-Count matching elements.
+统计匹配元素的数量。
 
 ### get box
 ```bash
 agent-browser get box <selector>
 ```
 
-Get bounding box (x, y, width, height) of element.
+获取元素的边界框（x, y, width, height）。
 
 ---
 
-## Check State
+## 检查状态
 
 ### is visible
 ```bash
 agent-browser is visible <selector>
 ```
 
-Check if element is visible.
+检查元素是否可见。
 
 ### is enabled
 ```bash
 agent-browser is enabled <selector>
 ```
 
-Check if element is enabled.
+检查元素是否启用。
 
 ### is checked
 ```bash
 agent-browser is checked <selector>
 ```
 
-Check if checkbox is checked.
+检查复选框是否已勾选。
 
 ---
 
-## Capture
+## 截图
 
 ### snapshot
 ```bash
 agent-browser snapshot
-agent-browser snapshot -i                 # interactive only
-agent-browser snapshot -c                 # compact
-agent-browser snapshot -d 3               # max depth
-agent-browser snapshot -s "#main"         # scope to selector
+agent-browser snapshot -i                 # 仅交互元素
+agent-browser snapshot -c                 # 紧凑模式
+agent-browser snapshot -d 3               # 最大深度
+agent-browser snapshot -s "#main"         # 限定在选择器范围内
 ```
 
-Get accessibility tree with refs. Best for AI agents.
+获取带有引用的可访问性树。最适合 AI 代理。
 
-Output format:
+输出格式：
 ```
-- heading "Title" [ref=e1] [level=1]
-- button "Submit" [ref=e2]
-- textbox "Email" [ref=e3]
-- link "Learn more" [ref=e4]
+- heading "标题" [ref=e1] [level=1]
+- button "提交" [ref=e2]
+- textbox "邮箱" [ref=e3]
+- link "了解更多" [ref=e4]
 ```
 
 ### screenshot
 ```bash
 agent-browser screenshot [path]
-agent-browser screenshot --full page.png   # full page
-agent-browser screenshot -f page.png       # short for full
+agent-browser screenshot --full page.png   # 全页面
+agent-browser screenshot -f page.png       # --full 的简写
 ```
 
-Take a screenshot of the current page.
+截取当前页面的屏幕截图。
 
 ### pdf
 ```bash
 agent-browser pdf <path>
 ```
 
-Save current page as PDF.
+将当前页面保存为 PDF。
 
 ---
 
-## Find Elements
+## 查找元素
 
-Semantic locators for finding elements by role, text, label, etc.
+通过角色、文本、标签等查找元素的语义定位器。
 
 ### find role
 ```bash
 agent-browser find role <role> <action> [value]
-agent-browser find role button click --name "Submit"
-agent-browser find role link hover --name "Learn more"
-agent-browser find role textbox fill "Email" "test@test.com"
+agent-browser find role button click --name "提交"
+agent-browser find role link hover --name "了解更多"
+agent-browser find role textbox fill "邮箱" "test@test.com"
 ```
 
-Find by ARIA role. Roles: `button`, `link`, `textbox`, `heading`, `listbox`, `menuitem`, etc.
+通过 ARIA 角色查找。角色：`button`, `link`, `textbox`, `heading`, `listbox`, `menuitem` 等。
 
 ### find text
 ```bash
 agent-browser find text <text> <action>
-agent-browser find text "Sign In" click
-agent-browser find text "Welcome" text
+agent-browser find text "登录" click
+agent-browser find text "欢迎" text
 ```
 
-Find by text content.
+通过文本内容查找。
 
 ### find label
 ```bash
 agent-browser find label <label> <action> [value]
-agent-browser find label "Email" fill "test@test.com"
-agent-browser find label "Password" fill "secret123"
+agent-browser find label "邮箱" fill "test@test.com"
+agent-browser find label "密码" fill "secret123"
 ```
 
-Find by associated label.
+通过关联标签查找。
 
 ### find placeholder
 ```bash
 agent-browser find placeholder <placeholder> <action> [value]
-agent-browser find placeholder "Search" fill "query"
+agent-browser find placeholder "搜索" fill "查询词"
 ```
 
-Find by placeholder attribute.
+通过占位符属性查找。
 
 ### find alt
 ```bash
@@ -366,15 +366,15 @@ agent-browser find alt <text> <action>
 agent-browser find alt "Logo" click
 ```
 
-Find by alt text (images).
+通过 alt 文本查找（图片）。
 
 ### find title
 ```bash
 agent-browser find title <text> <action>
-agent-browser find title "Tooltip" hover
+agent-browser find title "提示" hover
 ```
 
-Find by title attribute.
+通过 title 属性查找。
 
 ### find testid
 ```bash
@@ -382,7 +382,7 @@ agent-browser find testid <id> <action> [value]
 agent-browser find testid "submit-btn" click
 ```
 
-Find by data-testid attribute.
+通过 data-testid 属性查找。
 
 ### find first/last/nth
 ```bash
@@ -391,34 +391,34 @@ agent-browser find last <selector> <action> [value]
 agent-browser find nth <n> <selector> <action> [value]
 ```
 
-Find nth matching element.
+查找第 n 个匹配的元素。
 
-**Actions**: `click`, `fill`, `check`, `hover`, `text`
+**操作**：`click`, `fill`, `check`, `hover`, `text`
 
 ---
 
-## Wait
+## 等待
 
 ### wait (selector)
 ```bash
 agent-browser wait <selector>
 ```
 
-Wait for element to be visible.
+等待元素可见。
 
 ### wait (time)
 ```bash
-agent-browser wait 5000   # wait 5000ms
+agent-browser wait 5000   # 等待 5000 毫秒
 ```
 
-Wait for specified milliseconds.
+等待指定的毫秒数。
 
 ### wait --text
 ```bash
-agent-browser wait --text "Welcome"
+agent-browser wait --text "欢迎"
 ```
 
-Wait for text to appear on page.
+等待文本出现在页面上。
 
 ### wait --url
 ```bash
@@ -426,7 +426,7 @@ agent-browser wait --url "**/dashboard"
 agent-browser wait --url "https://example.com/*"
 ```
 
-Wait for URL to match pattern.
+等待 URL 匹配模式。
 
 ### wait --load
 ```bash
@@ -435,18 +435,18 @@ agent-browser wait --load domcontentloaded
 agent-browser wait --load load
 ```
 
-Wait for page load state.
+等待页面加载状态。
 
 ### wait --fn
 ```bash
 agent-browser wait --fn "window.ready === true"
 ```
 
-Wait for JavaScript condition to be true.
+等待 JavaScript 条件为真。
 
 ---
 
-## Browser Settings
+## 浏览器设置
 
 ### set viewport
 ```bash
@@ -454,7 +454,7 @@ agent-browser set viewport <width> <height>
 agent-browser set viewport 1920 1080
 ```
 
-Set viewport size.
+设置视口大小。
 
 ### set device
 ```bash
@@ -463,7 +463,7 @@ agent-browser set device "iPhone 14"
 agent-browser set device "Pixel 5"
 ```
 
-Emulate a device. Common devices: `iPhone 14`, `iPhone SE`, `Pixel 5`, `iPad Pro`, etc.
+模拟设备。常用设备：`iPhone 14`, `iPhone SE`, `Pixel 5`, `iPad Pro` 等。
 
 ### set geo
 ```bash
@@ -471,7 +471,7 @@ agent-browser set geo <latitude> <longitude>
 agent-browser set geo 37.7749 -122.4194
 ```
 
-Set geolocation.
+设置地理位置。
 
 ### set offline
 ```bash
@@ -479,21 +479,21 @@ agent-browser set offline on
 agent-browser set offline off
 ```
 
-Toggle offline mode.
+切换离线模式。
 
 ### set headers
 ```bash
 agent-browser set headers '{"Authorization": "Bearer token"}'
 ```
 
-Set global HTTP headers.
+设置全局 HTTP 请求头。
 
 ### set credentials
 ```bash
 agent-browser set credentials <username> <password>
 ```
 
-Set HTTP basic authentication credentials.
+设置 HTTP 基本认证凭据。
 
 ### set media
 ```bash
@@ -501,42 +501,42 @@ agent-browser set media dark
 agent-browser set media light
 ```
 
-Emulate color scheme preference.
+模拟配色方案偏好。
 
 ---
 
-## Cookies & Storage
+## Cookie 与存储
 
 ### cookies
 ```bash
 agent-browser cookies
 ```
 
-Get all cookies.
+获取所有 Cookie。
 
 ### cookies set
 ```bash
 agent-browser cookies set <name> <value>
 ```
 
-Set a cookie.
+设置一个 Cookie。
 
 ### cookies clear
 ```bash
 agent-browser cookies clear
 ```
 
-Clear all cookies.
+清除所有 Cookie。
 
 ### storage local
 ```bash
-agent-browser storage local           # get all
-agent-browser storage local <key>     # get specific
-agent-browser storage local set <k> <v>  # set value
-agent-browser storage local clear     # clear all
+agent-browser storage local           # 获取所有
+agent-browser storage local <key>     # 获取特定
+agent-browser storage local set <k> <v>  # 设置值
+agent-browser storage local clear     # 清除所有
 ```
 
-Manage localStorage.
+管理 localStorage。
 
 ### storage session
 ```bash
@@ -546,11 +546,11 @@ agent-browser storage session set <k> <v>
 agent-browser storage session clear
 ```
 
-Manage sessionStorage.
+管理 sessionStorage。
 
 ---
 
-## Network
+## 网络
 
 ### network route
 ```bash
@@ -559,14 +559,14 @@ agent-browser network route <url> --abort
 agent-browser network route <url> --body '{"status": "ok"}'
 ```
 
-Intercept and modify requests.
+拦截和修改请求。
 
 ### network unroute
 ```bash
 agent-browser network unroute [url]
 ```
 
-Remove request interception.
+移除请求拦截。
 
 ### network requests
 ```bash
@@ -574,80 +574,80 @@ agent-browser network requests
 agent-browser network requests --filter api
 ```
 
-View tracked requests.
+查看已追踪的请求。
 
 ---
 
-## Tabs & Windows
+## 标签页与窗口
 
 ### tab
 ```bash
-agent-browser tab              # list tabs
-agent-browser tab <n>          # switch to tab
+agent-browser tab              # 列出标签页
+agent-browser tab <n>          # 切换到标签页
 ```
 
-List or switch tabs.
+列出或切换标签页。
 
 ### tab new
 ```bash
 agent-browser tab new [url]
 ```
 
-Open new tab.
+打开新标签页。
 
 ### tab close
 ```bash
 agent-browser tab close [n]
 ```
 
-Close tab (current or specified).
+关闭标签页（当前或指定）。
 
 ### window new
 ```bash
 agent-browser window new
 ```
 
-Open new window.
+打开新窗口。
 
 ---
 
-## Frames
+## 框架
 
 ### frame
 ```bash
 agent-browser frame <selector>
 ```
 
-Switch to iframe.
+切换到 iframe。
 
 ### frame main
 ```bash
 agent-browser frame main
 ```
 
-Switch back to main frame.
+切换回主框架。
 
 ---
 
-## Dialogs
+## 对话框
 
 ### dialog accept
 ```bash
 agent-browser dialog accept [text]
 ```
 
-Accept alert/confirm/prompt dialog (with optional prompt text).
+接受 alert/confirm/prompt 对话框（带可选的提示文本）。
 
 ### dialog dismiss
 ```bash
 agent-browser dialog dismiss
 ```
 
-Dismiss dialog.
+关闭对话框。
 
 ---
 
-## Debug
+## 调试
 
 ### trace start/stop
 ```bash
@@ -655,7 +655,7 @@ agent-browser trace start [path]
 agent-browser trace stop [path]
 ```
 
-Record trace for debugging.
+录制追踪用于调试。
 
 ### console
 ```bash
@@ -663,7 +663,7 @@ agent-browser console
 agent-browser console --clear
 ```
 
-View or clear console messages.
+查看或清除控制台消息。
 
 ### errors
 ```bash
@@ -671,14 +671,14 @@ agent-browser errors
 agent-browser errors --clear
 ```
 
-View or clear page errors.
+查看或清除页面错误。
 
 ### highlight
 ```bash
 agent-browser highlight <selector>
 ```
 
-Highlight an element on the page.
+在页面上高亮显示一个元素。
 
 ### state save/load
 ```bash
@@ -686,21 +686,21 @@ agent-browser state save <path>
 agent-browser state load <path>
 ```
 
-Save/load authentication state (cookies, localStorage).
+保存/加载认证状态（Cookie, localStorage）。
 
 ---
 
-## Sessions
+## 会话
 
-Run multiple isolated browser instances.
+运行多个隔离的浏览器实例。
 
-### Via flag
+### 通过标志
 ```bash
 agent-browser --session agent1 open site-a.com
 agent-browser --session agent2 open site-b.com
 ```
 
-### Via environment
+### 通过环境变量
 ```bash
 AGENT_BROWSER_SESSION=agent1 agent-browser click "#btn"
 ```
@@ -710,37 +710,37 @@ AGENT_BROWSER_SESSION=agent1 agent-browser click "#btn"
 agent-browser session list
 ```
 
-List all active sessions.
+列出所有活动会话。
 
 ### session
 ```bash
 agent-browser session
 ```
 
-Show current session name.
+显示当前会话名称。
 
 ---
 
-## Options
+## 选项
 
-Global options that work with most commands:
+适用于大多数命令的全局选项：
 
-| Option | Description |
+| 选项 | 描述 |
 |--------|-------------|
-| `--session <name>` | Use isolated session |
-| `--headers <json>` | Set HTTP headers for URL origin |
-| `--executable-path <path>` | Custom browser executable |
-| `--json` | JSON output for machine parsing |
-| `--full, -f` | Full page screenshot |
-| `--name, -n` | Locator name filter |
-| `--exact` | Exact text match |
-| `--headed` | Show browser window |
-| `--cdp <port>` | Connect via Chrome DevTools Protocol |
-| `--debug` | Debug output |
+| `--session <name>` | 使用隔离会话 |
+| `--headers <json>` | 为 URL 来源设置 HTTP 请求头 |
+| `--executable-path <path>` | 自定义浏览器可执行文件 |
+| `--json` | JSON 输出用于机器解析 |
+| `--full, -f` | 全页面截图 |
+| `--name, -n` | 定位器名称过滤 |
+| `--exact` | 精确文本匹配 |
+| `--headed` | 显示浏览器窗口 |
+| `--cdp <port>` | 通过 Chrome DevTools 协议连接 |
+| `--debug` | 调试输出 |
 
 ---
 
-## Scrolling
+## 滚动
 
 ### scroll
 ```bash
@@ -751,26 +751,26 @@ agent-browser scroll left
 agent-browser scroll right
 ```
 
-Scroll page.
+滚动页面。
 
 ### scrollintoview
 ```bash
 agent-browser scrollintoview <selector>
-agent-browser scrollinto <selector>   # alias
+agent-browser scrollinto <selector>   # 别名
 ```
 
-Scroll element into view.
+将元素滚动到视图中。
 
 ---
 
-## Other Commands
+## 其他命令
 
 ### drag
 ```bash
 agent-browser drag <source> <target>
 ```
 
-Drag and drop.
+拖放。
 
 ### upload
 ```bash
@@ -778,7 +778,7 @@ agent-browser upload <selector> <files>
 agent-browser upload "#file-input" "/path/to/file1.png,/path/to/file2.jpg"
 ```
 
-Upload files (comma-separated).
+上传文件（逗号分隔）。
 
 ### eval
 ```bash
@@ -786,13 +786,13 @@ agent-browser eval <javascript>
 agent-browser eval "document.title"
 ```
 
-Execute JavaScript in page context.
+在页面上下文中执行 JavaScript。
 
 ---
 
-## Complete Workflow Examples
+## 完整工作流程示例
 
-### Login Flow
+### 登录流程
 ```bash
 agent-browser open https://example.com/login
 agent-browser snapshot
@@ -804,20 +804,21 @@ agent-browser screenshot dashboard.png
 agent-browser close
 ```
 
-### Form Testing
+### 表单测试
 ```bash
 agent-browser open https://example.com/form
-agent-browser snapshot -i    # interactive only
-agent-browser find label "Name" fill "John Doe"
-agent-browser find label "Email" fill "john@example.com"
-agent-browser find role button click --name "Submit"
-agent-browser wait --text "Thank you"
+agent-browser snapshot -i    # 仅交互元素
+agent-browser find label "姓名" fill "张三"
+agent-browser find label "邮箱" fill "zhangsan@example.com"
+agent-browser find role button click --name "提交"
+agent-browser wait --text "谢谢"
 agent-browser is visible ".success-message"
 ```
 
-### Scraping
+### 数据抓取
 ```bash
 agent-browser open https://example.com/list
 agent-browser get count ".item"
 agent-browser get text ".item:first-child"
 agent-browser get attr ".item:first-child a" "href"
+```

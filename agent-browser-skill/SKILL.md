@@ -1,167 +1,167 @@
 ---
 name: agent-browser-skill
-description: Headless browser automation CLI for AI agents. Use when Claude needs to automate web browsing tasks like navigating pages, clicking elements, filling forms, taking screenshots, extracting content, or interacting with web applications. Supports refs-based element selection, semantic locators, and programmatic control via Playwright.
+description: 用于 AI 代理的无头浏览器自动化 CLI。当 Claude 需要自动化网页浏览任务时使用，如导航页面、点击元素、填写表单、截取屏幕截图、提取内容或与 Web 应用程序交互。支持基于引用的元素选择、语义定位器和通过 Playwright 的程序化控制。
 ---
 
-# Agent Browser
+# 代理浏览器（Agent Browser）
 
-Headless browser automation CLI optimized for AI agents. Uses Rust CLI with Node.js fallback and Playwright browser engine.
+为 AI 代理优化的无头浏览器自动化 CLI。使用 Rust CLI 与 Node.js 回退和 Playwright 浏览器引擎。
 
-## Quick Start
+## 快速开始
 
 ```bash
-agent-browser open <url>              # Navigate to URL
-agent-browser snapshot                # Get accessibility tree with refs
-agent-browser click @e2               # Click by ref
-agent-browser fill @e3 "text"         # Fill by ref
+agent-browser open <url>              # 导航到 URL
+agent-browser snapshot                # 获取带有引用的可访问性树
+agent-browser click @e2               # 通过引用点击
+agent-browser fill @e3 "文本"         # 通过引用填写
 agent-browser screenshot page.png
 agent-browser close
 ```
 
-## Installation
+## 安装
 
 ```bash
 npm install -g agent-browser
-agent-browser install  # Download Chromium
+agent-browser install  # 下载 Chromium
 ```
 
-For Linux system dependencies:
+对于 Linux 系统依赖：
 
 ```bash
 agent-browser install --with-deps
 ```
 
-## Core Workflow
+## 核心工作流程
 
-1. **Navigate**: `agent-browser open <url>`
-2. **Snapshot**: `agent-browser snapshot` - Get page structure with refs (@e1, @e2, ...)
-3. **Interact**: Use refs to click, fill, or get elements
-4. **Re-snapshot**: After page changes, get new snapshot
-5. **Close**: `agent-browser close` when done
+1. **导航**：`agent-browser open <url>`
+2. **快照**：`agent-browser snapshot` - 获取带有引用（@e1, @e2, ...）的页面结构
+3. **交互**：使用引用进行点击、填写或获取元素
+4. **重新快照**：页面变化后，获取新快照
+5. **关闭**：完成后执行 `agent-browser close`
 
-## Why Refs?
+## 为什么使用引用？
 
-Refs provide deterministic element selection from snapshots:
+引用提供来自快照的确定性元素选择：
 
-- Fast: No DOM re-query needed
-- Reliable: Ref points to exact element from snapshot
-- AI-friendly: Snapshot + ref workflow is optimal for LLMs
+- 快速：无需 DOM 重新查询
+- 可靠：引用指向快照中的确切元素
+- AI 友好：快照 + 引用工作流程对 LLM 来说是最佳的
 
-## Commands
+## 命令
 
-### Navigation
-
-```bash
-agent-browser open <url>              # Navigate (aliases: goto, navigate)
-agent-browser back                    # Go back
-agent-browser forward                 # Go forward
-agent-browser reload                  # Reload page
-agent-browser close                   # Close browser (aliases: quit, exit)
-```
-
-### Page Interaction
+### 导航
 
 ```bash
-agent-browser click <sel>             # Click element
-agent-browser dblclick <sel>          # Double-click
-agent-browser focus <sel>             # Focus element
-agent-browser type <sel> <text>       # Type into element
-agent-browser fill <sel> <text>       # Clear and fill
-agent-browser press <key>             # Press key (Enter, Tab, Control+a)
-agent-browser hover <sel>             # Hover element
-agent-browser select <sel> <val>      # Select dropdown
-agent-browser check <sel>             # Check checkbox
-agent-browser uncheck <sel>           # Uncheck checkbox
+agent-browser open <url>              # 导航（别名：goto, navigate）
+agent-browser back                    # 返回
+agent-browser forward                 # 前进
+agent-browser reload                  # 重新加载页面
+agent-browser close                   # 关闭浏览器（别名：quit, exit）
 ```
 
-### Scrolling
+### 页面交互
 
 ```bash
-agent-browser scroll <dir> [px]       # Scroll (up/down/left/right)
-agent-browser scrollintoview <sel>    # Scroll element into view
+agent-browser click <sel>             # 点击元素
+agent-browser dblclick <sel>          # 双击
+agent-browser focus <sel>             # 聚焦元素
+agent-browser type <sel> <text>       # 在元素中输入文本
+agent-browser fill <sel> <text>       # 清空并填写
+agent-browser press <key>             # 按键（Enter, Tab, Control+a）
+agent-browser hover <sel>             # 悬停元素
+agent-browser select <sel> <val>      # 选择下拉框
+agent-browser check <sel>             # 勾选复选框
+agent-browser uncheck <sel>           # 取消勾选复选框
 ```
 
-### Get Info
+### 滚动
 
 ```bash
-agent-browser get text <sel>          # Get text content
-agent-browser get html <sel>          # Get innerHTML
-agent-browser get value <sel>         # Get input value
-agent-browser get attr <sel> <attr>   # Get attribute
-agent-browser get title               # Get page title
-agent-browser get url                 # Get current URL
-agent-browser get count <sel>         # Count matching elements
-agent-browser get box <sel>           # Get bounding box
+agent-browser scroll <dir> [px]       # 滚动（上/下/左/右）
+agent-browser scrollintoview <sel>    # 将元素滚动到视图中
 ```
 
-### Check State
+### 获取信息
 
 ```bash
-agent-browser is visible <sel>        # Check if visible
-agent-browser is enabled <sel>        # Check if enabled
-agent-browser is checked <sel>        # Check if checked
+agent-browser get text <sel>          # 获取文本内容
+agent-browser get html <sel>          # 获取 innerHTML
+agent-browser get value <sel>         # 获取输入值
+agent-browser get attr <sel> <attr>   # 获取属性
+agent-browser get title               # 获取页面标题
+agent-browser get url                 # 获取当前 URL
+agent-browser get count <sel>         # 统计匹配元素数量
+agent-browser get box <sel>           # 获取边界框
 ```
 
-### Capture
+### 检查状态
 
 ```bash
-agent-browser snapshot                # Accessibility tree with refs
-agent-browser screenshot [path]       # Take screenshot (--full for full page)
-agent-browser pdf <path>              # Save as PDF
+agent-browser is visible <sel>        # 检查是否可见
+agent-browser is enabled <sel>        # 检查是否启用
+agent-browser is checked <sel>        # 检查是否已勾选
 ```
 
-### Find (Semantic Locators)
+### 截图
 
 ```bash
-agent-browser find role <role> <action> [value]     # By ARIA role
-agent-browser find text <text> <action>             # By text content
-agent-browser find label <label> <action> [value]   # By label
-agent-browser find placeholder <ph> <action> [val]  # By placeholder
-agent-browser find testid <id> <action> [value]     # By data-testid
+agent-browser snapshot                # 可访问性树及引用
+agent-browser screenshot [path]       # 截取屏幕截图（--full 表示全页面）
+agent-browser pdf <path>              # 保存为 PDF
 ```
 
-Actions: `click`, `fill`, `check`, `hover`, `text`
-
-### Wait
+### 查找（语义定位器）
 
 ```bash
-agent-browser wait <sel>              # Wait for element to be visible
-agent-browser wait <ms>               # Wait milliseconds
-agent-browser wait --text "Welcome"   # Wait for text to appear
-agent-browser wait --url "**/dash"    # Wait for URL pattern
-agent-browser wait --load networkidle # Wait for load state
+agent-browser find role <role> <action> [value]     # 通过 ARIA 角色
+agent-browser find text <text> <action>             # 通过文本内容
+agent-browser find label <label> <action> [value]   # 通过标签
+agent-browser find placeholder <ph> <action> [val]  # 通过占位符
+agent-browser find testid <id> <action> [value]     # 通过 data-testid
 ```
 
-### Other
+操作：`click`, `fill`, `check`, `hover`, `text`
+
+### 等待
 
 ```bash
-agent-browser eval <js>               # Run JavaScript
-agent-browser drag <src> <tgt>        # Drag and drop
-agent-browser upload <sel> <files>    # Upload files
+agent-browser wait <sel>              # 等待元素可见
+agent-browser wait <ms>               # 等待毫秒
+agent-browser wait --text "欢迎"      # 等待文本出现
+agent-browser wait --url "**/dash"    # 等待 URL 模式匹配
+agent-browser wait --load networkidle # 等待加载状态
 ```
 
-## Snapshot Options
+### 其他
 
 ```bash
-agent-browser snapshot                # Full accessibility tree
-agent-browser snapshot -i             # Interactive elements only
-agent-browser snapshot -c             # Compact mode
-agent-browser snapshot -d 3           # Limit depth to 3 levels
-agent-browser snapshot -s "#main"     # Scope to CSS selector
-agent-browser snapshot -i -c -d 5     # Combine options
+agent-browser eval <js>               # 运行 JavaScript
+agent-browser drag <src> <tgt>        # 拖放
+agent-browser upload <sel> <files>    # 上传文件
 ```
 
-## Selectors
+## 快照选项
 
-**Refs** (recommended): `@e1`, `@e2`, etc. from snapshot
-**CSS**: `#id`, `.class`, `div > button`
-**Text**: `text=Submit`
-**XPath**: `xpath=//button`
-**Semantic**: `agent-browser find role button click --name "Submit"`
+```bash
+agent-browser snapshot                # 完整可访问性树
+agent-browser snapshot -i             # 仅交互元素
+agent-browser snapshot -c             # 紧凑模式
+agent-browser snapshot -d 3           # 限制深度为 3 层
+agent-browser snapshot -s "#main"     # 限定在 CSS 选择器范围内
+agent-browser snapshot -i -c -d 5     # 组合选项
+```
 
-## JSON Mode
+## 选择器
 
-For machine-readable output:
+**引用**（推荐）：`@e1`, `@e2` 等，来自快照
+**CSS**：`#id`, `.class`, `div > button`
+**文本**：`text=提交`
+**XPath**：`xpath=//button`
+**语义**：`agent-browser find role button click --name "提交"`
+
+## JSON 模式
+
+用于机器可读的输出：
 
 ```bash
 agent-browser snapshot --json
@@ -169,33 +169,33 @@ agent-browser get text @e1 --json
 agent-browser is visible @e2 --json
 ```
 
-## Sessions
+## 会话
 
-Run multiple isolated browser instances:
+运行多个隔离的浏览器实例：
 
 ```bash
 agent-browser --session agent1 open site-a.com
 agent-browser --session agent2 open site-b.com
-agent-browser session list            # List active sessions
+agent-browser session list            # 列出活动会话
 ```
 
-## Browser Settings
+## 浏览器设置
 
 ```bash
-agent-browser set viewport <w> <h>    # Set viewport size
-agent-browser set device "iPhone 14"  # Emulate device
-agent-browser set geo <lat> <lng>     # Set geolocation
-agent-browser set offline on          # Toggle offline mode
-agent-browser set media dark          # Emulate color scheme
+agent-browser set viewport <w> <h>    # 设置视口大小
+agent-browser set device "iPhone 14"  # 模拟设备
+agent-browser set geo <lat> <lng>     # 设置地理位置
+agent-browser set offline on          # 切换离线模式
+agent-browser set media dark          # 模拟配色方案
 ```
 
-## Advanced
+## 高级功能
 
-**Headers**: `agent-browser open <url> --headers '{"Authorization": "Bearer token"}'`
-**Headed**: `agent-browser open <url> --headed` (show browser window)
-**CDP**: `agent-browser --cdp 9222` (connect via Chrome DevTools Protocol)
-**Trace**: `agent-browser trace start` / `trace stop` for debugging
+**请求头**：`agent-browser open <url> --headers '{"Authorization": "Bearer token"}'`
+**有头模式**：`agent-browser open <url> --headed`（显示浏览器窗口）
+**CDP**：`agent-browser --cdp 9222`（通过 Chrome DevTools 协议连接）
+**追踪**：`agent-browser trace start` / `trace stop` 用于调试
 
-## Full Reference
+## 完整参考
 
-See [commands.md](references/commands.md) for complete command reference with examples.
+有关完整的命令参考及示例，请参阅 [commands.md](references/commands.md)。
