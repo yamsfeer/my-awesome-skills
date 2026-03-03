@@ -1,5 +1,5 @@
 ---
-name: agent-browser
+name: agent-browser-skill
 description: Headless browser automation CLI for AI agents. Use when Claude needs to automate web browsing tasks like navigating pages, clicking elements, filling forms, taking screenshots, extracting content, or interacting with web applications. Supports refs-based element selection, semantic locators, and programmatic control via Playwright.
 ---
 
@@ -26,6 +26,7 @@ agent-browser install  # Download Chromium
 ```
 
 For Linux system dependencies:
+
 ```bash
 agent-browser install --with-deps
 ```
@@ -41,6 +42,7 @@ agent-browser install --with-deps
 ## Why Refs?
 
 Refs provide deterministic element selection from snapshots:
+
 - Fast: No DOM re-query needed
 - Reliable: Ref points to exact element from snapshot
 - AI-friendly: Snapshot + ref workflow is optimal for LLMs
@@ -48,6 +50,7 @@ Refs provide deterministic element selection from snapshots:
 ## Commands
 
 ### Navigation
+
 ```bash
 agent-browser open <url>              # Navigate (aliases: goto, navigate)
 agent-browser back                    # Go back
@@ -57,6 +60,7 @@ agent-browser close                   # Close browser (aliases: quit, exit)
 ```
 
 ### Page Interaction
+
 ```bash
 agent-browser click <sel>             # Click element
 agent-browser dblclick <sel>          # Double-click
@@ -71,12 +75,14 @@ agent-browser uncheck <sel>           # Uncheck checkbox
 ```
 
 ### Scrolling
+
 ```bash
 agent-browser scroll <dir> [px]       # Scroll (up/down/left/right)
 agent-browser scrollintoview <sel>    # Scroll element into view
 ```
 
 ### Get Info
+
 ```bash
 agent-browser get text <sel>          # Get text content
 agent-browser get html <sel>          # Get innerHTML
@@ -89,6 +95,7 @@ agent-browser get box <sel>           # Get bounding box
 ```
 
 ### Check State
+
 ```bash
 agent-browser is visible <sel>        # Check if visible
 agent-browser is enabled <sel>        # Check if enabled
@@ -96,6 +103,7 @@ agent-browser is checked <sel>        # Check if checked
 ```
 
 ### Capture
+
 ```bash
 agent-browser snapshot                # Accessibility tree with refs
 agent-browser screenshot [path]       # Take screenshot (--full for full page)
@@ -103,6 +111,7 @@ agent-browser pdf <path>              # Save as PDF
 ```
 
 ### Find (Semantic Locators)
+
 ```bash
 agent-browser find role <role> <action> [value]     # By ARIA role
 agent-browser find text <text> <action>             # By text content
@@ -114,6 +123,7 @@ agent-browser find testid <id> <action> [value]     # By data-testid
 Actions: `click`, `fill`, `check`, `hover`, `text`
 
 ### Wait
+
 ```bash
 agent-browser wait <sel>              # Wait for element to be visible
 agent-browser wait <ms>               # Wait milliseconds
@@ -123,6 +133,7 @@ agent-browser wait --load networkidle # Wait for load state
 ```
 
 ### Other
+
 ```bash
 agent-browser eval <js>               # Run JavaScript
 agent-browser drag <src> <tgt>        # Drag and drop
@@ -151,6 +162,7 @@ agent-browser snapshot -i -c -d 5     # Combine options
 ## JSON Mode
 
 For machine-readable output:
+
 ```bash
 agent-browser snapshot --json
 agent-browser get text @e1 --json
@@ -160,6 +172,7 @@ agent-browser is visible @e2 --json
 ## Sessions
 
 Run multiple isolated browser instances:
+
 ```bash
 agent-browser --session agent1 open site-a.com
 agent-browser --session agent2 open site-b.com
