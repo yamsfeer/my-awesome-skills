@@ -1,0 +1,168 @@
+# footX - 领域层数据契约
+# 警告：此层含敏感字段，仅后端内部使用，禁止直接暴露给前端
+
+entities:
+
+  User:
+    description: 用户账户主体
+    fields:
+      id:            { type: uuid, primary: true }
+      email:         { type: string, nullable: true }   # ⚠️ 禁止暴露（Apple 隐藏邮件时为 relay 地址）
+      auth_provider: { type: enum, values: [apple, google, email] }
+      provider_id:   { type: string }                   # ⚠️ 禁止暴露（Apple/Google sub 字段）
+      password_hash: { type: string, nullable: true }   # ⚠️ 禁止暴露
+      is_active:     { type: boolean, default: true }
+      created_at:    { type: timestamp }
+      updated_at:    { type: timestamp }
+    indexes:
+      - [email] unique: true, where: "email IS NOT NULL"
+      - [provider_id, auth_provider] unique: true
+
+  UserProfile:
+    description: 用户足部档案（分析前置信息）
+    fields:
+      id:               { type: uuid, primary: true }
+      user_id:          { type: uuid, fk: User.id, cascade: delete }
+      shoe_size_us:     { type: decimal(4,1), nullable: true }  # US 码
+      shoe_size_eu:     { type: integer, nullable: true }       # EU 码
+      gender:           { type: enum, values: [male, female, other, prefer_not_to_say], nullable: true }
+      birth_year:       { type: integer, nullable: true }       # ⚠️ 敏感，不暴露原始值
+      sport_preference: { type: array<string>, nullable: true } # e.g. [running, hiking, casual]
+      profile_completed: { type: boolean, default: false }
+      updated_at:       { type: timestamp }
+    indexes:
+      - [user_id] unique: true
+
+  Address:
+    description: 收货地址（海外格式）
+    fields:
+      id:           { type: uuid, primary: true }
+      user_id:      { type: uuid, fk: User.id, cascade: delete }
+      label:        { type: string, nullable: true }            # 如 "Home", "Office"
+      full_name:    { type: string }
+      phone:        { type: string, nullable: true }            # ⚠️ 敏感
+      address_line1: { type: string }
+      address_line2: { type: string, nullable: true }
+      city:         { type: string }
+      state:        { type: string, nullable: true }            # 州/省
+      country:      { type: string }                            # ISO 3166-1 alpha-2, e.g. "US"
+      postal_code:  { type: string }
+      is_default:   { type: boolean, default: false }
+      created_at:   { type: timestamp }
+    indexes:
+      - [user_id]
+      - [user_id, is_default]
+
+  AnalysisSession:
+    description: 一次足部 AI 分析任务
+    fields:
+      id:            { type: uuid, primary: true }
+      user_id:       { type: uuid, fk: User.id }
+      shoe_type:     { type: enum, values: [running, dress, casual, medical, hiking] }
+      video_url:     { type: string }                           # ⚠️ 私有存储 URL，禁止暴露
+      video_key:     { type: string }                           # ⚠️ S3/R2 存储键
+      status:        { type: enum, values: [pending, processing, completed, failed] }
+      error_message: { type: string, nullable: true }           # 内部错误详情
+      created_at:    { type: timestamp }
+      completed_at:  { type: timestamp, nullable: true }
+    indexes:
+      - [user_id]
+      - [status]
+      - [user_id, created_at]
+
+  AnalysisReport:
+    description: AI 足部分析结果
+    fields:
+      id:               { type: uuid, primary: true }
+      session_id:       { type: uuid, fk: AnalysisSession.id, unique: true }
+      arch_type:        { type: enum, values: [high_arch, normal, flat_foot] }
+      gait_pattern:     { type: enum, values: [neutral, overpronation, supination] }
+      pressure_map_url: { type: string, nullable: true }        # CDN 公开 URL
+      posture_score:    { type: integer }                       # 0-100
+      forward_head:     { type: boolean }                       # 是否头前倾
+      pelvis_tilt:      { type: decimal(5,2), nullable: true }  # 骨盆倾斜角度（度）
+      spine_curvature:  { type: decimal(5,2), nullable: true }  # 脊柱侧弯角度
+      raw_model_output: { type: jsonb }                         # ⚠️ 禁止暴露（AI 原始输出）
+      recommended_skus: { type: array<string> }                 # 按匹配度排序的 SKU 列表
+      confidence_score: { type: decimal(4,3) }                  # ⚠️ AI 置信度，内部使用
+      created_at:       { type: timestamp }
+    indexes:
+      - [session_id] unique: true
+
+  Product:
+    description: 鞋垫商品
+    fields:
+      id:             { type: uuid, primary: true }
+      sku:            { type: string, unique: true }
+      name:           { type: string }
+      description:    { type: text }
+      images:         { type: array<string> }               # CDN URL 列表
+      price_cents:    { type: integer }                     # USD 分，如 2999 = $29.99
+      currency:       { type: string, default: "USD" }
+      arch_type_fit:  { type: array<enum>, values: [high_arch, normal, flat_foot] }
+      gait_fit:       { type: array<enum>, values: [neutral, overpronation, supination] }
+      stock_qty:      { type: integer, default: 0 }         # ⚠️ 内部库存，不直接暴露
+      is_active:      { type: boolean, default: true }
+      created_at:     { type: timestamp }
+    indexes:
+      - [sku] unique: true
+      - [is_active]
+
+  Cart:
+    description: 购物车（持久化）
+    fields:
+      id:         { type: uuid, primary: true }
+      user_id:    { type: uuid, fk: User.id, unique: true }
+      updated_at: { type: timestamp }
+    indexes:
+      - [user_id] unique: true
+
+  CartItem:
+    description: 购物车行项
+    fields:
+      id:         { type: uuid, primary: true }
+      cart_id:    { type: uuid, fk: Cart.id, cascade: delete }
+      product_id: { type: uuid, fk: Product.id }
+      quantity:   { type: integer, default: 1 }
+      added_at:   { type: timestamp }
+    indexes:
+      - [cart_id]
+      - [cart_id, product_id] unique: true
+
+  Order:
+    description: 订单主体
+    fields:
+      id:                    { type: uuid, primary: true }
+      order_number:          { type: string, unique: true }       # 人类可读编号，如 FX-20240001
+      user_id:               { type: uuid, fk: User.id }
+      address_id:            { type: uuid, fk: Address.id }
+      address_snapshot:      { type: jsonb }                      # 下单时地址快照，防止地址修改影响历史
+      status:                { type: enum, values: [pending_payment, paid, processing, shipped, delivered, cancelled, refunded] }
+      total_cents:           { type: integer }                    # USD 分
+      currency:              { type: string, default: "USD" }
+      stripe_payment_intent: { type: string, nullable: true }     # ⚠️ 禁止暴露
+      stripe_customer_id:    { type: string, nullable: true }     # ⚠️ 禁止暴露
+      tracking_number:       { type: string, nullable: true }
+      tracking_carrier:      { type: string, nullable: true }
+      notes:                 { type: text, nullable: true }
+      created_at:            { type: timestamp }
+      paid_at:               { type: timestamp, nullable: true }
+      shipped_at:            { type: timestamp, nullable: true }
+    indexes:
+      - [user_id]
+      - [order_number] unique: true
+      - [status]
+      - [stripe_payment_intent]
+
+  OrderItem:
+    description: 订单行项
+    fields:
+      id:           { type: uuid, primary: true }
+      order_id:     { type: uuid, fk: Order.id, cascade: delete }
+      product_id:   { type: uuid, fk: Product.id }
+      product_snapshot: { type: jsonb }                           # 下单时商品快照
+      quantity:     { type: integer }
+      price_cents:  { type: integer }                             # 下单时单价
+      report_id:    { type: uuid, fk: AnalysisReport.id, nullable: true }  # 推荐来源
+    indexes:
+      - [order_id]

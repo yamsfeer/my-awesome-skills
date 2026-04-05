@@ -1,0 +1,422 @@
+# UI 层数据契约 - FreelanceBook
+# 说明：定义 UI 组件直接消费的数据格式，包含展示规则和多态状态
+# 按页面/组件组织
+
+# ========== 全局格式化规则 ==========
+
+format_rules:
+  date:
+    short:
+      condition: "距今 < 24 小时"
+      format: "今天"
+    recent:
+      condition: "距今 < 7 天"
+      format: "N 天前"
+    this_year:
+      condition: "今年内"
+      format: "M月D日"
+    cross_year:
+      condition: "跨年"
+      format: "YYYY年M月D日"
+
+  date_full:
+    format: "YYYY-MM-DD（用于发票日期等精确日期）"
+
+  currency:
+    unit: "分（整数存储）"
+    display: "元（保留两位小数，带¥符号）"
+    example: "存储 390000 → 显示 ¥3,900.00"
+    thousands_separator: true
+
+  invoice_status:
+    draft:
+      label: "草稿"
+      color: neutral
+      icon: edit
+    sent:
+      label: "已发送"
+      color: info
+      icon: send
+    paid:
+      label: "已收款"
+      color: success
+      icon: check
+    overdue:
+      label: "已逾期"
+      color: error
+      icon: alert
+
+  project_status:
+    active:
+      label: "进行中"
+      color: success
+    completed:
+      label: "已完成"
+      color: neutral
+    cancelled:
+      label: "已取消"
+      color: error
+    paused:
+      label: "已暂停"
+      color: warning
+
+  client_status:
+    active:
+      label: "活跃"
+      color: success
+    archived:
+      label: "已归档"
+      color: neutral
+
+
+# ========== 页面 / 组件定义 ==========
+
+pages:
+
+  # ---------- 仪表板 ----------
+  DashboardPage:
+    route: "/dashboard"
+    data_source: "GET /api/v1/stats/income + GET /api/v1/invoices?overdue_only=true"
+
+    states:
+      loading:
+        ui: "顶部 KPI 骨架屏（4 个数字区域）+ 图表骨架屏"
+        trigger: 页面挂载时
+      success:
+        ui: "正常展示 KPI 卡片 + 收入折线图 + 逾期提醒列表"
+        trigger: 数据加载成功
+      empty:
+        ui: "欢迎引导面板，从创建第一个客户开始"
+        trigger: total_income_cents === 0 且无任何发票
+      error:
+        ui: "通用错误提示 + [重试] 按钮"
+
+    components:
+      - name: KpiCard
+        data_source: "IncomeStats"
+        fields:
+          - field: total_income_cents
+            label: "本月收入"
+            format: "¥N,N00.00"
+            source: "series[-1].income_cents"
+          - field: paid_invoices
+            label: "已收款发票"
+            format: "N 张"
+            source: "paid_invoices"
+          - field: overdue_invoices
+            label: "逾期发票"
+            format: "N 张"
+            source: "overdue_invoices"
+            highlight_condition: "overdue_invoices > 0 则显示红色警示"
+          - field: pending_amount
+            label: "待收款"
+            format: "¥N,N00.00"
+            source: "total_income_cents - paid_amount_cents（计算字段）"
+
+      - name: IncomeChart
+        data_source: "IncomeStats.series"
+        fields:
+          - field: label
+            format: "月份简写，如 1月"
+            source: "series[].label"
+          - field: income_cents
+            format: "折线图 Y 轴，单位元"
+            source: "series[].income_cents"
+
+      - name: OverdueAlertList
+        data_source: "GET /api/v1/invoices?status=overdue"
+        fields:
+          - field: invoice_no
+            format: "1 行，超出省略"
+            source: "items[].invoice_no"
+          - field: client_name
+            source: "items[].project.client_name"
+          - field: amount_cents
+            format: "¥N,N00.00"
+            source: "items[].amount_cents"
+          - field: due_date
+            format: "YYYY-MM-DD（标红）"
+            source: "items[].due_date"
+
+
+  # ---------- 客户列表页 ----------
+  ClientListPage:
+    route: "/clients"
+    data_source: "GET /api/v1/clients"
+
+    states:
+      loading:
+        ui: "骨架屏（3 行卡片占位）"
+        trigger: 页面挂载或筛选条件变化
+      success:
+        ui: "客户卡片网格列表"
+        trigger: "items.length > 0"
+      empty:
+        ui: "空状态插画 + 还没有客户提示 + [添加客户] 按钮"
+        trigger: "items.length === 0"
+      error:
+        ui: "错误提示 + [重试]"
+
+    components:
+      - name: ClientCard
+        data_source: "items[]"
+        fields:
+          - field: name
+            format: "1 行，超出省略号，加粗"
+            source: "items[].name"
+          - field: company
+            format: "1 行，灰色小字"
+            source: "items[].company"
+            fallback: "（个人）"
+          - field: project_count
+            format: "N 个项目"
+            source: "items[].project_count"
+          - field: total_paid_cents
+            format: "累计 ¥N,N00"
+            source: "items[].total_paid_cents"
+          - field: status
+            format: "状态标签，见 client_status 映射"
+            source: "items[].status"
+
+
+  # ---------- 客户详情页 ----------
+  ClientDetailPage:
+    route: "/clients/:id"
+    data_source: "GET /api/v1/clients/:id"
+
+    states:
+      loading:
+        ui: "头部骨架屏 + 项目列表骨架屏"
+      success:
+        ui: "完整客户信息 + 联系人列表 + 项目列表"
+      not_found:
+        ui: "客户不存在或已删除 + [返回客户列表]"
+        trigger: "API 返回 404"
+      error:
+        ui: "通用错误提示"
+
+    components:
+      - name: ClientHeader
+        fields:
+          - field: name
+            format: "大标题"
+            source: "name"
+          - field: company
+            format: "副标题"
+            source: "company"
+          - field: status
+            format: "状态标签"
+            source: "status"
+          - field: total_paid_cents
+            label: "累计收款"
+            format: "¥N,N00.00"
+            source: "total_paid_cents"
+
+      - name: ContactList
+        fields:
+          - field: name
+            source: "contacts[].name"
+          - field: is_primary
+            format: "主联系人则显示主标签"
+            source: "contacts[].is_primary"
+          - field: contact_email
+            source: "contacts[].contact_email"
+            fallback: "—"
+          - field: contact_phone
+            source: "contacts[].contact_phone"
+            fallback: "—"
+
+
+  # ---------- 项目列表页 ----------
+  ProjectListPage:
+    route: "/projects"
+    data_source: "GET /api/v1/projects"
+
+    states:
+      loading:
+        ui: "骨架屏（3 行列表占位）"
+      success:
+        ui: "项目列表（含筛选栏）"
+      empty:
+        ui: "空状态 + [创建项目]"
+      error:
+        ui: "通用错误提示"
+
+    components:
+      - name: ProjectRow
+        data_source: "items[]"
+        fields:
+          - field: name
+            format: "1 行，加粗"
+            source: "items[].name"
+          - field: client_name
+            format: "灰色小字"
+            source: "items[].client.name"
+          - field: contract_amount_cents
+            label: "合同金额"
+            format: "¥N,N00.00"
+            source: "items[].contract_amount_cents"
+          - field: paid_amount_cents
+            label: "已收款"
+            format: "¥N,N00.00"
+            source: "items[].paid_amount_cents"
+          - field: status
+            format: "状态标签，见 project_status 映射"
+            source: "items[].status"
+          - field: start_date
+            format: "YYYY-MM-DD"
+            source: "items[].start_date"
+
+
+  # ---------- 发票列表页 ----------
+  InvoiceListPage:
+    route: "/invoices"
+    data_source: "GET /api/v1/invoices"
+
+    states:
+      loading:
+        ui: "骨架屏（4 行表格占位）"
+      success:
+        ui: "发票表格（可按状态筛选）"
+      empty:
+        ui: "空状态 + [创建发票]"
+      empty_filtered:
+        ui: "该筛选条件下没有发票 + [清除筛选]"
+        trigger: "有筛选条件但结果为空"
+      error:
+        ui: "通用错误提示"
+
+    components:
+      - name: InvoiceRow
+        data_source: "items[]"
+        fields:
+          - field: invoice_no
+            format: "等宽字体，1 行"
+            source: "items[].invoice_no"
+          - field: client_name
+            source: "items[].project.client_name"
+          - field: project_name
+            source: "items[].project.name"
+          - field: amount_cents
+            format: "¥N,N00.00，右对齐"
+            source: "items[].amount_cents"
+          - field: status
+            format: "状态标签，见 invoice_status 映射"
+            source: "items[].status"
+          - field: due_date
+            format: "YYYY-MM-DD；逾期则标红"
+            source: "items[].due_date"
+            condition_style: "status=overdue 时 color: error"
+          - field: paid_at
+            format: "YYYY-MM-DD；status=paid 才显示"
+            source: "items[].paid_at"
+
+
+  # ---------- 收入统计页 ----------
+  StatsPage:
+    route: "/stats"
+    data_source: "GET /api/v1/stats/income"
+
+    states:
+      loading:
+        ui: "图表骨架屏"
+      success:
+        ui: "年度/月度切换 + 柱状图 + 客户构成饼图"
+      empty:
+        ui: "本年度暂无收入数据 + 切换年度按钮"
+      error:
+        ui: "通用错误提示"
+
+    components:
+      - name: IncomeBarChart
+        fields:
+          - field: label
+            format: "X 轴月份"
+            source: "series[].label"
+          - field: income_cents
+            format: "Y 轴金额（元），千分位"
+            source: "series[].income_cents"
+
+      - name: ClientPieChart
+        fields:
+          - field: client_name
+            source: "by_client[].client_name"
+          - field: percentage
+            format: "N.N%"
+            source: "by_client[].percentage"
+          - field: income_cents
+            format: "¥N,N00"
+            source: "by_client[].income_cents"
+
+
+  # ---------- 税务预估页 ----------
+  TaxEstimatePage:
+    route: "/tax"
+    data_source: "GET /api/v1/stats/tax-estimate"
+
+    states:
+      loading:
+        ui: "计算结果区域骨架屏"
+      success:
+        ui: "税务预估结果 + 扣除项配置表单"
+      error:
+        ui: "通用错误提示"
+
+    components:
+      - name: TaxSummaryCard
+        fields:
+          - field: total_income_cents
+            label: "年度总收入"
+            format: "¥N,N00.00"
+            source: "total_income_cents"
+          - field: total_deductions_cents
+            label: "总扣除金额"
+            format: "¥N,N00.00"
+            source: "total_deductions_cents"
+          - field: taxable_income_cents
+            label: "应纳税所得额"
+            format: "¥N,N00.00"
+            source: "taxable_income_cents"
+          - field: estimated_tax_cents
+            label: "预计应缴税"
+            format: "¥N,N00.00，红色强调"
+            source: "estimated_tax_cents"
+          - field: effective_rate
+            label: "综合税率"
+            format: "N.N%"
+            source: "effective_rate"
+
+      - name: DeductionForm
+        fields:
+          - field: child_edu_deduction_cents
+            label: "子女教育"
+            format: "输入框（元），转换为分存储"
+          - field: housing_loan_deduction_cents
+            label: "住房贷款利息"
+            format: "输入框（元）"
+          - field: housing_rent_deduction_cents
+            label: "住房租金"
+            format: "输入框（元）"
+          - field: elderly_care_deduction_cents
+            label: "赡养老人"
+            format: "输入框（元）"
+
+
+# ========== 全局 UI 状态规范 ==========
+
+global_states:
+  network_error:
+    ui: "顶部 Toast，网络连接失败，请检查网络"
+    duration: 3000ms
+  session_expired:
+    ui: "弹窗登录已过期，请重新登录，含去登录按钮"
+    action: "跳转登录页，保存当前路由用于登录后回跳"
+  permission_denied:
+    ui: "Toast 无权限执行此操作"
+    duration: 2000ms
+  trial_expired:
+    ui: "全局横幅提示试用已到期，含立即升级按钮"
+    pages: 所有付费功能页面
+  pro_feature_gate:
+    ui: "功能被灰化 + 锁图标 + 悬停 Tooltip 升级 Pro 解锁"
+    action: "点击弹出升级弹窗"

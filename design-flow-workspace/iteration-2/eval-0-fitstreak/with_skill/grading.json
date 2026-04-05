@@ -1,0 +1,41 @@
+{
+  "eval_id": 0,
+  "config": "with_skill",
+  "expectations": [
+    {
+      "text": "核心文件是否创建",
+      "passed": true,
+      "evidence": "检查 product-overview.md, contracts/domain.yaml, design/tokens.json，存在=True"
+    },
+    {
+      "text": "敏感字段是否标注",
+      "passed": true,
+      "evidence": "domain.yaml 含'禁止暴露'=True"
+    },
+    {
+      "text": "Design Token 是否冻结",
+      "passed": true,
+      "evidence": "tokens.json 含'_frozen'=True"
+    },
+    {
+      "text": "线框图是否创建",
+      "passed": true,
+      "evidence": "wireframes/*.md 数量=6, 含 ASCII 框=True"
+    },
+    {
+      "text": "状态机是否创建",
+      "passed": true,
+      "evidence": "state-machine.yaml 含'states'=True"
+    },
+    {
+      "text": "可视化状态机是否生成",
+      "passed": true,
+      "evidence": "state-machine-visual.md 存在=True, 含 stateDiagram=True"
+    },
+    {
+      "text": "可交互 HTML 查看器是否生成",
+      "passed": true,
+      "evidence": "HTML 存在=True, mermaid CDN=True, STATES 对象=True"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "eval_id": 2,
+  "eval_name": "freelancebook-finance-tool_with_skill",
+  "run_dir": "/Users/yams/my-awesome-skills/design-flow-workspace/iteration-1/eval-2-freelancebook/with_skill",
+  "expectations": [
+    {
+      "text": "核心文件是否创建: freelancebook/ 目录下存在 product-overview.md, contracts/domain.yaml, design/tokens.json",
+      "passed": true,
+      "evidence": "Found 3/3 core files: ['product-overview.md', 'contracts/domain.yaml', 'design/tokens.json']"
+    },
+    {
+      "text": "金额字段是否用整数: domain.yaml 中金额相关字段应为 integer/int 类型，而非 float/decimal",
+      "passed": false,
+      "evidence": "Has amount/price: True, integer type: True, no float/decimal: False"
+    },
+    {
+      "text": "敏感字段是否标注: domain.yaml 包含 ⚠️ 禁止暴露 标记",
+      "passed": true,
+      "evidence": "Contains '禁止暴露' marker: True"
+    },
+    {
+      "text": "路线图是否有版本分层: product-roadmap.md 应包含至少两个版本阶段（如 v1.0 和 v1.5/v2.0）",
+      "passed": true,
+      "evidence": "Version markers found: ['v1.0', 'v1.5', 'v2.0', 'v2', 'MVP', '成长']"
+    }
+  ],
+  "config": "with_skill"
+}

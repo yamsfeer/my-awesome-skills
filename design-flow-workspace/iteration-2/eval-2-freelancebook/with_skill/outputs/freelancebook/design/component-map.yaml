@@ -1,0 +1,283 @@
+# 组件-数据映射表 - FreelanceBook
+# 将 API 数据字段与 UI 组件绑定，指定样式规格
+
+version: "1.0"
+design_token_ref: "design/tokens.json"
+
+components:
+
+  # ========== 全局布局 ==========
+
+  - name: AppLayout
+    description: 整体应用布局（侧边导航 + 内容区）
+    structure:
+      - sidebar: SideNav (width: tokens.layout.sidebar_width)
+      - main: ContentArea (max-width: tokens.layout.content_max_width)
+    notes:
+      - "顶部 nav 在小屏幕（< md）折叠为汉堡菜单"
+
+  - name: SideNav
+    description: 左侧固定导航栏
+    data_source: "本地状态 + users/me"
+    fields:
+      - field: logo
+        component: Image
+        style: "height: 32px; margin-bottom: 24px"
+      - field: nav_items
+        component: NavItem
+        style: "padding: 8px 12px; border-radius: tokens.radius.lg"
+        active_style: "background: tokens.color.primary.50; color: tokens.color.primary.600"
+      - field: user_name
+        component: Text
+        style: "font-size: tokens.typography.fontSize.sm; font-weight: medium"
+        source: "users/me.name"
+      - field: trial_badge
+        component: Badge
+        condition: "user.trial_days_left > 0"
+        style: "background: tokens.color.warning_bg; color: tokens.color.warning; font-size: xs"
+        format: "剩余 N 天试用"
+
+
+  # ========== KPI 卡片 ==========
+
+  - name: KpiCard
+    description: 仪表板顶部数据卡片
+    data_source: "GET /api/v1/stats/income"
+    fields:
+      - field: label
+        component: Text
+        style: "font-size: tokens.typography.fontSize.sm; color: tokens.color.neutral.500"
+      - field: value
+        component: Text
+        style: "font-size: tokens.typography.fontSize.kpi; font-weight: bold; color: tokens.color.neutral.900"
+        format: "金额用 ¥ + 千分位；张数直接数字"
+      - field: overdue_value
+        component: Text
+        style: "color: tokens.color.semantic.error; font-size: tokens.typography.fontSize.kpi"
+        condition: "field === overdue_invoices && value > 0"
+    layout: "grid 4 columns; gap: tokens.spacing.4"
+    shadow: "tokens.shadow.sm"
+    radius: "tokens.radius.xl"
+    padding: "tokens.spacing.5 tokens.spacing.6"
+
+
+  # ========== 客户卡片 ==========
+
+  - name: ClientCard
+    description: 客户列表卡片组件
+    data_source: "GET /api/v1/clients (items[])"
+    fields:
+      - field: name
+        component: Text
+        style: "font-size: tokens.typography.fontSize.lg; font-weight: semibold; max-lines: 1"
+        source: "items[].name"
+      - field: company
+        component: Text
+        style: "font-size: tokens.typography.fontSize.sm; color: tokens.color.neutral.500; max-lines: 1"
+        source: "items[].company"
+        fallback: "（个人）"
+      - field: project_count
+        component: Text
+        style: "font-size: tokens.typography.fontSize.sm; color: tokens.color.neutral.600"
+        format: "N 个项目"
+        source: "items[].project_count"
+      - field: total_paid_cents
+        component: Text
+        style: "font-size: tokens.typography.fontSize.base; font-weight: medium; color: tokens.color.primary.700"
+        format: "累计 ¥N,N00"
+        source: "items[].total_paid_cents"
+      - field: status_badge
+        component: Badge
+        source: "items[].status"
+        mapping:
+          active:   "background: tokens.color.semantic.success_bg; color: tokens.color.semantic.success"
+          archived: "background: tokens.color.neutral.100; color: tokens.color.neutral.500"
+    layout: "grid 3 columns; gap: tokens.spacing.4"
+    shadow: "tokens.shadow.sm"
+    radius: "tokens.radius.xl"
+    padding: "tokens.spacing.5"
+    hover: "shadow: tokens.shadow.md; transform: translateY(-1px)"
+
+
+  # ========== 发票行 ==========
+
+  - name: InvoiceRow
+    description: 发票列表行，用于表格展示
+    data_source: "GET /api/v1/invoices (items[])"
+    fields:
+      - field: invoice_no
+        component: Text
+        style: "font-family: tokens.typography.fontFamily.mono; font-size: tokens.typography.fontSize.sm"
+        source: "items[].invoice_no"
+      - field: client_name
+        component: Text
+        style: "font-size: tokens.typography.fontSize.sm; color: tokens.color.neutral.600"
+        source: "items[].project.client_name"
+      - field: amount_cents
+        component: Text
+        style: "font-size: tokens.typography.fontSize.base; font-weight: semibold; text-align: right"
+        format: "¥N,N00.00"
+        source: "items[].amount_cents"
+      - field: status_badge
+        component: StatusBadge
+        source: "items[].status"
+        mapping:
+          draft:   "background: tokens.color.neutral.100; color: tokens.color.neutral.600"
+          sent:    "background: tokens.color.info_bg; color: tokens.color.info"
+          paid:    "background: tokens.color.semantic.success_bg; color: tokens.color.semantic.success"
+          overdue: "background: tokens.color.semantic.error_bg; color: tokens.color.semantic.error"
+      - field: due_date
+        component: Text
+        style: "font-size: tokens.typography.fontSize.sm"
+        format: "YYYY-MM-DD"
+        source: "items[].due_date"
+        overdue_style: "color: tokens.color.semantic.error; font-weight: medium"
+
+
+  # ========== 发票详情卡片 ==========
+
+  - name: InvoiceDetailCard
+    description: 发票详情页顶部信息卡片
+    data_source: "GET /api/v1/invoices/:id"
+    fields:
+      - field: invoice_no
+        component: Text
+        style: "font-size: tokens.typography.fontSize.2xl; font-weight: bold; font-family: mono"
+        source: "invoice_no"
+      - field: status_badge
+        component: StatusBadge
+        source: "status"
+        size: "large"
+      - field: amount_cents
+        component: Text
+        style: "font-size: tokens.typography.fontSize.4xl; font-weight: bold; color: tokens.color.neutral.900"
+        format: "¥N,N00.00"
+        source: "amount_cents"
+      - field: issue_date
+        component: Text
+        style: "font-size: tokens.typography.fontSize.sm; color: tokens.color.neutral.500"
+        format: "开具 YYYY-MM-DD"
+        source: "issue_date"
+      - field: due_date
+        component: Text
+        style: "font-size: tokens.typography.fontSize.sm"
+        format: "到期 YYYY-MM-DD"
+        source: "due_date"
+        overdue_style: "color: tokens.color.semantic.overdue; font-weight: semibold"
+
+
+  # ========== 税务预估结果卡片 ==========
+
+  - name: TaxSummaryCard
+    description: 税务预估计算结果展示
+    data_source: "GET /api/v1/stats/tax-estimate"
+    fields:
+      - field: disclaimer
+        component: AlertBanner
+        style: "background: tokens.color.warning_bg; color: tokens.color.warning; border-radius: tokens.radius.lg; padding: 8px 12px"
+        content: "⚠️ 本工具仅供参考，以税务局实际申报为准"
+      - field: total_income_cents
+        component: TaxLineItem
+        label: "年度总收入"
+        style: "font-size: tokens.typography.fontSize.base"
+        format: "¥N,N00.00"
+        source: "total_income_cents"
+      - field: estimated_tax_cents
+        component: TaxLineItem
+        label: "预计应缴税"
+        style: "font-size: tokens.typography.fontSize.2xl; font-weight: bold; color: tokens.color.semantic.error"
+        format: "¥N,N00.00"
+        source: "estimated_tax_cents"
+      - field: effective_rate
+        component: Text
+        label: "综合税率"
+        style: "font-size: tokens.typography.fontSize.base; color: tokens.color.neutral.500"
+        format: "N.N%"
+        source: "effective_rate"
+
+
+  # ========== 收入图表 ==========
+
+  - name: IncomeBarChart
+    description: 月度/季度收入柱状图
+    data_source: "GET /api/v1/stats/income"
+    library: "recharts 或 Chart.js"
+    fields:
+      - field: x_axis
+        source: "series[].label"
+        format: "N月"
+      - field: y_axis
+        source: "series[].income_cents"
+        format: "分转元，千分位，如 ¥12,000"
+        unit: "元"
+    style:
+      bar_color: "tokens.color.primary.500"
+      bar_radius: "tokens.radius.sm"
+      grid_color: "tokens.color.neutral.100"
+      font_size: "tokens.typography.fontSize.xs"
+      height: "260px"
+
+
+  # ========== 通用空状态 ==========
+
+  - name: EmptyState
+    description: 列表/页面为空时的引导组件
+    variants:
+      - name: no_clients
+        illustration: "客户档案插画"
+        title: "还没有任何客户"
+        description: "添加第一个客户，开始记录你的自由职业收入"
+        cta: "添加客户"
+      - name: no_invoices
+        illustration: "发票插画"
+        title: "还没有发票"
+        cta: "创建发票"
+      - name: new_user
+        illustration: "欢迎插画"
+        title: "欢迎使用 FreelanceBook！"
+        description: "30 天免费试用，无需信用卡"
+        cta: "创建第一个客户"
+    style:
+      container_padding: "tokens.spacing.20"
+      title_size: "tokens.typography.fontSize.xl"
+      desc_size: "tokens.typography.fontSize.sm"
+      desc_color: "tokens.color.neutral.400"
+
+
+  # ========== 逾期提醒横幅 ==========
+
+  - name: OverdueBanner
+    description: 发票详情页的逾期提醒横幅
+    data_source: "invoice.status === overdue"
+    fields:
+      - field: overdue_days
+        component: Text
+        format: "此发票已逾期 N 天，请及时跟进客户付款"
+        source: "计算字段：today - due_date"
+    style:
+      background: "tokens.color.semantic.error_bg"
+      border: "1px solid tokens.color.semantic.error"
+      border_radius: "tokens.radius.lg"
+      padding: "tokens.spacing.3 tokens.spacing.4"
+      color: "tokens.color.semantic.overdue"
+      icon: "⚠️"
+
+
+  # ========== 试用到期全局横幅 ==========
+
+  - name: TrialExpiredBanner
+    description: 试用到期后全局顶部横幅
+    condition: "user.trial_days_left <= 0 && !user.is_pro"
+    fields:
+      - field: message
+        component: Text
+        content: "你的 30 天免费试用已结束，升级 Pro 解锁全部功能"
+      - field: cta
+        component: Button
+        label: "立即升级 ¥39/月"
+        style: "background: tokens.color.primary.600; color: white; font-weight: semibold"
+    style:
+      background: "tokens.color.primary.700"
+      color: "white"
+      height: "40px"
+      position: "sticky top-0 z-index: tokens.zIndex.sticky"

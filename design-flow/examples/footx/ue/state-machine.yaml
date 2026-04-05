@@ -1,0 +1,406 @@
+# footX - UE 状态机
+# 覆盖全部核心页面：认证流程 / 分析流程 / 购买流程 / 个人中心
+
+pages:
+
+  # ════════════════════════════════════════
+  # 1. 认证流程
+  # ════════════════════════════════════════
+
+  LoginPage:
+    initial_state: idle
+    states:
+      idle:
+        description: 展示登录选项（Apple/Google/Email）
+        transitions:
+          - trigger: tap_apple_signin → loading_apple
+          - trigger: tap_google_signin → loading_google
+          - trigger: tap_email_login → email_form
+      loading_apple:
+        description: 等待 Apple OAuth 回调
+        transitions:
+          - trigger: auth_success → [首次用户 → OnboardingPage | 老用户 → HomePage]
+          - trigger: auth_failed → error
+          - trigger: user_cancelled → idle
+      loading_google:
+        description: 等待 Google OAuth 回调
+        transitions:
+          - trigger: auth_success → [首次用户 → OnboardingPage | 老用户 → HomePage]
+          - trigger: auth_failed → error
+          - trigger: user_cancelled → idle
+      email_form:
+        description: 邮箱/密码输入表单
+        transitions:
+          - trigger: tap_login → loading_email
+          - trigger: tap_register → RegisterPage
+          - trigger: tap_back → idle
+      loading_email:
+        description: 验证邮箱密码
+        transitions:
+          - trigger: auth_success → [首次用户 → OnboardingPage | 老用户 → HomePage]
+          - trigger: auth_failed → email_error
+      email_error:
+        description: 账号或密码错误提示
+        transitions:
+          - trigger: tap_retry → email_form
+      error:
+        description: OAuth 登录失败通用错误
+        transitions:
+          - trigger: tap_retry → idle
+
+  RegisterPage:
+    initial_state: idle
+    states:
+      idle:
+        description: 邮箱注册表单
+        transitions:
+          - trigger: tap_register → loading
+          - trigger: tap_back → LoginPage
+      loading:
+        transitions:
+          - trigger: register_success → OnboardingPage
+          - trigger: register_failed → error
+      error:
+        transitions:
+          - trigger: tap_retry → idle
+
+  # ════════════════════════════════════════
+  # 2. 引导流程
+  # ════════════════════════════════════════
+
+  OnboardingPage:
+    description: 首次登录后填写足部档案（3 步）
+    initial_state: step1_shoe_size
+    states:
+      step1_shoe_size:
+        description: 输入 US/EU 鞋码
+        transitions:
+          - trigger: tap_next → step2_basic_info
+      step2_basic_info:
+        description: 选择性别 + 年龄段
+        transitions:
+          - trigger: tap_next → step3_sport_preference
+          - trigger: tap_back → step1_shoe_size
+      step3_sport_preference:
+        description: 选择运动偏好（多选）
+        transitions:
+          - trigger: tap_finish → saving
+          - trigger: tap_skip → HomePage      # 允许跳过
+          - trigger: tap_back → step2_basic_info
+      saving:
+        transitions:
+          - trigger: save_success → HomePage
+          - trigger: save_failed → error
+      error:
+        transitions:
+          - trigger: tap_retry → saving
+
+  # ════════════════════════════════════════
+  # 3. 首页
+  # ════════════════════════════════════════
+
+  HomePage:
+    initial_state: loading
+    states:
+      loading:
+        description: 骨架屏，加载用户信息和最近分析
+        transitions:
+          - trigger: data_loaded → success
+          - trigger: data_failed → error
+      success:
+        description: 展示用户信息、最近分析报告、快捷入口
+        transitions:
+          - trigger: tap_new_analysis → AnalysisShoeTypePage
+          - trigger: tap_report_card → AnalysisReportPage
+          - trigger: tap_shop → ProductListPage
+          - trigger: tap_orders → OrderListPage
+          - trigger: tap_profile → ProfilePage
+      error:
+        transitions:
+          - trigger: tap_retry → loading
+      empty_no_analysis:
+        description: 新用户无历史分析时的引导状态
+        transitions:
+          - trigger: tap_start_analysis → AnalysisShoeTypePage
+
+  # ════════════════════════════════════════
+  # 4. 分析流程（核心流程）
+  # ════════════════════════════════════════
+
+  AnalysisShoeTypePage:
+    description: Step 1：选择鞋类类型
+    initial_state: idle
+    states:
+      idle:
+        description: 展示 5 种鞋类选项（运动/正装/休闲/医疗/登山）
+        transitions:
+          - trigger: select_shoe_type → selected
+      selected:
+        description: 高亮所选类型，显示确认按钮
+        transitions:
+          - trigger: tap_next → AnalysisRecordingPage
+          - trigger: tap_other_type → idle
+
+  AnalysisRecordingPage:
+    description: Step 2：引导拍摄脚部视频
+    initial_state: guide
+    states:
+      guide:
+        description: 展示拍摄说明（3 步图文引导：站姿/行走/侧面）
+        transitions:
+          - trigger: tap_start_camera → camera_ready
+      camera_ready:
+        description: 相机预览，等待用户开始录制
+        transitions:
+          - trigger: tap_record → recording
+          - trigger: tap_back → guide
+          - trigger: camera_permission_denied → permission_error
+      recording:
+        description: 录制中，展示进度（建议 15-30 秒）
+        transitions:
+          - trigger: tap_stop → reviewing       # 手动停止
+          - trigger: max_duration_reached → reviewing
+      reviewing:
+        description: 预览录制的视频，确认或重新录制
+        transitions:
+          - trigger: tap_use_video → AnalysisUploadingPage
+          - trigger: tap_retake → camera_ready
+      permission_error:
+        description: 相机权限被拒绝，引导用户去设置
+        transitions:
+          - trigger: tap_open_settings → [系统设置]
+          - trigger: tap_back → AnalysisShoeTypePage
+
+  AnalysisUploadingPage:
+    description: Step 3：上传视频并触发 AI 分析
+    initial_state: uploading
+    states:
+      uploading:
+        description: 上传视频到云端，展示进度条（0-100%）
+        transitions:
+          - trigger: upload_complete → processing
+          - trigger: upload_failed → upload_error
+          - trigger: network_lost → upload_error
+      processing:
+        description: AI 分析中，展示动效（预计 20-60 秒），每 3 秒轮询一次
+        transitions:
+          - trigger: analysis_complete → AnalysisReportPage
+          - trigger: analysis_failed → processing_error
+          - trigger: timeout_5min → processing_error
+      upload_error:
+        description: 上传失败，提供重试
+        transitions:
+          - trigger: tap_retry → uploading
+          - trigger: tap_cancel → HomePage
+      processing_error:
+        description: AI 分析失败，提供重试或联系支持
+        transitions:
+          - trigger: tap_retry → processing
+          - trigger: tap_back_home → HomePage
+
+  AnalysisReportPage:
+    description: 分析报告详情页
+    initial_state: loading
+    states:
+      loading:
+        description: 骨架屏
+        transitions:
+          - trigger: data_loaded → success
+          - trigger: data_failed → error
+      success:
+        description: 完整报告（足弓/步态/体态/热力图）+ 推荐商品
+        transitions:
+          - trigger: tap_product → ProductDetailPage
+          - trigger: tap_shop_all → ProductListPage
+          - trigger: tap_share → sharing_sheet
+          - trigger: tap_back → HomePage
+      sharing_sheet:
+        description: 分享报告选项（复制链接/截图）
+        transitions:
+          - trigger: dismiss → success
+      error:
+        transitions:
+          - trigger: tap_retry → loading
+
+  # ════════════════════════════════════════
+  # 5. 购买流程
+  # ════════════════════════════════════════
+
+  ProductListPage:
+    initial_state: loading
+    states:
+      loading:
+        transitions:
+          - trigger: data_loaded → success
+          - trigger: data_failed → error
+      success:
+        description: 商品卡片网格，可按足弓/步态筛选
+        transitions:
+          - trigger: tap_product → ProductDetailPage
+          - trigger: tap_filter → filter_sheet
+          - trigger: tap_cart → CartPage
+      filter_sheet:
+        description: 底部弹出筛选面板
+        transitions:
+          - trigger: apply_filter → success（刷新列表）
+          - trigger: dismiss → success
+      empty:
+        description: 无匹配商品
+        transitions:
+          - trigger: tap_clear_filter → success（清空筛选）
+      error:
+        transitions:
+          - trigger: tap_retry → loading
+
+  ProductDetailPage:
+    initial_state: loading
+    states:
+      loading:
+        transitions:
+          - trigger: data_loaded → success
+          - trigger: data_failed → error
+      success:
+        description: 商品图片/描述/适配说明/价格
+        transitions:
+          - trigger: tap_add_to_cart → adding_to_cart
+          - trigger: tap_buy_now → CheckoutPage（直接结算）
+          - trigger: tap_back → ProductListPage
+      adding_to_cart:
+        description: 加入购物车中
+        transitions:
+          - trigger: add_success → success（Toast 提示 "Added to Cart"）
+          - trigger: add_failed → cart_error
+      cart_error:
+        transitions:
+          - trigger: dismiss → success
+      error:
+        transitions:
+          - trigger: tap_retry → loading
+
+  CartPage:
+    initial_state: loading
+    states:
+      loading:
+        transitions:
+          - trigger: data_loaded → [有商品 → has_items | 空 → empty]
+          - trigger: data_failed → error
+      empty:
+        description: 购物车为空（插图 + "Start Analysis" CTA）
+        transitions:
+          - trigger: tap_start_analysis → AnalysisShoeTypePage
+          - trigger: tap_shop → ProductListPage
+      has_items:
+        description: 商品列表 + 总价 + 结算按钮
+        transitions:
+          - trigger: tap_checkout → CheckoutPage
+          - trigger: tap_remove_item → has_items（更新列表）
+          - trigger: tap_update_qty → has_items（更新数量）
+          - trigger: remove_last_item → empty
+      error:
+        transitions:
+          - trigger: tap_retry → loading
+
+  CheckoutPage:
+    initial_state: idle
+    states:
+      idle:
+        description: 地址选择 + 订单摘要 + 支付方式
+        transitions:
+          - trigger: tap_add_address → AddressManagementPage
+          - trigger: tap_change_address → address_selector
+          - trigger: tap_pay → processing_payment
+      address_selector:
+        description: 选择已有地址
+        transitions:
+          - trigger: select_address → idle（更新选中地址）
+          - trigger: dismiss → idle
+      processing_payment:
+        description: 支付处理中（Stripe/Apple Pay），禁止重复点击
+        transitions:
+          - trigger: payment_success → OrderConfirmationPage
+          - trigger: payment_failed → payment_error
+          - trigger: user_cancelled → idle
+      payment_error:
+        description: 支付失败（卡被拒/余额不足等）
+        transitions:
+          - trigger: tap_retry → idle
+          - trigger: tap_change_payment → idle
+
+  OrderConfirmationPage:
+    initial_state: success
+    states:
+      success:
+        description: 订单确认（动画 + 订单号 + 配送预计）
+        transitions:
+          - trigger: tap_view_order → OrderDetailPage
+          - trigger: tap_continue_shopping → HomePage
+          - trigger: tap_track → OrderDetailPage
+
+  OrderListPage:
+    initial_state: loading
+    states:
+      loading:
+        transitions:
+          - trigger: data_loaded → [有订单 → success | 无 → empty]
+      success:
+        description: 订单列表（按时间排序）
+        transitions:
+          - trigger: tap_order → OrderDetailPage
+          - trigger: pull_refresh → loading
+      empty:
+        description: 无历史订单
+        transitions:
+          - trigger: tap_shop → ProductListPage
+      error:
+        transitions:
+          - trigger: tap_retry → loading
+
+  OrderDetailPage:
+    initial_state: loading
+    states:
+      loading:
+        transitions:
+          - trigger: data_loaded → success
+      success:
+        description: 订单详情（状态/商品/地址/物流追踪）
+        transitions:
+          - trigger: tap_track_package → [外部物流网站]
+          - trigger: tap_back → OrderListPage
+
+  # ════════════════════════════════════════
+  # 6. 地址管理
+  # ════════════════════════════════════════
+
+  AddressManagementPage:
+    initial_state: loading
+    states:
+      loading:
+        transitions:
+          - trigger: data_loaded → success
+      success:
+        description: 地址列表 + 添加按钮
+        transitions:
+          - trigger: tap_add → AddressFormPage（新建）
+          - trigger: tap_edit → AddressFormPage（编辑）
+          - trigger: tap_delete → confirming_delete
+          - trigger: tap_set_default → success（更新默认地址）
+      confirming_delete:
+        transitions:
+          - trigger: confirm → success（删除后刷新）
+          - trigger: cancel → success
+
+  AddressFormPage:
+    initial_state: idle
+    states:
+      idle:
+        description: 地址表单（姓名/地址行/城市/州/邮编/国家）
+        transitions:
+          - trigger: tap_save → saving
+          - trigger: tap_back → AddressManagementPage
+      saving:
+        transitions:
+          - trigger: save_success → AddressManagementPage
+          - trigger: save_failed → error
+      error:
+        transitions:
+          - trigger: tap_retry → idle

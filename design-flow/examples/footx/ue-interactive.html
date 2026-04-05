@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>footX — UE 状态机交互文档</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{display:flex;height:100vh;overflow:hidden;background:#0F172A;color:#E2E8F0;font-family:'Inter',system-ui,sans-serif;font-size:13px}
+#sidebar{width:210px;min-width:210px;background:#080E1C;border-right:1px solid #1E293B;overflow-y:auto;display:flex;flex-direction:column}
+#sidebar-header{padding:16px 14px 10px;border-bottom:1px solid #1E293B}
+#sidebar-header .logo{font-size:18px;font-weight:800;color:#fff;letter-spacing:-0.5px}
+#sidebar-header .logo span{color:#F97316}
+.group-label{padding:14px 14px 4px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#475569}
+.page-item{display:flex;align-items:center;gap:8px;padding:7px 14px;cursor:pointer;border-radius:6px;margin:1px 6px;transition:all .15s;color:#94A3B8}
+.page-item:hover{background:#1E293B;color:#E2E8F0}
+.page-item.active{background:#1E3A5F;color:#60A5FA;font-weight:600}
+.page-item .icon{font-size:14px;width:18px;text-align:center}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#topbar{height:44px;background:#080E1C;border-bottom:1px solid #1E293B;display:flex;align-items:center;padding:0 18px;gap:8px;flex-shrink:0}
+#topbar .page-name{font-weight:700;color:#fff;font-size:14px}
+#topbar .state-name{color:#60A5FA;font-size:13px}
+#topbar .sep{color:#334155}
+#body{flex:1;display:flex;overflow:hidden}
+#graph-panel{flex:1;overflow:hidden;position:relative;background:#0F172A}
+#graph-scroll{width:100%;height:100%;overflow:auto;padding:24px}
+#graph-svg{display:block}
+#right-panel{width:340px;min-width:340px;background:#080E1C;border-left:1px solid #1E293B;display:flex;flex-direction:column;overflow:hidden}
+#state-info{padding:14px 16px;border-bottom:1px solid #1E293B;flex-shrink:0}
+#state-info .state-title{font-size:14px;font-weight:700;color:#fff;margin-bottom:4px}
+#state-info .state-desc{color:#94A3B8;font-size:12px;line-height:1.5}
+#transitions-section{padding:10px 16px;border-bottom:1px solid #1E293B;flex-shrink:0}
+#transitions-section h4{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#475569;margin-bottom:8px}
+.trans-item{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;margin-bottom:4px;cursor:pointer;background:#0F172A;border:1px solid #1E293B;transition:all .15s}
+.trans-item:hover{border-color:#2563EB;background:#0D1F3C}
+.trans-item .trigger{font-size:11px;color:#F97316;font-family:'JetBrains Mono',monospace;flex:1}
+.trans-item .arrow{color:#475569;font-size:10px}
+.trans-item .target{font-size:11px;color:#60A5FA;font-family:monospace}
+.trans-item.external .target{color:#A78BFA}
+#wireframe-section{flex:1;overflow-y:auto;padding:14px 16px}
+#wireframe-section h4{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#475569;margin-bottom:10px}
+#wireframe-box{background:#0A1520;border:1px solid #1E3A5F;border-radius:8px;padding:12px 10px}
+#wireframe-pre{font-family:'JetBrains Mono','Fira Code',monospace;font-size:10.5px;line-height:1.45;color:#4ADE80;white-space:pre;overflow-x:auto}
+.no-wireframe{color:#334155;font-style:italic;font-size:12px;padding:8px 0}
+/* SVG node styles */
+.state-node{cursor:pointer;transition:all .15s}
+.state-node rect{rx:8;ry:8;fill:#121F35;stroke:#2D3F5A;stroke-width:1.5;transition:all .2s}
+.state-node text{fill:#94A3B8;font-size:11px;font-family:'Inter',system-ui;font-weight:500;user-select:none;pointer-events:none}
+.state-node.initial rect{stroke:#10B981;stroke-width:2}
+.state-node.initial text{fill:#6EE7B7}
+.state-node.selected rect{fill:#0D2B5C;stroke:#2563EB;stroke-width:2.5}
+.state-node.selected text{fill:#93C5FD}
+.state-node:hover rect{stroke:#3B82F6;fill:#142040}
+.state-node.error-type rect{stroke:#EF4444;stroke-dasharray:4 2}
+.state-node.error-type text{fill:#FCA5A5}
+.state-node.loading-type rect{stroke:#F59E0B;stroke-dasharray:4 2}
+.state-node.loading-type text{fill:#FDE68A}
+.trans-arrow{fill:none;stroke:#2D3F5A;stroke-width:1.5;marker-end:url(#arrowhead)}
+.trans-arrow.external{stroke:#7C3AED;stroke-dasharray:5 3;marker-end:url(#arrowhead-ext)}
+.trans-label{font-size:9px;fill:#475569;font-family:monospace;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <div id="sidebar-header"><div class="logo">foot<span>X</span></div><div style="color:#475569;font-size:11px;margin-top:2px">UE 状态机文档</div></div>
+  <div id="page-list"></div>
+</div>
+<div id="main">
+  <div id="topbar">
+    <span id="tb-page" class="page-name">选择左侧页面</span>
+    <span class="sep">›</span>
+    <span id="tb-state" class="state-name">—</span>
+  </div>
+  <div id="body">
+    <div id="graph-panel"><div id="graph-scroll"><svg id="graph-svg"></svg></div></div>
+    <div id="right-panel">
+      <div id="state-info"><div class="state-title" id="si-title">点击左侧选择页面</div><div class="state-desc" id="si-desc">从侧边栏选择一个页面，再点击状态节点查看详情和线框图</div></div>
+      <div id="transitions-section"><h4>Transitions</h4><div id="trans-list"></div></div>
+      <div id="wireframe-section"><h4>Wireframe</h4><div id="wireframe-box"><pre id="wireframe-pre" class="no-wireframe">— 选择状态查看线框图 —</pre></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── WIREFRAMES ───────────────────────────────────────────────────────────────
+const WF = {
+'LoginPage.idle':`┌─────────────────────────────────┐
+│                                 │
+│         footX  logo             │
+│    "Find Your Perfect Fit"      │
+│                                 │
+├─────────────────────────────────┤
+│                                 │
+│  ┌───────────────────────────┐  │
+│  │  🍎  Continue with Apple  │  │  🔴 iOS 必须放在最顶部
+│  └───────────────────────────┘  │
+│                                 │
+│  ┌───────────────────────────┐  │
+│  │  G   Continue with Google │  │
+│  └───────────────────────────┘  │
+│                                 │
+│  ──────────── or ────────────   │
+│                                 │
+│  ┌───────────────────────────┐  │
+│  │  Continue with Email      │  │
+│  └───────────────────────────┘  │
+│                                 │
+│  Don't have an account? Sign up │  🟢 文字链
+│                                 │
+│  By continuing you agree to     │
+│  Terms & Privacy Policy         │  🔵 合规要求
+└─────────────────────────────────┘`,
+'LoginPage.email_form':`┌─────────────────────────────────┐
+│  [← 返回]        Log In         │  🔴 顶部导航固定
+├─────────────────────────────────┤
+│                                 │
+│  Email                          │
+│  ┌───────────────────────────┐  │
+│  │ user@example.com          │  │  🔴 必填 emailAddress 键盘
+│  └───────────────────────────┘  │
+│                                 │
+│  Password                       │
+│  ┌───────────────────────────┐  │
+│  │ ••••••••         [👁 显示]│  │  🔴 必填
+│  └───────────────────────────┘  │
+│                                 │
+│  Forgot Password?               │  🟢 右对齐文字链
+│                                 │
+│  ┌───────────────────────────┐  │
+│  │         Log In            │  │  🔴 填写后才可点击
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘`,
+'LoginPage.loading_apple':`┌─────────────────────────────────┐
+│  [← 返回]        Log In         │
+├─────────────────────────────────┤
+│                                 │
+│  [所有按钮和输入框灰化/禁用]      │  🔴 防止重复点击
+│                                 │
+│  ┌───────────────────────────┐  │
+│  │     ⏳ Signing in...      │  │  🔴 Loading 状态
+│  └───────────────────────────┘  │
+│                                 │
+└─────────────────────────────────┘`,
+'LoginPage.loading_google':`┌─────────────────────────────────┐
+│  [← 返回]        Log In         │
+├─────────────────────────────────┤
+│  [所有按钮灰化/禁用]              │  🔴 防止重复点击
+│  ┌───────────────────────────┐  │
+│  │  ⏳ Signing in with G...  │  │
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘`,
+'LoginPage.loading_email':`┌─────────────────────────────────┐
+│  [← 返回]        Log In         │
+├─────────────────────────────────┤
+│  Email    [user@example.com]    │
+│  Password [••••••••]            │
+│  [所有输入框禁用]                 │  🔴 防止修改
+│  ┌───────────────────────────┐  │
+│  │   ⏳ Signing in...        │  │
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘`,
+'LoginPage.email_error':`┌─────────────────────────────────┐
+│  [← 返回]        Log In         │
+├─────────────────────────────────┤
+│  ┌───────────────────────────┐  │
+│  │ ⚠️ Invalid email or       │  │  🔴 错误提示，红色背景
+│  │    password               │  │
+│  └───────────────────────────┘  │
+│  Email                          │
+│  ┌───────────────────────────┐  │
+│  │ user@example.com          │  │
+│  └───────────────────────────┘  │
+│  Password                       │
+│  ┌───────────────────────────┐  │
+│  │ ••••••••         [👁]     │  │
+│  └───────────────────────────┘  │
+│  ┌───────────────────────────┐  │
+│  │         Try Again         │  │
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘`,
+'LoginPage.error':`┌─────────────────────────────────┐
+│  [← 返回]                       │
+├─────────────────────────────────┤
+│         [错误插图]               │
+│  Something went wrong           │
+│  Sign-in failed. Please try     │
+│  again.                         │
+│  ┌───────────────────────────┐  │
+│  │   🔄 Try Again            │  │  🔴 重试
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘`,
+'RegisterPage.idle':`┌─────────────────────────────────┐
+│  [← 返回]      Create Account   │
+├─────────────────────────────────┤
+│  Email                          │
+│  ┌───────────────────────────┐  │
+│  │ _________________________  │  │  🔴 必填
+│  └───────────────────────────┘  │
+│  Password                       │
+│  ┌───────────────────────────┐  │
+│  │ _________________________  │  │  🔴 最少 8 位
+│  └───────────────────────────┘  │
+│  At least 8 characters          │  🔵 密码规则提示
+│  Confirm Password               │
+│  ┌───────────────────────────┐  │
+│  │ _________________________  │  │  🔴 必填，需一致
+│  └───────────────────────────┘  │
+│  ┌───────────────────────────┐  │
+│  │       Create Account      │  │  🔴 主操作按钮
+│  └───────────────────────────┘  │
+│  Already have an account? Log In│
+└─────────────────────────────────┘`,
+'OnboardingPage.step1_shoe_size':`┌─────────────────────────────────┐
+│            ● ○ ○               │  🔵 步骤指示点（3步）
+│      Let's set up your profile  │
+├─────────────────────────────────┤
+│    👟 What's your shoe size?    │
+│                                 │
+│  ┌─────────┐  ┌─────────┐      │
+│  │  US Size│  │ EU Size │      │  🔵 双制式，联动换算
+│  │   [ 9 ] │  │  [ 42 ] │      │
+│  └─────────┘  └─────────┘      │
+│                                 │
+│  Don't know EU size?            │  🟢 换算表文字链
+│  See size chart                 │
+│                                 │
+│  ┌───────────────────────────┐  │
+│  │          Next →           │  │  🔴 至少填一种码才激活
+│  └───────────────────────────┘  │
+│       Skip for now              │  🟢 允许跳过
+└─────────────────────────────────┘`,
+'OnboardingPage.step2_basic_info':`┌─────────────────────────────────┐
+│            ○ ● ○               │
+│        Tell us about you        │
+├─────────────────────────────────┤
+│  Gender (optional)              │
+│  ┌──────┐ ┌──────┐ ┌────────┐  │
+│  │ Male │ │Female│ │  Other │  │  🟢 可选，选中高亮
+│  └──────┘ └──────┘ └────────┘  │
+│                                 │
+│  Age Group (optional)           │
+│  ┌──────┐ ┌──────┐ ┌────────┐  │
+│  │ Teen │ │Adult │ │ Senior │  │  🟢 不收集具体年份
+│  └──────┘ └──────┘ └────────┘  │
+│                                 │
+│  ┌───────────────────────────┐  │
+│  │          Next →           │  │  🔴 optional，可直接继续
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘`,
+'OnboardingPage.step3_sport_preference':`┌─────────────────────────────────┐
+│            ○ ○ ●               │
+│  What activities do you do?     │
+│    (Select all that apply)      │
+├─────────────────────────────────┤
+│  ┌──────────┐  ┌──────────┐    │
+│  │🏃 Running│  │🚶 Walking│    │  🔵 多选标签
+│  └──────────┘  └──────────┘    │
+│  ┌──────────┐  ┌──────────┐    │
+│  │⛰️ Hiking │  │💼 Daily  │    │
+│  └──────────┘  └──────────┘    │
+│  ┌──────────┐  ┌──────────┐    │
+│  │🏀 Sports │  │🏥 Medical│    │
+│  └──────────┘  └──────────┘    │
+│  ┌───────────────────────────┐  │
+│  │     Get Started! 🎉       │  │  🔴 完成引导
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘`,
+'HomePage.loading':`┌─────────────────────────────────┐
+│  ░░░░░░░░░░░░        ░░  ░░   │
+├─────────────────────────────────┤
+│  ░░░░░░░░░░░░░░░░░░░░░░░░░░░  │
+│  ░░░░░░░░░░░░░░░░░░░░░░░░░    │
+│                                 │
+│  ░░░░░░░░░░░░░░               │
+│  ░░░░░░░░░░░░░░░░░░░░░░░░░   │  🔵 骨架屏 Shimmer 动画
+│  ░░░░░░░░░░░░░░               │
+│                                 │
+│  ┌──────┐  ┌──────┐           │
+│  │░░░░░░│  │░░░░░░│           │
+│  │░░░░░░│  │░░░░░░│           │
+│  └──────┘  └──────┘           │
+├─────────────────────────────────┤
+│  [🏠]  [🔬]  [🛒]  [👤]       │
+└─────────────────────────────────┘`,
+'HomePage.success':`┌─────────────────────────────────┐
+│  Hi, Alex 👋        [🔔]  [👤] │  🔴 顶部导航固定
+├─────────────────────────────────┤
+│  ┌───────────────────────────┐  │
+│  │  ✨ Start New Analysis    │  │  🔴 核心 CTA，渐变背景
+│  │  "Scan feet → find fit"   │  │
+│  └───────────────────────────┘  │
+│                                 │
+│  Your Latest Analysis           │
+│  ┌───────────────────────────┐  │
+│  │  Normal Arch · Neutral    │  │
+│  │  Posture: Good (78/100)   │  │
+│  │  Mar 15, 2024    [View →] │  │
+│  └───────────────────────────┘  │
+│                                 │
+│  Recommended for You            │
+│  ┌────────┐  ┌────────┐        │
+│  │ [img]  │  │ [img]  │        │  🔵 横向滚动
+│  │ProFit  │  │ActiveX │        │
+│  │$29.99  │  │$34.99  │        │
+│  └────────┘  └────────┘        │
+├─────────────────────────────────┤
+│  [🏠]  [🔬]  [🛒]  [👤]       │  🔴 底部导航固定
+└─────────────────────────────────┘`,
+'HomePage.empty_no_analysis':`┌─────────────────────────────────┐
+│  Hi, Alex 👋        [🔔]  [👤] │
+├─────────────────────────────────┤
+│                                 │
+│         [足部插图]               │
+│                                 │
+│    Discover Your Perfect Fit    │
+│    Scan your feet to get a      │
+│    personalized recommendation  │
+│                                 │
+│  ┌───────────────────────────┐  │
+│  │  Start My First Analysis  │  │  🔴 新用户唯一 CTA
+│  └───────────────────────────┘  │
+│                                 │
+│  1️⃣ Select shoe type            │
+│  2️⃣ Record a short video        │
+│  3️⃣ Get your analysis + order   │
+├─────────────────────────────────┤
+│  [🏠]  [🔬]  [🛒]  [👤]       │
+└─────────────────────────────────┘`,
+'AnalysisShoeTypePage.idle':`┌─────────────────────────────────┐
+│  [← 返回]   Foot Analysis       │  🔴 顶部导航
+├─────────────────────────────────┤
+│  Step 1 of 3: Shoe Type         │
+│  ████░░░░░░░░░░░░░░░░  33%      │  🔵 进度条
+│                                 │
+│  What type of shoes will        │
+│  you mainly use these for?      │
+│                                 │
+│  ┌───────────────────────────┐  │
+│  │  🏃  Running / Athletic   │  │
+│  └───────────────────────────┘  │
+│  ┌───────────────────────────┐  │
+│  │  👔  Dress / Formal       │  │
+│  └───────────────────────────┘  │
+│  ┌───────────────────────────┐  │
+│  │  👟  Casual / Everyday    │  │
+│  └───────────────────────────┘  │
+│  ┌───────────────────────────┐  │
+│  │  🏥  Medical / Therapeutic│  │
+│  └───────────────────────────┘  │
+│  ┌───────────────────────────┐  │
+│  │  ⛰️   Hiking / Outdoor    │  │
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘`,
+'AnalysisShoeTypePage.selected':`┌─────────────────────────────────┐
+│  [← 返回]   Foot Analysis       │
+├─────────────────────────────────┤
+│  Step 1 of 3: Shoe Type         │
+│  ████░░░░░░░░░░░░░░░░  33%      │
+│                                 │
+│  ┌───────────────────────────┐  │
+│  │  ✓  🏃 Running / Athletic │  │  🔴 选中项高亮边框+背景
+│  └───────────────────────────┘  │
+│  ... 其余选项恢复默认 ...          │
+│                                 │
+│  ┌───────────────────────────┐  │
+│  │    Next: Record Video →   │  │  🔴 选中后才显示
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘`,
+'AnalysisRecordingPage.guide':`┌─────────────────────────────────┐
+│  [← 返回]   Record Your Feet    │
+├─────────────────────────────────┤
+│  Step 2 of 3: Video Recording   │
+│  ████████░░░░░░░░░░░░  66%      │
+│                                 │
+│  How to record:                 │
+│  ① [图示] Stand barefoot        │
+│           on flat ground        │
+│  ② [图示] Walk naturally        │
+│           for 10-15 steps       │
+│  ③ [图示] Film from behind      │
+│           at ankle height       │
+│                                 │
+│  💡 Good lighting = better      │
+│     results                     │
+│                                 │
+│  ┌───────────────────────────┐  │
+│  │    📷 Open Camera         │  │  🔴 主操作
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘`,
+'AnalysisRecordingPage.camera_ready':`┌─────────────────────────────────┐
+│  [✕ Cancel]                     │  🔴 仅显示取消按钮
+│  ╔═════════════════════════╗    │
+│  ║                         ║    │
+│  ║   [相机实时预览]          ║    │  🔴 全屏相机预览
+│  ║   ┌── AR 引导框 ──┐    ║    │  🟢 虚线引导框
+│  ║   │               │    ║    │
+│  ║   └───────────────┘    ║    │
+│  ║                         ║    │
+│  ╚═════════════════════════╝    │
+│                                 │
+│       [⏺ 开始录制]              │  🔴 大圆形录制按钮
+└─────────────────────────────────┘`,
+'AnalysisRecordingPage.recording':`┌─────────────────────────────────┐
+│  [✕]        ⏺ REC  0:12        │  🔴 红色录制指示 + 时长
+│  ╔═════════════════════════╗    │
+│  ║                         ║    │
+│  ║   [相机实时预览]          ║    │
+│  ║                         ║    │
+│  ║   Keep walking...       ║    │  🟢 文字提示
+│  ╚═════════════════════════╝    │
+│  ████████████░░░░░ 15s max      │  🔵 录制进度条
+│       [⏹ 停止录制]              │  🔴 停止按钮
+└─────────────────────────────────┘`,
+'AnalysisRecordingPage.reviewing':`┌─────────────────────────────────┐
+│  [← 重录]   Preview             │
+├─────────────────────────────────┤
+│  ╔═════════════════════════╗    │
+│  ║                         ║    │
+│  ║   [录制视频预览]          ║    │
+│  ║         ▶ 播放           ║    │
+│  ╚═════════════════════════╝    │
+│  Duration: 12 seconds           │
+│                                 │
+│  ┌───────────────────────────┐  │
+│  │   ✓ Use This Video        │  │  🔴 确认上传
+│  └───────────────────────────┘  │
+│  ┌───────────────────────────┐  │
+│  │   🔄 Retake               │  │  🟢 重新录制
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘`,
+'AnalysisRecordingPage.permission_error':`┌─────────────────────────────────┐
+│  [← 返回]                       │
+├─────────────────────────────────┤
+│         [相机权限插图]            │
+│                                 │
+│    Camera Access Required       │
+│                                 │
+│    footX needs camera access    │
+│    to record your gait analysis │
+│                                 │
+│  ┌───────────────────────────┐  │
+│  │   ⚙️ Open Settings        │  │  🔴 跳转系统设置
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘`,
+'AnalysisUploadingPage.uploading':`┌─────────────────────────────────┐
+│            Uploading...         │  🔴 不允许返回（防止中断）
+├─────────────────────────────────┤
+│                                 │
+│         [上传动画图示]            │
+│                                 │
+│  Uploading your video           │
+│  ████████████░░░░░░░  64%       │  🔵 实际上传进度
+│                                 │
+│  Please stay connected          │
+│                                 │
+└─────────────────────────────────┘`,
+'AnalysisUploadingPage.processing':`┌─────────────────────────────────┐
+│            Analyzing...         │  🔴 不允许返回
+├─────────────────────────────────┤
+│         [AI 扫描动效]            │
+│                                 │
+│    AI is analyzing your gait    │
+│    This takes ~30 seconds       │
+│                                 │
+│  ⠿ Detecting foot arch...   ✓  │
+│  ⠿ Analyzing gait pattern... ⏳ │  🟢 分步骤进度
+│  ⠿ Building pressure map...    │
+│  ⠿ Checking posture...          │
+└─────────────────────────────────┘`,
+'AnalysisUploadingPage.upload_error':`┌─────────────────────────────────┐
+│  [← 返回首页]                    │
+├─────────────────────────────────┤
+│         [错误插图]               │
+│  Upload Failed                  │
+│  Please check your connection   │
+│  and try again.                 │
+│  ┌───────────────────────────┐  │
+│  │   🔄 Try Again            │  │  🔴 重试
+│  └───────────────────────────┘  │
+│  Contact Support                │  🟢 文字链
+└─────────────────────────────────┘`,
+'AnalysisUploadingPage.processing_error':`┌─────────────────────────────────┐
+│  [← 返回首页]                    │
+├─────────────────────────────────┤
+│         [错误插图]               │
+│  Analysis Failed                │
+│  Our AI couldn't process your   │
+│  video. Please try again.       │
+│  ┌───────────────────────────┐  │
+│  │   🔄 Try Again            │  │  🔴 重试
+│  └───────────────────────────┘  │
+│  Contact Support                │
+└─────────────────────────────────┘`,
+'AnalysisReportPage.success':`┌─────────────────────────────────┐
+│  [← 返回]  Your Analysis  [↑分享]│
+├─────────────────────────────────┤
+│  Mar 15, 2024 · Running shoes   │
+│                                 │
+│  ── Foot Structure ──           │
+│  ┌──────────┐  ┌──────────┐    │
+│  │🦶 Arch   │  │🚶 Gait   │    │
+│  │  Normal  │  │ Neutral  │    │
+│  └──────────┘  └──────────┘    │
+│                                 │
+│  ── Posture Score ──            │
+│  ┌───────────────────────────┐  │
+│  │        [环形图表]          │  │
+│  │        78 / 100           │  │
+│  │          GOOD             │  │  🔵 PostureScoreRing
+│  └───────────────────────────┘  │
+│  ⚠️ Forward Head Detected       │  🔵 forward_head=true 才显示
+│                                 │
+│  ── Recommended Insoles ──      │
+│  ┌───────────────────────────┐  │
+│  │[img] ProFit  95% $29.99   │  │
+│  │      [Add to Cart]        │  │  🔴 直接加购
+│  └───────────────────────────┘  │
+│  ┌───────────────────────────┐  │
+│  │   Shop All Insoles →      │  │
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘`,
+'CartPage.has_items':`┌─────────────────────────────────┐
+│  [← 返回]        Cart  (2)      │  🔴 标题显示数量
+├─────────────────────────────────┤
+│  ┌───────────────────────────┐  │
+│  │[图] ProFit Standard       │  │
+│  │     Running · US 9        │  │
+│  │     $29.99  [−]1[+] [🗑] │  │  🔴 数量=1时减号禁用
+│  └───────────────────────────┘  │
+│  ┌───────────────────────────┐  │
+│  │[图] ActiveFlex Plus       │  │
+│  │     Running · US 9        │  │
+│  │     $34.99  [−]1[+] [🗑] │  │
+│  └───────────────────────────┘  │
+├─────────────────────────────────┤
+│  Subtotal (2)        $64.98     │
+│  Shipping            Free       │  🟢 免运费提示
+│  ─────────────────────────────  │
+│  Total               $64.98     │
+│  ┌───────────────────────────┐  │
+│  │   Proceed to Checkout →   │  │  🔴 主操作
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘`,
+'CartPage.empty':`┌─────────────────────────────────┐
+│  [← 返回]        Cart           │
+├─────────────────────────────────┤
+│         [空购物车插图]            │
+│    Your cart is empty           │
+│  ┌───────────────────────────┐  │
+│  │   Start Analysis First    │  │  🔴 引导主流程
+│  └───────────────────────────┘  │
+│  ┌───────────────────────────┐  │
+│  │   Browse All Insoles      │  │  🟢 次要操作
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘`,
+'CheckoutPage.idle':`┌─────────────────────────────────┐
+│  [← 返回]       Checkout        │
+├─────────────────────────────────┤
+│  Delivery Address               │
+│  ┌───────────────────────────┐  │
+│  │  Alex Johnson             │  │
+│  │  123 Main St, Apt 4B      │  │  🔴 必须选择地址才能结算
+│  │  New York, NY 10001, US   │  │
+│  │              [Change →]   │  │
+│  └───────────────────────────┘  │
+│  [+ Add New Address]            │
+│                                 │
+│  Order Summary                  │
+│  ProFit Standard ×1   $29.99    │
+│  ActiveFlex Plus ×1   $34.99    │
+│  Total                $64.98    │
+│                                 │
+│  Payment Method                 │
+│  ┌───────────────────────────┐  │
+│  │  🍎 Apple Pay             │  │  🔴 iOS 优先
+│  └───────────────────────────┘  │
+│  ┌───────────────────────────┐  │
+│  │  💳 Credit / Debit Card   │  │
+│  └───────────────────────────┘  │
+│  ┌───────────────────────────┐  │
+│  │      Pay $64.98           │  │  🔴 主操作
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘`,
+'CheckoutPage.processing_payment':`┌─────────────────────────────────┐
+│            Processing...        │  🔴 不显示返回（防支付中断）
+├─────────────────────────────────┤
+│         [支付处理动画]            │
+│                                 │
+│    Processing your payment...   │
+│    Please do not close the app  │  🔴 强提示
+│                                 │
+│  ┌───────────────────────────┐  │
+│  │   ⏳ Processing...        │  │  🔴 禁止点击
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘`,
+'CheckoutPage.payment_error':`┌─────────────────────────────────┐
+│  [← 返回]       Checkout        │
+├─────────────────────────────────┤
+│  ┌───────────────────────────┐  │
+│  │ ⚠️ Payment Failed         │  │  🔴 错误提示（红色）
+│  │ Your card was declined.   │  │
+│  └───────────────────────────┘  │
+│                                 │
+│  Delivery Address  [已填写]      │
+│  Order Summary     $64.98       │
+│                                 │
+│  ┌───────────────────────────┐  │
+│  │   Try Again               │  │  🔴 重新尝试支付
+│  └───────────────────────────┘  │
+│  Change payment method          │  🟢 更换支付方式
+└─────────────────────────────────┘`,
+'OrderConfirmationPage.success':`┌─────────────────────────────────┐
+│                                 │
+│           ✅ (大号动画)           │
+│                                 │
+│    Order Placed!                │
+│    Thank you for your order     │
+│                                 │
+│  ┌───────────────────────────┐  │
+│  │  Order #FX-20240001       │  │
+│  │  Est. delivery:           │  │
+│  │  March 20 - 25, 2024      │  │
+│  └───────────────────────────┘  │
+│                                 │
+│  📧 Confirmation sent to email  │  🟢 邮件确认提示
+│                                 │
+│  ┌───────────────────────────┐  │
+│  │   View Order Details      │  │  🔵 次要操作
+│  └───────────────────────────┘  │
+│  ┌───────────────────────────┐  │
+│  │   Continue Shopping       │  │  🟢 返回首页
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘`,
+'OrderListPage.success':`┌─────────────────────────────────┐
+│  [← 返回]       My Orders       │
+├─────────────────────────────────┤
+│  ┌───────────────────────────┐  │
+│  │  Order #FX-20240001       │  │
+│  │  Mar 15, 2024 · $64.98    │  │
+│  │  [🟣 Shipped]             │  │  🔵 状态标签带颜色
+│  │  ProFit Standard +1 more  │  │
+│  │               [View →]    │  │
+│  └───────────────────────────┘  │
+│  ┌───────────────────────────┐  │
+│  │  Order #FX-20231225       │  │
+│  │  Dec 25, 2023 · $29.99    │  │
+│  │  [🟢 Delivered]           │  │
+│  │  ActiveFlex Plus          │  │
+│  │               [View →]    │  │
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘`,
+'OrderDetailPage.success':`┌─────────────────────────────────┐
+│  [← 返回]  Order #FX-20240001   │
+├─────────────────────────────────┤
+│  [🟣 Shipped]                   │
+│  Tracking: FedEx 123456789012   │
+│  [Track Package →]              │  🟢 外部物流网站
+│                                 │
+│  Items                          │
+│  ┌───────────────────────────┐  │
+│  │[图] ProFit Standard ×1    │  │
+│  │     $29.99                │  │
+│  └───────────────────────────┘  │
+│  ┌───────────────────────────┐  │
+│  │[图] ActiveFlex Plus ×1    │  │
+│  │     $34.99                │  │
+│  └───────────────────────────┘  │
+│  Delivery to: Alex Johnson      │
+│  123 Main St, NY 10001, US      │
+│  ───────────────────────────    │
+│  Total               $64.98     │
+└─────────────────────────────────┘`,
+'AddressManagementPage.success':`┌─────────────────────────────────┐
+│  [← 返回]    Addresses          │
+├─────────────────────────────────┤
+│  ┌───────────────────────────┐  │
+│  │  ✦ Default               │  │  🔵 默认标签
+│  │  Alex Johnson             │  │
+│  │  123 Main St, Apt 4B      │  │
+│  │  New York, NY 10001, US   │  │
+│  │  [Edit]         [Delete]  │  │
+│  └───────────────────────────┘  │
+│  ┌───────────────────────────┐  │
+│  │  Home · Jane Smith        │  │
+│  │  456 Oak Ave              │  │
+│  │  Los Angeles, CA 90001    │  │
+│  │  [Edit][Set Default][Del] │  │
+│  └───────────────────────────┘  │
+│  ┌───────────────────────────┐  │
+│  │  + Add New Address        │  │  🔴 添加按钮
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘`,
+'AddressFormPage.idle':`┌─────────────────────────────────┐
+│  [← 返回]    Add Address        │
+├─────────────────────────────────┤
+│  Full Name *                    │
+│  ┌───────────────────────────┐  │
+│  │ Alex Johnson              │  │  🔴 必填
+│  └───────────────────────────┘  │
+│  Address Line 1 *               │
+│  ┌───────────────────────────┐  │
+│  │ 123 Main St               │  │  🔴 必填
+│  └───────────────────────────┘  │
+│  Address Line 2                 │
+│  ┌───────────────────────────┐  │
+│  │ Apt 4B (optional)         │  │  🟢 可选
+│  └───────────────────────────┘  │
+│  City *          State          │
+│  ┌──────────┐  ┌─────────────┐  │
+│  │ New York │  │ NY          │  │
+│  └──────────┘  └─────────────┘  │
+│  ZIP / Postal Code *            │
+│  ┌───────────────────────────┐  │
+│  │ 10001                     │  │  🔴 必填
+│  └───────────────────────────┘  │
+│  Country *  [United States  ▼]  │  🔴 下拉选国家
+│  Phone (optional)               │
+│  ┌───────────────────────────┐  │
+│  │ +1 212 555 0000           │  │
+│  └───────────────────────────┘  │
+│  ☑ Set as default address       │
+│  ┌───────────────────────────┐  │
+│  │       Save Address        │  │  🔴 主操作
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘`
+};
+
+// ─── STATE MACHINE DATA ───────────────────────────────────────────────────────
+const GROUPS = [
+  { name: '认证流程', pages: ['LoginPage','RegisterPage'] },
+  { name: '引导流程', pages: ['OnboardingPage'] },
+  { name: '首页', pages: ['HomePage'] },
+  { name: 'AI 分析流程', pages: ['AnalysisShoeTypePage','AnalysisRecordingPage','AnalysisUploadingPage','AnalysisReportPage'] },
+  { name: '购买流程', pages: ['CartPage','CheckoutPage','OrderConfirmationPage'] },
+  { name: '订单管理', pages: ['OrderListPage','OrderDetailPage'] },
+  { name: '地址管理', pages: ['AddressManagementPage','AddressFormPage'] },
+];
+const ICONS = {LoginPage:'🔐',RegisterPage:'📝',OnboardingPage:'👋',HomePage:'🏠',AnalysisShoeTypePage:'👟',AnalysisRecordingPage:'📷',AnalysisUploadingPage:'☁️',AnalysisReportPage:'📊',CartPage:'🛒',CheckoutPage:'💳',OrderConfirmationPage:'✅',OrderListPage:'📦',OrderDetailPage:'🧾',AddressManagementPage:'📍',AddressFormPage:'✏️'};
+const LABELS = {LoginPage:'登录页',RegisterPage:'注册页',OnboardingPage:'引导页',HomePage:'首页',AnalysisShoeTypePage:'鞋类选择',AnalysisRecordingPage:'视频录制',AnalysisUploadingPage:'上传分析',AnalysisReportPage:'分析报告',CartPage:'购物车',CheckoutPage:'结算页',OrderConfirmationPage:'订单确认',OrderListPage:'订单列表',OrderDetailPage:'订单详情',AddressManagementPage:'地址管理',AddressFormPage:'地址表单'};
+
+const PAGES = {
+  LoginPage:{initial:'idle',states:{idle:{desc:'展示登录选项（Apple/Google/Email）'},loading_apple:{desc:'等待 Apple OAuth 回调',type:'loading'},loading_google:{desc:'等待 Google OAuth 回调',type:'loading'},email_form:{desc:'邮箱/密码输入表单'},loading_email:{desc:'验证邮箱密码',type:'loading'},email_error:{desc:'账号或密码错误提示',type:'error'},error:{desc:'OAuth 登录失败通用错误',type:'error'}},transitions:[{f:'idle',t:'loading_apple',label:'tap_apple_signin'},{f:'idle',t:'loading_google',label:'tap_google_signin'},{f:'idle',t:'email_form',label:'tap_email_login'},{f:'loading_apple',t:'error',label:'auth_failed'},{f:'loading_apple',t:'idle',label:'user_cancelled'},{f:'loading_google',t:'error',label:'auth_failed'},{f:'loading_google',t:'idle',label:'user_cancelled'},{f:'email_form',t:'loading_email',label:'tap_login'},{f:'email_form',t:'idle',label:'tap_back'},{f:'email_form',t:'RegisterPage',label:'tap_register',ext:true},{f:'loading_email',t:'email_error',label:'auth_failed'},{f:'email_error',t:'email_form',label:'tap_retry'},{f:'error',t:'idle',label:'tap_retry'}]},
+  RegisterPage:{initial:'idle',states:{idle:{desc:'邮箱注册表单'},loading:{desc:'提交注册请求',type:'loading'},error:{desc:'注册失败提示',type:'error'}},transitions:[{f:'idle',t:'loading',label:'tap_register'},{f:'idle',t:'LoginPage',label:'tap_back',ext:true},{f:'loading',t:'OnboardingPage',label:'register_success',ext:true},{f:'loading',t:'error',label:'register_failed'},{f:'error',t:'idle',label:'tap_retry'}]},
+  OnboardingPage:{initial:'step1_shoe_size',states:{step1_shoe_size:{desc:'输入 US/EU 鞋码'},step2_basic_info:{desc:'选择性别 + 年龄段'},step3_sport_preference:{desc:'选择运动偏好（多选）'},saving:{desc:'保存档案中',type:'loading'},error:{desc:'保存失败',type:'error'}},transitions:[{f:'step1_shoe_size',t:'step2_basic_info',label:'tap_next'},{f:'step2_basic_info',t:'step3_sport_preference',label:'tap_next'},{f:'step2_basic_info',t:'step1_shoe_size',label:'tap_back'},{f:'step3_sport_preference',t:'saving',label:'tap_finish'},{f:'step3_sport_preference',t:'HomePage',label:'tap_skip',ext:true},{f:'step3_sport_preference',t:'step2_basic_info',label:'tap_back'},{f:'saving',t:'HomePage',label:'save_success',ext:true},{f:'saving',t:'error',label:'save_failed'},{f:'error',t:'saving',label:'tap_retry'}]},
+  HomePage:{initial:'loading',states:{loading:{desc:'骨架屏，加载用户数据',type:'loading'},success:{desc:'展示分析卡片、推荐商品、快捷入口'},empty_no_analysis:{desc:'新用户，无历史分析引导'},error:{desc:'数据加载失败',type:'error'}},transitions:[{f:'loading',t:'success',label:'data_loaded'},{f:'loading',t:'error',label:'data_failed'},{f:'success',t:'empty_no_analysis',label:'no_analysis_history'},{f:'success',t:'AnalysisShoeTypePage',label:'tap_new_analysis',ext:true},{f:'empty_no_analysis',t:'AnalysisShoeTypePage',label:'tap_start_analysis',ext:true},{f:'error',t:'loading',label:'tap_retry'}]},
+  AnalysisShoeTypePage:{initial:'idle',states:{idle:{desc:'展示 5 种鞋类选项'},selected:{desc:'高亮选中项，显示确认按钮'}},transitions:[{f:'idle',t:'selected',label:'select_shoe_type'},{f:'selected',t:'idle',label:'tap_other_type'},{f:'selected',t:'AnalysisRecordingPage',label:'tap_next',ext:true}]},
+  AnalysisRecordingPage:{initial:'guide',states:{guide:{desc:'3步图文拍摄引导'},camera_ready:{desc:'相机预览，等待录制'},recording:{desc:'录制中，展示进度'},reviewing:{desc:'预览视频，确认或重录'},permission_error:{desc:'相机权限被拒绝',type:'error'}},transitions:[{f:'guide',t:'camera_ready',label:'tap_start_camera'},{f:'camera_ready',t:'recording',label:'tap_record'},{f:'camera_ready',t:'guide',label:'tap_back'},{f:'camera_ready',t:'permission_error',label:'camera_permission_denied'},{f:'recording',t:'reviewing',label:'tap_stop'},{f:'reviewing',t:'AnalysisUploadingPage',label:'tap_use_video',ext:true},{f:'reviewing',t:'camera_ready',label:'tap_retake'},{f:'permission_error',t:'AnalysisShoeTypePage',label:'tap_back',ext:true}]},
+  AnalysisUploadingPage:{initial:'uploading',states:{uploading:{desc:'上传视频到云端（0-100%）',type:'loading'},processing:{desc:'AI 分析中，每3秒轮询',type:'loading'},upload_error:{desc:'上传失败，提供重试',type:'error'},processing_error:{desc:'AI 分析失败/超时',type:'error'}},transitions:[{f:'uploading',t:'processing',label:'upload_complete'},{f:'uploading',t:'upload_error',label:'upload_failed'},{f:'processing',t:'AnalysisReportPage',label:'analysis_complete',ext:true},{f:'processing',t:'processing_error',label:'analysis_failed'},{f:'upload_error',t:'uploading',label:'tap_retry'},{f:'upload_error',t:'HomePage',label:'tap_cancel',ext:true},{f:'processing_error',t:'processing',label:'tap_retry'},{f:'processing_error',t:'HomePage',label:'tap_back_home',ext:true}]},
+  AnalysisReportPage:{initial:'loading',states:{loading:{desc:'骨架屏',type:'loading'},success:{desc:'完整报告（足弓/步态/体态/热力图）+ 推荐商品'},sharing_sheet:{desc:'分享报告底部弹窗'},error:{desc:'报告加载失败',type:'error'}},transitions:[{f:'loading',t:'success',label:'data_loaded'},{f:'loading',t:'error',label:'data_failed'},{f:'success',t:'sharing_sheet',label:'tap_share'},{f:'success',t:'CartPage',label:'tap_add_to_cart',ext:true},{f:'sharing_sheet',t:'success',label:'dismiss'},{f:'error',t:'loading',label:'tap_retry'}]},
+  CartPage:{initial:'loading',states:{loading:{desc:'加载购物车',type:'loading'},empty:{desc:'购物车为空，引导做分析'},has_items:{desc:'商品列表 + 总价 + 结算'},error:{desc:'加载失败',type:'error'}},transitions:[{f:'loading',t:'has_items',label:'data_loaded_items'},{f:'loading',t:'empty',label:'data_loaded_empty'},{f:'loading',t:'error',label:'data_failed'},{f:'has_items',t:'empty',label:'remove_last_item'},{f:'has_items',t:'has_items',label:'tap_update_qty'},{f:'has_items',t:'CheckoutPage',label:'tap_checkout',ext:true},{f:'empty',t:'AnalysisShoeTypePage',label:'tap_start_analysis',ext:true},{f:'error',t:'loading',label:'tap_retry'}]},
+  CheckoutPage:{initial:'idle',states:{idle:{desc:'地址选择 + 订单摘要 + 支付'},address_selector:{desc:'选择已有地址（底部弹窗）'},processing_payment:{desc:'支付处理中，禁止重复点击',type:'loading'},payment_error:{desc:'支付失败（卡被拒等）',type:'error'}},transitions:[{f:'idle',t:'address_selector',label:'tap_change_address'},{f:'idle',t:'AddressManagementPage',label:'tap_add_address',ext:true},{f:'idle',t:'processing_payment',label:'tap_pay'},{f:'address_selector',t:'idle',label:'select_address'},{f:'processing_payment',t:'OrderConfirmationPage',label:'payment_success',ext:true},{f:'processing_payment',t:'payment_error',label:'payment_failed'},{f:'processing_payment',t:'idle',label:'user_cancelled'},{f:'payment_error',t:'idle',label:'tap_retry'}]},
+  OrderConfirmationPage:{initial:'success',states:{success:{desc:'订单确认（动画 + 订单号 + 预计送达）'}},transitions:[{f:'success',t:'OrderDetailPage',label:'tap_view_order',ext:true},{f:'success',t:'HomePage',label:'tap_continue_shopping',ext:true}]},
+  OrderListPage:{initial:'loading',states:{loading:{desc:'加载订单列表',type:'loading'},success:{desc:'订单列表（按时间排序）'},empty:{desc:'无历史订单'},error:{desc:'加载失败',type:'error'}},transitions:[{f:'loading',t:'success',label:'data_loaded'},{f:'loading',t:'empty',label:'data_loaded_empty'},{f:'loading',t:'error',label:'data_failed'},{f:'success',t:'OrderDetailPage',label:'tap_order',ext:true},{f:'success',t:'loading',label:'pull_refresh'},{f:'empty',t:'CartPage',label:'tap_shop',ext:true},{f:'error',t:'loading',label:'tap_retry'}]},
+  OrderDetailPage:{initial:'loading',states:{loading:{desc:'加载订单详情',type:'loading'},success:{desc:'订单详情（状态/商品/地址/物流）'}},transitions:[{f:'loading',t:'success',label:'data_loaded'},{f:'success',t:'OrderListPage',label:'tap_back',ext:true}]},
+  AddressManagementPage:{initial:'loading',states:{loading:{desc:'加载地址列表',type:'loading'},success:{desc:'地址列表 + 添加按钮'},confirming_delete:{desc:'删除确认对话框'}},transitions:[{f:'loading',t:'success',label:'data_loaded'},{f:'success',t:'AddressFormPage',label:'tap_add',ext:true},{f:'success',t:'AddressFormPage',label:'tap_edit',ext:true},{f:'success',t:'confirming_delete',label:'tap_delete'},{f:'success',t:'success',label:'tap_set_default'},{f:'confirming_delete',t:'success',label:'confirm_or_cancel'}]},
+  AddressFormPage:{initial:'idle',states:{idle:{desc:'地址表单（姓名/地址/城市/邮编/国家）'},saving:{desc:'保存地址中',type:'loading'},error:{desc:'保存失败',type:'error'}},transitions:[{f:'idle',t:'saving',label:'tap_save'},{f:'idle',t:'AddressManagementPage',label:'tap_back',ext:true},{f:'saving',t:'AddressManagementPage',label:'save_success',ext:true},{f:'saving',t:'error',label:'save_failed'},{f:'error',t:'idle',label:'tap_retry'}]},
+};
+
+// ─── LAYOUT & RENDER ─────────────────────────────────────────────────────────
+const NW=130,NH=38,HGAP=28,VGAP=62,PAD=30;
+let currentPage=null, currentState=null;
+
+function layoutPage(pageId){
+  const pg = PAGES[pageId];
+  const states = Object.keys(pg.states);
+  const layers = {}, visited = new Set();
+  const queue = [[pg.initial, 0]];
+  while(queue.length){
+    const [s,l] = queue.shift();
+    if(visited.has(s)) continue;
+    visited.add(s);
+    if(!layers[l]) layers[l]=[];
+    layers[l].push(s);
+    (pg.transitions||[]).filter(t=>t.f===s&&!t.ext&&pg.states[t.t]).forEach(t=>{ if(!visited.has(t.t)) queue.push([t.t,l+1]); });
+  }
+  states.forEach(s=>{ if(!visited.has(s)){ const mx=Math.max(...Object.keys(layers).map(Number),0); const nl=mx+1; if(!layers[nl]) layers[nl]=[]; layers[nl].push(s); } });
+  const pos={};
+  Object.entries(layers).forEach(([l,ss])=>{
+    const y=parseInt(l)*(NH+VGAP)+PAD;
+    const tw=ss.length*(NW+HGAP)-HGAP;
+    let x=PAD;
+    ss.forEach(s=>{ pos[s]={x,y,cx:x+NW/2,cy:y+NH/2}; x+=NW+HGAP; });
+    // center horizontally - skip centering to keep it left-aligned
+    _ = tw;
+  });
+  return pos;
+}
+
+function renderGraph(pageId){
+  const pg = PAGES[pageId];
+  const pos = layoutPage(pageId);
+  const allX = Object.values(pos).map(p=>p.x+NW);
+  const allY = Object.values(pos).map(p=>p.y+NH);
+  const svgW = Math.max(...allX)+PAD;
+  const svgH = Math.max(...allY)+PAD;
+  const svg = document.getElementById('graph-svg');
+  svg.setAttribute('width', svgW);
+  svg.setAttribute('height', svgH);
+  svg.innerHTML = `
+    <defs>
+      <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#2D3F5A"/>
+      </marker>
+      <marker id="arrowhead-ext" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#7C3AED"/>
+      </marker>
+    </defs>`;
+
+  // Draw transitions first (behind nodes)
+  const arrowsG = document.createElementNS('http://www.w3.org/2000/svg','g');
+  arrowsG.setAttribute('id','arrows-g');
+  (pg.transitions||[]).forEach((t,i)=>{
+    const fp=pos[t.f], tp2=t.ext?null:pos[t.t];
+    if(!fp) return;
+    const isExt = t.ext || !tp2;
+    let x1=fp.cx, y1=fp.y+NH, x2, y2;
+    if(!isExt && tp2){
+      x2=tp2.cx; y2=tp2.y;
+      // Same layer? Use curved path
+      if(Math.abs(y1-y2)<10){
+        const off=30+i*5;
+        const mx=(x1+x2)/2, my=Math.min(fp.y,tp2.y)-off;
+        const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+        path.setAttribute('d',`M ${x1} ${fp.cy} Q ${mx} ${my} ${x2} ${tp2.cy}`);
+        path.setAttribute('class','trans-arrow');
+        arrowsG.appendChild(path);
+        const lx=mx, ly=my+8;
+        const lt=document.createElementNS('http://www.w3.org/2000/svg','text');
+        lt.setAttribute('x',lx); lt.setAttribute('y',ly); lt.setAttribute('text-anchor','middle');
+        lt.setAttribute('class','trans-label'); lt.textContent=t.label.substring(0,18);
+        arrowsG.appendChild(lt);
+      } else {
+        const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+        const cy1=y1+VGAP*0.3, cy2=y2-VGAP*0.3;
+        path.setAttribute('d',`M ${x1} ${y1} C ${x1} ${cy1}, ${x2} ${cy2}, ${x2} ${y2}`);
+        path.setAttribute('class','trans-arrow');
+        arrowsG.appendChild(path);
+        const lx=(x1+x2)/2+14, ly=(y1+y2)/2;
+        const lt=document.createElementNS('http://www.w3.org/2000/svg','text');
+        lt.setAttribute('x',lx); lt.setAttribute('y',ly); lt.setAttribute('class','trans-label');
+        lt.textContent=t.label.substring(0,18); arrowsG.appendChild(lt);
+      }
+    } else {
+      // External transition: draw arrow going right off-canvas
+      x2=fp.x+NW+50; y2=fp.cy;
+      const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d',`M ${fp.x+NW} ${fp.cy} L ${x2} ${y2}`);
+      path.setAttribute('class','trans-arrow external');
+      arrowsG.appendChild(path);
+      const lt=document.createElementNS('http://www.w3.org/2000/svg','text');
+      lt.setAttribute('x',x2+4); lt.setAttribute('y',y2+4);
+      lt.setAttribute('class','trans-label'); lt.setAttribute('fill','#7C3AED');
+      lt.textContent=`→ ${t.t}`; arrowsG.appendChild(lt);
+    }
+  });
+  svg.appendChild(arrowsG);
+
+  // Draw nodes
+  const nodesG = document.createElementNS('http://www.w3.org/2000/svg','g');
+  Object.entries(pos).forEach(([sid, p])=>{
+    const st=pg.states[sid];
+    const isInit=sid===pg.initial;
+    const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('class',`state-node${isInit?' initial':''}${st.type==='error'?' error-type':''}${st.type==='loading'?' loading-type':''}${sid===currentState?' selected':''}`);
+    g.setAttribute('data-state',sid);
+    const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x',p.x); rect.setAttribute('y',p.y); rect.setAttribute('width',NW); rect.setAttribute('height',NH);
+    rect.setAttribute('rx',8); rect.setAttribute('ry',8);
+    g.appendChild(rect);
+    const text=document.createElementNS('http://www.w3.org/2000/svg','text');
+    text.setAttribute('x',p.cx); text.setAttribute('y',p.cy+4); text.setAttribute('text-anchor','middle');
+    text.textContent=sid.length>16?sid.substring(0,15)+'…':sid;
+    g.appendChild(text);
+    if(isInit){
+      const badge=document.createElementNS('http://www.w3.org/2000/svg','text');
+      badge.setAttribute('x',p.x+NW-2); badge.setAttribute('y',p.y-3);
+      badge.setAttribute('text-anchor','end'); badge.setAttribute('font-size','8');
+      badge.setAttribute('fill','#10B981'); badge.textContent='initial';
+      g.appendChild(badge);
+    }
+    g.addEventListener('click',()=>selectState(pageId, sid));
+    nodesG.appendChild(g);
+  });
+  svg.appendChild(nodesG);
+}
+
+function selectState(pageId, stateId){
+  currentState=stateId;
+  const pg=PAGES[pageId];
+  const st=pg.states[stateId];
+  // Update topbar
+  document.getElementById('tb-page').textContent=LABELS[pageId]||pageId;
+  document.getElementById('tb-state').textContent=stateId;
+  // Update state info
+  document.getElementById('si-title').textContent=stateId;
+  document.getElementById('si-desc').textContent=st.desc||'—';
+  // Update transitions
+  const tl=document.getElementById('trans-list');
+  tl.innerHTML='';
+  const outs=(pg.transitions||[]).filter(t=>t.f===stateId);
+  if(!outs.length){ tl.innerHTML='<div style="color:#334155;font-size:11px;padding:4px 0">无出向 Transition</div>'; }
+  outs.forEach(t=>{
+    const d=document.createElement('div');
+    d.className='trans-item'+(t.ext?' external':'');
+    d.innerHTML=`<span class="trigger">${t.label}</span><span class="arrow">→</span><span class="target">${t.t}</span>`;
+    d.addEventListener('click',()=>{
+      if(t.ext && PAGES[t.t]) selectPage(t.t);
+      else if(pg.states[t.t]) selectState(pageId, t.t);
+    });
+    tl.appendChild(d);
+  });
+  // Update wireframe
+  const wfKey=`${pageId}.${stateId}`;
+  const pre=document.getElementById('wireframe-pre');
+  if(WF[wfKey]){ pre.className=''; pre.textContent=WF[wfKey]; }
+  else { pre.className='no-wireframe'; pre.textContent='— 此状态暂无线框图 —'; }
+  // Re-render graph to update selection
+  renderGraph(pageId);
+}
+
+function selectPage(pageId){
+  currentPage=pageId;
+  currentState=null;
+  // Update sidebar active
+  document.querySelectorAll('.page-item').forEach(el=>el.classList.toggle('active',el.dataset.page===pageId));
+  // Update topbar
+  document.getElementById('tb-page').textContent=LABELS[pageId]||pageId;
+  document.getElementById('tb-state').textContent='—';
+  // Reset right panel
+  document.getElementById('si-title').textContent=LABELS[pageId]||pageId;
+  document.getElementById('si-desc').textContent=`${Object.keys(PAGES[pageId].states).length} 个状态 · 点击节点查看详情`;
+  document.getElementById('trans-list').innerHTML='';
+  const pre=document.getElementById('wireframe-pre');
+  pre.className='no-wireframe'; pre.textContent='— 点击状态节点查看线框图 —';
+  // Render graph
+  renderGraph(pageId);
+  // Auto-select initial state
+  selectState(pageId, PAGES[pageId].initial);
+}
+
+// ─── SIDEBAR BUILD ────────────────────────────────────────────────────────────
+function buildSidebar(){
+  const list=document.getElementById('page-list');
+  GROUPS.forEach(g=>{
+    const gl=document.createElement('div');
+    gl.className='group-label'; gl.textContent=g.name;
+    list.appendChild(gl);
+    g.pages.forEach(pid=>{
+      const item=document.createElement('div');
+      item.className='page-item'; item.dataset.page=pid;
+      item.innerHTML=`<span class="icon">${ICONS[pid]||'📄'}</span><span>${LABELS[pid]||pid}</span>`;
+      item.addEventListener('click',()=>selectPage(pid));
+      list.appendChild(item);
+    });
+  });
+}
+
+buildSidebar();
+selectPage('LoginPage');
+</script>
+</body>
+</html>

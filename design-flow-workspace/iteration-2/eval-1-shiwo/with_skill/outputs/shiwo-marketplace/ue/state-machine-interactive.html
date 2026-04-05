@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>拾物 — 交互状态机查看器</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f7; color: #1d1d1f; min-height: 100vh; }
+
+  .header {
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header h1 { font-size: 17px; font-weight: 600; color: #1d1d1f; }
+  .header .subtitle { font-size: 13px; color: #6b7280; margin-top: 2px; }
+  .header-left { display: flex; flex-direction: column; }
+
+  .page-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .page-filter label { font-size: 13px; color: #6b7280; }
+  .page-filter select {
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 14px;
+    background: #fff;
+    cursor: pointer;
+    color: #1d1d1f;
+  }
+
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    height: calc(100vh - 57px);
+  }
+
+  .diagram-panel {
+    padding: 24px;
+    overflow: auto;
+    background: #fff;
+    border-right: 1px solid #e5e7eb;
+  }
+  .diagram-panel h2 { font-size: 13px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; }
+
+  #diagram-container {
+    display: flex;
+    justify-content: center;
+    min-height: 300px;
+  }
+  #diagram-container svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .detail-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #f9fafb;
+  }
+
+  .detail-header {
+    padding: 20px 20px 16px;
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .page-badge {
+    display: inline-block;
+    background: #eff6ff;
+    color: #3b82f6;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 99px;
+    margin-bottom: 8px;
+  }
+  .state-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1d1d1f;
+    margin-bottom: 4px;
+  }
+  .state-label { font-size: 13px; color: #6b7280; }
+  .trigger-text {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    font-style: italic;
+  }
+
+  .detail-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+  }
+
+  .wireframe-container {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .wireframe-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 10px 16px 8px;
+    border-bottom: 1px solid #f3f4f6;
+  }
+  .wireframe pre {
+    font-family: 'Courier New', 'Menlo', 'Monaco', monospace;
+    font-size: 11.5px;
+    line-height: 1.55;
+    padding: 14px 16px;
+    color: #374151;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .constraints-container { margin-bottom: 8px; }
+  .constraints-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+  .constraint-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+  .constraint-item.hard { background: #fef2f2; color: #991b1b; }
+  .constraint-item.soft { background: #eff6ff; color: #1e40af; }
+  .constraint-item.suggest { background: #f0fdf4; color: #166534; }
+  .constraint-badge {
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 24px;
+    color: #9ca3af;
+  }
+  .empty-state .emoji { font-size: 40px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; }
+
+  .state-list {
+    padding: 12px;
+    background: #f9fafb;
+    border-radius: 10px;
+    margin-bottom: 12px;
+  }
+  .state-list-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+    padding: 0 4px;
+  }
+  .state-chip {
+    display: inline-block;
+    margin: 3px;
+    padding: 4px 10px;
+    border-radius: 99px;
+    font-size: 12px;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: all 0.15s;
+    background: #fff;
+    color: #4b5563;
+    border-color: #e5e7eb;
+  }
+  .state-chip:hover { border-color: #3b82f6; color: #3b82f6; }
+  .state-chip.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+
+  .transitions-box {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+  }
+  .transitions-box h4 {
+    font-size: 11px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+  .transition-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #4b5563;
+    padding: 3px 0;
+  }
+  .transition-arrow { color: #d1d5db; }
+  .transition-event { color: #3b82f6; font-weight: 500; }
+  .transition-target { color: #059669; font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>拾物（Shiwo）— 交互状态机查看器</h1>
+    <div class="subtitle">点击状态节点查看对应线框图</div>
+  </div>
+  <div class="page-filter">
+    <label for="page-select">筛选页面：</label>
+    <select id="page-select">
+      <option value="all">全部页面</option>
+      <option value="HomePage">首页</option>
+      <option value="ItemDetailPage">商品详情</option>
+      <option value="PublishItemPage">发布商品</option>
+      <option value="MessageListPage">私信列表</option>
+      <option value="MessageDetailPage">私信详情</option>
+      <option value="ProfilePage">个人主页</option>
+    </select>
+  </div>
+</div>
+
+<div class="main">
+  <div class="diagram-panel">
+    <h2>状态流程图</h2>
+    <div id="diagram-container">
+      <div style="color:#9ca3af;padding:40px;text-align:center">正在渲染状态图...</div>
+    </div>
+    <div class="state-list" id="state-chips-container" style="display:none;">
+      <div class="state-list-title">快速选择状态</div>
+      <div id="state-chips"></div>
+    </div>
+  </div>
+
+  <div class="detail-panel">
+    <div class="detail-header" id="detail-header">
+      <div class="empty-state">
+        <div class="emoji">👆</div>
+        <p>点击左侧状态节点<br>查看对应线框图和约束说明</p>
+      </div>
+    </div>
+    <div class="detail-body" id="detail-body" style="display:none;"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// 状态数据
+// ============================================================
+const STATES = {
+  // ── 首页 ──
+  "home_loading": {
+    page: "首页", pageKey: "HomePage",
+    label: "加载中",
+    trigger: "页面挂载 / 切换校区 / 切换分类",
+    wireframe: `┌─────────────────────────────────┐
+│  拾物          [🔍搜索] [📍校区] │
+├─────────────────────────────────┤
+│  [全部] [教材] [电子] [生活]...  │  分类标签骨架屏
+├─────────────────────────────────┤
+│  ┌────────┐  ┌────────┐         │
+│  │░░░░░░░░│  │░░░░░░░░│         │
+│  │░ IMG ░░│  │░ IMG ░░│         │
+│  └────────┘  └────────┘         │
+│  ░░░░░░░░░░  ░░░░░░░░░░         │
+│  ░░░░░░░     ░░░░░░              │
+│  ┌────────┐  ┌────────┐         │
+│  │░░░░░░░░│  │░░░░░░░░│         │
+│  └────────┘  └────────┘         │
+├─────────────────────────────────┤
+│  [🏠首页] [💬消息] [➕发布] [👤我]│
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "顶部导航固定不可滚动" },
+      { level: "soft", text: "骨架屏卡片数量 = 6 个" }
+    ],
+    transitions: [
+      { event: "fetch_success", target: "home_success" },
+      { event: "fetch_empty", target: "home_empty" },
+      { event: "fetch_error", target: "home_error" }
+    ]
+  },
+
+  "home_success": {
+    page: "首页", pageKey: "HomePage",
+    label: "列表正常展示",
+    trigger: "数据加载成功且 items.length > 0",
+    wireframe: `┌─────────────────────────────────┐
+│  拾物          [🔍搜索] [📍南校区]│
+├─────────────────────────────────┤
+│ [全部▼] [📚教材] [📱电子] [🏠生活]│
+├─────────────────────────────────┤
+│  ┌────────┐  ┌────────┐         │
+│  │  IMG   │  │  IMG   │         │
+│  └────────┘  └────────┘         │
+│  高等数学(上)  iPhone 13         │
+│  ¥25         ¥2,800             │
+│  👤小明 南校区  👤小红 东校区    │
+│                                 │
+│  ┌────────┐  ┌──────────────┐   │
+│  │  IMG   │  │ 已售出 IMG   │   │
+│  └────────┘  └──────────────┘   │
+│  英语四级词汇  微积分课本         │
+│  ¥15         ¥20               │
+├─────────────────────────────────┤
+│  [🏠首页] [💬消息] [➕发布] [👤我]│
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "价格必须显示（¥ 前缀）" },
+      { level: "soft", text: "商品标题最多 2 行，超出截断" },
+      { level: "suggest", text: "已售出商品显示灰色遮罩角标" }
+    ],
+    transitions: [
+      { event: "item_tap", target: "→ ItemDetailPage" },
+      { event: "category_tab_tap", target: "home_loading" },
+      { event: "campus_filter_tap", target: "home_loading" },
+      { event: "scroll_to_bottom", target: "home_loading_more" },
+      { event: "pull_to_refresh", target: "home_loading" }
+    ]
+  },
+
+  "home_empty": {
+    page: "首页", pageKey: "HomePage",
+    label: "无商品",
+    trigger: "items.length === 0（当前校区/分类无商品）",
+    wireframe: `┌─────────────────────────────────┐
+│  拾物          [🔍搜索] [📍南校区]│
+├─────────────────────────────────┤
+│ [全部▼] [📚教材] [📱电子]...    │
+├─────────────────────────────────┤
+│                                 │
+│          🎒                     │
+│                                 │
+│    该校区暂无商品                │
+│    快来发布第一件吧！            │
+│                                 │
+│      [ 去发布闲置物 ]            │
+│                                 │
+├─────────────────────────────────┤
+│  [🏠首页] [💬消息] [➕发布] [👤我]│
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "必须有引导发布的操作按钮" },
+      { level: "suggest", text: "建议使用插画提升情感化体验" }
+    ],
+    transitions: [
+      { event: "publish_tap", target: "→ PublishItemPage" }
+    ]
+  },
+
+  "home_error": {
+    page: "首页", pageKey: "HomePage",
+    label: "加载失败",
+    trigger: "API 返回 4xx/5xx 或网络超时",
+    wireframe: `┌─────────────────────────────────┐
+│  拾物          [🔍搜索] [📍校区] │
+├─────────────────────────────────┤
+│                                 │
+│          ⚠️                     │
+│                                 │
+│      加载失败                   │
+│      请检查网络后重试            │
+│                                 │
+│        [ 重 试 ]                │
+│                                 │
+├─────────────────────────────────┤
+│  [🏠首页] [💬消息] [➕发布] [👤我]│
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "必须显示重试按钮" },
+      { level: "soft", text: "错误原因尽量明确（网络/服务器）" }
+    ],
+    transitions: [
+      { event: "retry_tap", target: "home_loading" }
+    ]
+  },
+
+  "home_loading_more": {
+    page: "首页", pageKey: "HomePage",
+    label: "加载更多",
+    trigger: "下拉到底部",
+    wireframe: `┌─────────────────────────────────┐
+│  （商品列表，同 success 状态）    │
+│                                 │
+│  ... （商品卡片）...             │
+│                                 │
+│   ─────── ⏳ 加载更多 ───────   │
+│                                 │
+├─────────────────────────────────┤
+│  [🏠首页] [💬消息] [➕发布] [👤我]│
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "soft", text: "加载动画在列表末尾，不遮挡内容" }
+    ],
+    transitions: [
+      { event: "load_more_success", target: "home_success" },
+      { event: "load_more_error", target: "home_success（Toast 提示）" },
+      { event: "no_more_data", target: "home_success_all_loaded" }
+    ]
+  },
+
+  // ── 商品详情 ──
+  "detail_loading": {
+    page: "商品详情", pageKey: "ItemDetailPage",
+    label: "加载中",
+    trigger: "点击商品卡片进入",
+    wireframe: `┌─────────────────────────────────┐
+│  [← 返回]    商品详情   [⋯更多]  │
+├─────────────────────────────────┤
+│  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
+│  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
+│  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
+│  ░░░░░░░░  价格占位              │
+│  ░░░░░░░░░░░░░░  标题占位        │
+│  ░░░░░░░░░░░░  标题第二行        │
+│                                 │
+│  ░░░░  ░░░░░░░░░░  卖家信息占位  │
+├─────────────────────────────────┤
+│  [❤ 收藏]       [ 💬 私信卖家 ] │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "soft", text: "骨架屏反映真实内容层级结构" }
+    ],
+    transitions: [
+      { event: "fetch_success", target: "detail_success" },
+      { event: "fetch_not_found", target: "detail_not_found" },
+      { event: "fetch_error", target: "detail_error" }
+    ]
+  },
+
+  "detail_success": {
+    page: "商品详情", pageKey: "ItemDetailPage",
+    label: "正常展示",
+    trigger: "数据加载成功",
+    wireframe: `┌─────────────────────────────────┐
+│  [← 返回]    商品详情   [⋯更多]  │
+├─────────────────────────────────┤
+│  ┌─────────────────────────────┐│
+│  │          IMG 1/3            ││
+│  └─────────────────────────────┘│
+│              ● ○ ○              │
+│  ¥25.00    ~~原价 ¥80~~         │
+│  高等数学（上册）人教版 全新      │
+│  📚 教材  📍 南校区  3小时前    │
+│  九成新，只看了前三章...  [展开▼]│
+│  ── 卖家信息 ──                 │
+│  👤 小明  ★4.8  💚 信用良好    │
+│     5件在售  XX大学·南校区       │
+├─────────────────────────────────┤
+│  [❤ 收藏(23)]   [ 💬 私信卖家 ] │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "价格醒目展示（主色大字）" },
+      { level: "hard", text: "未登录用户无法使用收藏/私信" },
+      { level: "soft", text: "商品描述超过 3 行折叠" },
+      { level: "suggest", text: "已售出商品底部显示'此商品已售出'提示" }
+    ],
+    transitions: [
+      { event: "favor_tap", target: "detail_favoring" },
+      { event: "message_tap", target: "→ MessageDetailPage" },
+      { event: "seller_tap", target: "→ ProfilePage" },
+      { event: "image_tap", target: "detail_image_preview" }
+    ]
+  },
+
+  "detail_not_found": {
+    page: "商品详情", pageKey: "ItemDetailPage",
+    label: "商品不存在",
+    trigger: "API 返回 404",
+    wireframe: `┌─────────────────────────────────┐
+│  [← 返回]    商品详情            │
+├─────────────────────────────────┤
+│                                 │
+│           🗑️                    │
+│                                 │
+│      该商品已下架或不存在         │
+│                                 │
+│       [ 返回首页 ]               │
+│                                 │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "必须提供返回入口，防止用户无路可走" }
+    ],
+    transitions: [
+      { event: "go_home_tap", target: "→ HomePage" }
+    ]
+  },
+
+  // ── 发布商品 ──
+  "publish_idle": {
+    page: "发布商品", pageKey: "PublishItemPage",
+    label: "空白表单",
+    trigger: "页面初始加载",
+    wireframe: `┌─────────────────────────────────┐
+│  [✕ 取消]    发布闲置物          │
+├─────────────────────────────────┤
+│  ┌────┐ ┌────┐ ┌────┐ ┌──────┐ │
+│  │IMG │ │    │ │    │ │  +   │ │  至少1张，最多6张
+│  └────┘ └────┘ └────┘ └──────┘ │
+│  商品标题 * [___________________]│  必填
+│  分类 *            [请选择 ▸]   │  必选
+│  校区 *            [南校区 ▸]   │  必选
+│  售价 *    ¥ [_________________]│  必填
+│  原价（可选）¥ [_______________]│
+│  描述 [_________________________]│
+│                              0/1000│
+│                                 │
+│       [ 发 布 商 品 ]            │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "至少上传 1 张图片" },
+      { level: "hard", text: "标题、分类、校区、售价必填" },
+      { level: "soft", text: "图片最多 6 张，第一张为封面" }
+    ],
+    transitions: [
+      { event: "image_select", target: "publish_uploading" },
+      { event: "submit_tap", target: "publish_validating" }
+    ]
+  },
+
+  "publish_validation_error": {
+    page: "发布商品", pageKey: "PublishItemPage",
+    label: "表单校验失败",
+    trigger: "必填字段未填时点击发布",
+    wireframe: `┌─────────────────────────────────┐
+│  [✕ 取消]    发布闲置物          │
+├─────────────────────────────────┤
+│  ⚠️ 请完善以下信息后再发布        │
+│                                 │
+│  商品标题 * [___________________]│
+│  ⚠️ 请输入商品标题（字段级提示）  │  错误提示（红色）
+│                                 │
+│  分类 *        [请选择分类 ▸]   │  边框变红
+│  ⚠️ 请选择商品分类               │
+│                                 │
+│       [ 发 布 商 品 ]            │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "错误提示紧贴对应字段下方" },
+      { level: "hard", text: "表单顶部显示总体错误提示" }
+    ],
+    transitions: [
+      { event: "field_fix", target: "publish_idle" }
+    ]
+  },
+
+  "publish_submitting": {
+    page: "发布商品", pageKey: "PublishItemPage",
+    label: "提交中",
+    trigger: "校验通过后点击发布",
+    wireframe: `┌─────────────────────────────────┐
+│  [✕ 取消]    发布闲置物          │
+├─────────────────────────────────┤
+│                                 │
+│  （表单全部禁用，变灰）            │
+│                                 │
+│                                 │
+│    [ ⏳ 发布中，请稍候... ]      │  按钮 loading，不可点击
+│                                 │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "按钮 loading 状态，禁止重复点击" },
+      { level: "hard", text: "表单全部禁用，防止数据变更" }
+    ],
+    transitions: [
+      { event: "submit_success", target: "publish_success" },
+      { event: "submit_error", target: "publish_error_state" }
+    ]
+  },
+
+  // ── 私信列表 ──
+  "msg_list_auth_required": {
+    page: "私信列表", pageKey: "MessageListPage",
+    label: "未登录",
+    trigger: "用户未登录访问消息页",
+    wireframe: `┌─────────────────────────────────┐
+│            消息                 │
+├─────────────────────────────────┤
+│                                 │
+│          💬                     │
+│                                 │
+│      登录后即可查看消息           │
+│      与买卖双方便捷沟通           │
+│                                 │
+│    [ 微信一键登录 ]               │
+│                                 │
+├─────────────────────────────────┤
+│  [🏠首页] [💬消息] [➕发布] [👤我]│
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "必须提供微信登录入口" },
+      { level: "hard", text: "未登录不可直接访问消息内容" }
+    ],
+    transitions: [
+      { event: "login_success", target: "msg_list_loading" }
+    ]
+  },
+
+  "msg_list_success": {
+    page: "私信列表", pageKey: "MessageListPage",
+    label: "有消息",
+    trigger: "conversations.length > 0",
+    wireframe: `┌─────────────────────────────────┐
+│            消息                 │
+├─────────────────────────────────┤
+│  👤  小红同学           3分钟前  │
+│      关于：iPhone 13             │
+│      好的，明天下午可以吗         │
+│  ─────────────────────────────  │
+│  👤  小王同学  ●2       昨天    │  ●2 = 未读角标
+│      关于：高等数学教材           │
+│      这本书还在吗？              │
+│  ─────────────────────────────  │
+│  👤  小李同学           3天前   │
+│      关于：英语四级词汇           │
+│      谢谢，已收到~              │
+├─────────────────────────────────┤
+│  [🏠首页] [💬消息●3] [➕发布] [👤我]│
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "未读消息红色圆形角标，≥100 显示 99+" },
+      { level: "hard", text: "Tab 栏消息图标显示总未读数" },
+      { level: "soft", text: "列表按最后消息时间降序排列" }
+    ],
+    transitions: [
+      { event: "conversation_tap", target: "→ MessageDetailPage" },
+      { event: "pull_to_refresh", target: "msg_list_loading" }
+    ]
+  },
+
+  // ── 私信详情 ──
+  "msg_detail_success": {
+    page: "私信详情", pageKey: "MessageDetailPage",
+    label: "正常对话",
+    trigger: "消息加载成功",
+    wireframe: `┌─────────────────────────────────┐
+│  [← 返回]    小红同学            │
+├─────────────────────────────────┤
+│  [IMG] iPhone 13  ¥2,800  在售  │  商品上下文卡片
+├─────────────────────────────────┤
+│  ─── 昨天 14:30 ───             │
+│  ┌─────────────┐                │
+│  │ 你好，还在吗│  对方（靠左）   │
+│  └─────────────┘                │
+│           ┌──────────────────┐  │
+│           │ 在的！可面交      │  │  自己（靠右，主色）
+│           └──────────────────┘  │
+│  ┌──────────────────────────┐   │
+│  │ 📅 预约面交               │   │  面交卡片
+│  │ 明天 14:00 图书馆门口     │   │
+│  │ [确认] [拒绝]             │   │
+│  └──────────────────────────┘   │
+├─────────────────────────────────┤
+│  [📅预约] [___________] [发送]  │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "消息最多 500 字" },
+      { level: "soft", text: "每隔 5 分钟显示一次时间戳" },
+      { level: "suggest", text: "发送失败消息显示红色感叹号 + 重发" }
+    ],
+    transitions: [
+      { event: "send_message_tap", target: "msg_detail_sending" },
+      { event: "appointment_tap", target: "msg_detail_appointment_picker" },
+      { event: "load_older_messages", target: "msg_detail_loading_history" }
+    ]
+  },
+
+  "msg_detail_sending": {
+    page: "私信详情", pageKey: "MessageDetailPage",
+    label: "发送中",
+    trigger: "点击发送按钮",
+    wireframe: `┌─────────────────────────────────┐
+│  [← 返回]    小红同学            │
+├─────────────────────────────────┤
+│  [IMG] iPhone 13  ¥2,800        │
+├─────────────────────────────────┤
+│                                 │
+│           ┌──────────────────┐  │
+│           │ 好的，明天见！    │⏳│  发送中：⏳替代头像
+│           └──────────────────┘  │
+│                                 │
+├─────────────────────────────────┤
+│  [📅预约] [___________] [⏳发送]│  发送按钮 loading
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "发送按钮 loading，防止重复发送" }
+    ],
+    transitions: [
+      { event: "send_success", target: "msg_detail_success" },
+      { event: "send_error", target: "msg_detail_success（显示失败气泡）" }
+    ]
+  },
+
+  // ── 个人主页 ──
+  "profile_success_self": {
+    page: "个人主页", pageKey: "ProfilePage",
+    label: "自己的主页",
+    trigger: "当前页面是已登录用户自己的主页",
+    wireframe: `┌─────────────────────────────────┐
+│  [← 返回]    我的主页   [⚙️]    │
+├─────────────────────────────────┤
+│  👤(72px)  [✏️ 编辑资料]         │
+│  小明同学  ✓已认证  💚信用良好   │
+│  XX大学 · 南校区                │
+│  ┌────────┬────────┬────────────┐│
+│  │12件在售│8件已售 │ ★4.8(15评)││
+│  └────────┴────────┴────────────┘│
+│  [在售(12)] [已售(8)] [收藏] [评价]│
+│  ─────────────────────────────  │
+│  ┌────────┐  ┌────────┐         │
+│  │  IMG   │  │  IMG   │         │
+│  └────────┘  └────────┘         │
+│  高数教材      iPhone 13        │
+│  ¥25          ¥2,800           │
+├─────────────────────────────────┤
+│  [🏠首页] [💬消息] [➕发布] [👤我]│
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "编辑按钮只对本人显示" },
+      { level: "soft", text: "4 个 Tab：在售/已售/收藏/评价" }
+    ],
+    transitions: [
+      { event: "edit_profile_tap", target: "profile_edit" },
+      { event: "item_tap", target: "→ ItemDetailPage" },
+      { event: "logout_tap", target: "profile_confirm_logout" }
+    ]
+  },
+
+  "profile_success_other": {
+    page: "个人主页", pageKey: "ProfilePage",
+    label: "他人主页",
+    trigger: "访问他人的主页",
+    wireframe: `┌─────────────────────────────────┐
+│  [← 返回]    小红同学            │  无设置按钮
+├─────────────────────────────────┤
+│  👤(72px)                        │  无编辑按钮
+│  小红同学  💚 信用良好            │
+│  XX大学 · 东校区                │
+│  ┌────────┬────────┬────────────┐│
+│  │5件在售 │20件已售│ ★4.9(8评) ││
+│  └────────┴────────┴────────────┘│
+│  [在售(5)]  [收到评价(8)]        │  无收藏Tab
+│  ─────────────────────────────  │
+│  ┌────────┐  ┌────────┐         │
+│  │  IMG   │  │  IMG   │         │
+│  └────────┘  └────────┘         │
+├─────────────────────────────────┤
+│  [🏠首页] [💬消息] [➕发布] [👤我]│
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "不显示编辑/设置/退出按钮" },
+      { level: "soft", text: "仅显示公开信息：在售/评价 Tab" }
+    ],
+    transitions: [
+      { event: "item_tap", target: "→ ItemDetailPage" }
+    ]
+  },
+
+  "profile_edit": {
+    page: "个人主页", pageKey: "ProfilePage",
+    label: "编辑资料",
+    trigger: "点击编辑按钮",
+    wireframe: `┌─────────────────────────────────┐
+│  [✕ 取消]    编辑资料   [保存]   │
+├─────────────────────────────────┤
+│  👤(72px)  [点击更换头像]         │
+│                                 │
+│  昵称                           │
+│  ┌─────────────────────────────┐│
+│  │ 小明同学                    ││  最多 30 字
+│  └─────────────────────────────┘│
+│                             5/30│
+│                                 │
+│  校区              [南校区 ▸]   │
+│                                 │
+│        [ 保 存 修 改 ]           │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "取消和保存按钮必须都存在" },
+      { level: "hard", text: "昵称最多 30 字" }
+    ],
+    transitions: [
+      { event: "save_tap", target: "profile_saving" },
+      { event: "cancel_tap", target: "profile_success_self" }
+    ]
+  }
+};
+
+// ============================================================
+// 状态图定义（按页面）
+// ============================================================
+const DIAGRAMS = {
+  all: `stateDiagram-v2
+  [*] --> HomePage
+
+  state "首页 (HomePage)" as HomePage {
+    [*] --> home_loading
+    home_loading --> home_success : fetch_success
+    home_loading --> home_empty : fetch_empty
+    home_loading --> home_error : fetch_error
+    home_success --> home_loading_more : scroll_to_bottom
+    home_success --> home_loading : pull_to_refresh
+    home_loading_more --> home_success : load_done
+    home_error --> home_loading : retry_tap
+  }
+
+  state "商品详情 (ItemDetailPage)" as ItemDetailPage {
+    [*] --> detail_loading
+    detail_loading --> detail_success : fetch_success
+    detail_loading --> detail_not_found : 404
+    detail_loading --> detail_error : fetch_error
+    detail_success --> detail_favoring : favor_tap
+    detail_favoring --> detail_success : done
+    detail_error --> detail_loading : retry_tap
+  }
+
+  state "发布商品 (PublishItemPage)" as PublishItemPage {
+    [*] --> publish_idle
+    publish_idle --> publish_uploading : image_select
+    publish_uploading --> publish_idle : upload_done
+    publish_idle --> publish_validating : submit_tap
+    publish_validating --> publish_submitting : pass
+    publish_validating --> publish_validation_error : fail
+    publish_validation_error --> publish_idle : fix
+    publish_submitting --> publish_success : ok
+    publish_submitting --> publish_error_state : error
+  }
+
+  state "私信列表 (MessageListPage)" as MessageListPage {
+    [*] --> msg_list_auth_required : 未登录
+    [*] --> msg_list_loading : 已登录
+    msg_list_auth_required --> msg_list_loading : login
+    msg_list_loading --> msg_list_success : fetch_success
+    msg_list_loading --> msg_list_empty : empty
+    msg_list_loading --> msg_list_error : error
+    msg_list_error --> msg_list_loading : retry
+  }
+
+  state "私信详情 (MessageDetailPage)" as MessageDetailPage {
+    [*] --> msg_detail_loading
+    msg_detail_loading --> msg_detail_success : fetch_success
+    msg_detail_success --> msg_detail_sending : send_tap
+    msg_detail_success --> msg_detail_appointment_picker : appointment_tap
+    msg_detail_sending --> msg_detail_success : done
+    msg_detail_appointment_picker --> msg_detail_sending : confirm
+    msg_detail_appointment_picker --> msg_detail_success : cancel
+  }
+
+  state "个人主页 (ProfilePage)" as ProfilePage {
+    [*] --> profile_loading
+    profile_loading --> profile_success_self : self
+    profile_loading --> profile_success_other : other
+    profile_success_self --> profile_edit : edit_tap
+    profile_edit --> profile_saving : save
+    profile_saving --> profile_success_self : done
+    profile_edit --> profile_success_self : cancel
+  }
+
+  HomePage --> ItemDetailPage : item_tap
+  ItemDetailPage --> MessageDetailPage : message_tap
+  ItemDetailPage --> ProfilePage : seller_tap
+  MessageListPage --> MessageDetailPage : conversation_tap
+  PublishItemPage --> ItemDetailPage : publish_success`,
+
+  HomePage: `stateDiagram-v2
+  [*] --> home_loading
+  home_loading --> home_success : fetch_success
+  home_loading --> home_empty : fetch_empty
+  home_loading --> home_error : fetch_error
+  home_success --> home_loading_more : scroll_to_bottom
+  home_success --> home_loading : pull_to_refresh / filter_change
+  home_loading_more --> home_success : load_done
+  home_loading_more --> home_success_all_loaded : no_more_data
+  home_empty --> PublishItemPage : publish_tap
+  home_error --> home_loading : retry_tap`,
+
+  ItemDetailPage: `stateDiagram-v2
+  [*] --> detail_loading
+  detail_loading --> detail_success : fetch_success
+  detail_loading --> detail_not_found : 404
+  detail_loading --> detail_error : fetch_error
+  detail_success --> detail_image_preview : image_tap
+  detail_image_preview --> detail_success : close_tap
+  detail_success --> detail_favoring : favor_tap
+  detail_success --> detail_unfavoring : unfavor_tap
+  detail_favoring --> detail_success : done
+  detail_unfavoring --> detail_success : done
+  detail_error --> detail_loading : retry_tap`,
+
+  PublishItemPage: `stateDiagram-v2
+  [*] --> publish_idle
+  publish_idle --> publish_uploading : image_select
+  publish_uploading --> publish_idle : upload_success / upload_error
+  publish_idle --> publish_validating : submit_tap
+  publish_validating --> publish_submitting : validate_pass
+  publish_validating --> publish_validation_error : validate_fail
+  publish_validation_error --> publish_idle : field_fix
+  publish_submitting --> publish_success : submit_success
+  publish_submitting --> publish_error_state : submit_error
+  publish_error_state --> publish_idle : toast_dismiss`,
+
+  MessageListPage: `stateDiagram-v2
+  [*] --> msg_list_idle
+  msg_list_idle --> msg_list_auth_required : 未登录
+  msg_list_idle --> msg_list_loading : 已登录
+  msg_list_auth_required --> msg_list_loading : login_success
+  msg_list_loading --> msg_list_success : fetch_success
+  msg_list_loading --> msg_list_empty : fetch_empty
+  msg_list_loading --> msg_list_error : fetch_error
+  msg_list_success --> msg_list_loading : pull_to_refresh
+  msg_list_error --> msg_list_loading : retry_tap`,
+
+  MessageDetailPage: `stateDiagram-v2
+  [*] --> msg_detail_loading
+  msg_detail_loading --> msg_detail_success : fetch_success
+  msg_detail_loading --> msg_detail_error : fetch_error
+  msg_detail_success --> msg_detail_sending : send_message_tap
+  msg_detail_success --> msg_detail_appointment_picker : appointment_tap
+  msg_detail_success --> msg_detail_loading_history : load_older
+  msg_detail_sending --> msg_detail_success : send_done
+  msg_detail_loading_history --> msg_detail_success : loaded
+  msg_detail_appointment_picker --> msg_detail_sending : confirm
+  msg_detail_appointment_picker --> msg_detail_success : cancel
+  msg_detail_error --> msg_detail_loading : retry_tap`,
+
+  ProfilePage: `stateDiagram-v2
+  [*] --> profile_loading
+  profile_loading --> profile_success_self : self
+  profile_loading --> profile_success_other : other
+  profile_loading --> profile_error : error
+  profile_success_self --> profile_edit : edit_tap
+  profile_edit --> profile_saving : save_tap
+  profile_saving --> profile_success_self : save_success
+  profile_saving --> profile_edit : save_error
+  profile_edit --> profile_success_self : cancel_tap
+  profile_success_self --> profile_confirm_logout : logout_tap
+  profile_confirm_logout --> profile_success_self : cancel
+  profile_confirm_logout --> profile_loading : confirm_logout
+  profile_error --> profile_loading : retry_tap`
+};
+
+// ============================================================
+// 应用逻辑
+// ============================================================
+let currentPageFilter = 'all';
+let selectedState = null;
+
+mermaid.initialize({
+  startOnLoad: false,
+  securityLevel: 'loose',
+  theme: 'default',
+  stateDiagram: { useMaxWidth: false }
+});
+
+async function renderDiagram(pageKey) {
+  const container = document.getElementById('diagram-container');
+  container.innerHTML = '<div style="color:#9ca3af;padding:40px;text-align:center">正在渲染...</div>';
+
+  const def = DIAGRAMS[pageKey] || DIAGRAMS['all'];
+  try {
+    const { svg } = await mermaid.render('state-diagram-' + Date.now(), def);
+    container.innerHTML = svg;
+    bindDiagramClicks(container);
+  } catch (e) {
+    container.innerHTML = `<div style="color:#ef4444;padding:24px;text-align:center">图表渲染失败：${e.message}</div>`;
+  }
+}
+
+function bindDiagramClicks(container) {
+  const svgEl = container.querySelector('svg');
+  if (!svgEl) return;
+
+  svgEl.style.maxWidth = '100%';
+  svgEl.style.height = 'auto';
+
+  // 尝试绑定所有 state 节点
+  svgEl.querySelectorAll('g').forEach(el => {
+    const idAttr = el.getAttribute('id') || '';
+    const matchedKey = Object.keys(STATES).find(k => {
+      return idAttr === k || idAttr.includes(k) || (el.textContent && el.textContent.trim() === k);
+    });
+    if (matchedKey) {
+      el.style.cursor = 'pointer';
+      el.setAttribute('data-state-key', matchedKey);
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectState(matchedKey);
+      });
+    }
+  });
+}
+
+function selectState(stateKey) {
+  selectedState = stateKey;
+  const state = STATES[stateKey];
+  if (!state) return;
+
+  // 更新 chip 高亮
+  document.querySelectorAll('.state-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.key === stateKey);
+  });
+
+  // 更新右侧面板
+  const header = document.getElementById('detail-header');
+  const body = document.getElementById('detail-body');
+
+  header.innerHTML = `
+    <div class="page-badge">${state.page}</div>
+    <div class="state-name">${stateKey}</div>
+    <div class="state-label">${state.label}</div>
+    <div class="trigger-text">触发条件：${state.trigger}</div>
+  `;
+
+  let constraintsHtml = '';
+  if (state.constraints && state.constraints.length) {
+    constraintsHtml = `
+      <div class="constraints-container">
+        <div class="constraints-title">约束标记</div>
+        ${state.constraints.map(c => `
+          <div class="constraint-item ${c.level}">
+            <span class="constraint-badge">${c.level === 'hard' ? '🔴' : c.level === 'soft' ? '🔵' : '🟢'}</span>
+            <span>${c.text}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  let transitionsHtml = '';
+  if (state.transitions && state.transitions.length) {
+    transitionsHtml = `
+      <div class="transitions-box">
+        <h4>状态转换</h4>
+        ${state.transitions.map(t => `
+          <div class="transition-item">
+            <span class="transition-event">${t.event}</span>
+            <span class="transition-arrow">→</span>
+            <span class="transition-target">${t.target}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  body.innerHTML = `
+    <div class="wireframe-container">
+      <div class="wireframe-title">低保真线框图</div>
+      <div class="wireframe"><pre>${escapeHtml(state.wireframe)}</pre></div>
+    </div>
+    ${constraintsHtml}
+    ${transitionsHtml}
+  `;
+
+  body.style.display = 'block';
+}
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function renderChips(pageKey) {
+  const container = document.getElementById('state-chips');
+  const wrapper = document.getElementById('state-chips-container');
+
+  const filtered = pageKey === 'all'
+    ? Object.keys(STATES)
+    : Object.keys(STATES).filter(k => STATES[k].pageKey === pageKey);
+
+  if (filtered.length === 0) {
+    wrapper.style.display = 'none';
+    return;
+  }
+
+  wrapper.style.display = 'block';
+  container.innerHTML = filtered.map(k => `
+    <span class="state-chip ${selectedState === k ? 'active' : ''}" data-key="${k}" onclick="selectState('${k}')">${k}</span>
+  `).join('');
+}
+
+// 初始化
+document.getElementById('page-select').addEventListener('change', function() {
+  currentPageFilter = this.value;
+  selectedState = null;
+  document.getElementById('detail-header').innerHTML = `
+    <div class="empty-state">
+      <div class="emoji">👆</div>
+      <p>点击左侧状态节点<br>查看对应线框图和约束说明</p>
+    </div>
+  `;
+  document.getElementById('detail-body').style.display = 'none';
+  renderDiagram(currentPageFilter);
+  renderChips(currentPageFilter);
+});
+
+// 启动
+renderDiagram('all');
+renderChips('all');
+</script>
+</body>
+</html>

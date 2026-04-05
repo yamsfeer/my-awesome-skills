@@ -1,0 +1,296 @@
+# footX - API 层数据契约
+# 聚合响应、去除敏感字段、定义端点
+
+base_url: /api/v1
+auth_scheme: Bearer JWT
+
+# ─────────────────────────────────────────
+# 聚合响应体定义（DTO）
+# ─────────────────────────────────────────
+
+responses:
+
+  UserDTO:
+    description: 返回给前端的用户信息（去除敏感字段）
+    fields:
+      id:             uuid
+      auth_provider:  enum [apple, google, email]
+      display_name:   string           # 从 Apple/Google 获取的显示名
+      avatar_url:     string | null
+      profile_completed: boolean
+      created_at:     ISO8601
+
+  UserProfileDTO:
+    fields:
+      shoe_size_us:     number | null
+      shoe_size_eu:     integer | null
+      gender:           enum | null
+      age_group:        enum [teen, adult, senior] | null  # 不暴露出生年份
+      sport_preference: array<string>
+      profile_completed: boolean
+
+  AddressDTO:
+    fields:
+      id:           uuid
+      label:        string | null
+      full_name:    string
+      address_line1: string
+      address_line2: string | null
+      city:         string
+      state:        string | null
+      country:      string            # ISO 3166-1 alpha-2
+      postal_code:  string
+      is_default:   boolean
+
+  AnalysisSessionDTO:
+    fields:
+      id:          uuid
+      shoe_type:   enum
+      status:      enum [pending, processing, completed, failed]
+      created_at:  ISO8601
+      completed_at: ISO8601 | null
+      report:      AnalysisReportDTO | null   # 仅 completed 时有值
+
+  AnalysisReportDTO:
+    fields:
+      id:               uuid
+      arch_type:        enum [high_arch, normal, flat_foot]
+      gait_pattern:     enum [neutral, overpronation, supination]
+      pressure_map_url: string | null
+      posture_score:    integer          # 0-100
+      forward_head:     boolean
+      pelvis_tilt:      number | null
+      recommended_products: array<ProductSummaryDTO>  # 展开推荐商品详情
+
+  ProductDTO:
+    fields:
+      id:           uuid
+      sku:          string
+      name:         string
+      description:  string
+      images:       array<string>
+      price_cents:  integer
+      currency:     string
+      arch_type_fit: array<enum>
+      gait_fit:     array<enum>
+      in_stock:     boolean            # 不暴露具体库存数量
+
+  ProductSummaryDTO:
+    fields:
+      id:          uuid
+      sku:         string
+      name:        string
+      images:      array<string>       # 仅第一张
+      price_cents: integer
+      currency:    string
+      match_score: number              # 与用户足型的匹配度 0-1
+      in_stock:    boolean
+
+  CartDTO:
+    fields:
+      id:          uuid
+      items:       array<CartItemDTO>
+      total_cents: integer
+      item_count:  integer
+
+  CartItemDTO:
+    fields:
+      id:         uuid
+      product:    ProductSummaryDTO
+      quantity:   integer
+      subtotal_cents: integer
+
+  OrderDTO:
+    fields:
+      id:            uuid
+      order_number:  string
+      status:        enum
+      items:         array<OrderItemDTO>
+      total_cents:   integer
+      currency:      string
+      address:       AddressDTO
+      tracking_number: string | null
+      tracking_carrier: string | null
+      created_at:    ISO8601
+      paid_at:       ISO8601 | null
+      shipped_at:    ISO8601 | null
+
+  OrderItemDTO:
+    fields:
+      id:           uuid
+      product_name: string
+      product_image: string
+      quantity:     integer
+      price_cents:  integer
+      subtotal_cents: integer
+
+  PaymentIntentDTO:
+    description: 用于前端 Stripe SDK 初始化
+    fields:
+      client_secret: string           # ⚠️ Stripe PaymentIntent client_secret，用完即失效
+      amount_cents:  integer
+      currency:      string
+
+# ─────────────────────────────────────────
+# API 端点定义
+# ─────────────────────────────────────────
+
+endpoints:
+
+  # === 认证 ===
+  auth:
+    - method: POST
+      path: /auth/apple
+      description: Apple Sign-In 认证
+      request:
+        identity_token: string   # Apple id_token
+        authorization_code: string
+        full_name: { first: string, last: string } | null
+      response: { token: string, user: UserDTO, is_new_user: boolean }
+
+    - method: POST
+      path: /auth/google
+      description: Google Sign-In 认证
+      request:
+        id_token: string
+      response: { token: string, user: UserDTO, is_new_user: boolean }
+
+    - method: POST
+      path: /auth/email/register
+      request: { email: string, password: string }
+      response: { token: string, user: UserDTO }
+
+    - method: POST
+      path: /auth/email/login
+      request: { email: string, password: string }
+      response: { token: string, user: UserDTO }
+
+    - method: POST
+      path: /auth/refresh
+      description: 刷新 JWT token
+      response: { token: string }
+
+  # === 用户 ===
+  users:
+    - method: GET
+      path: /users/me
+      response: UserDTO
+
+    - method: PATCH
+      path: /users/me/profile
+      request: UserProfileDTO（部分字段）
+      response: UserProfileDTO
+
+    - method: GET
+      path: /users/me/addresses
+      response: array<AddressDTO>
+
+    - method: POST
+      path: /users/me/addresses
+      request: AddressDTO（不含 id）
+      response: AddressDTO
+
+    - method: PUT
+      path: /users/me/addresses/{id}
+      request: AddressDTO（不含 id）
+      response: AddressDTO
+
+    - method: DELETE
+      path: /users/me/addresses/{id}
+      response: { success: boolean }
+
+    - method: POST
+      path: /users/me/addresses/{id}/set-default
+      response: AddressDTO
+
+  # === 分析 ===
+  analysis:
+    - method: POST
+      path: /analysis/sessions
+      description: 创建分析任务，获取上传凭证
+      request: { shoe_type: enum }
+      response:
+        session_id: uuid
+        upload_url: string        # 预签名 S3/R2 PUT URL（15分钟有效）
+        upload_fields: object     # 上传时需要附带的字段
+
+    - method: POST
+      path: /analysis/sessions/{id}/submit
+      description: 视频上传完毕，触发 AI 分析
+      response: AnalysisSessionDTO
+
+    - method: GET
+      path: /analysis/sessions/{id}
+      description: 轮询分析状态（前端每 3 秒轮询一次）
+      response: AnalysisSessionDTO
+
+    - method: GET
+      path: /analysis/history
+      description: 用户历史分析列表
+      query_params: { page: integer, per_page: integer }
+      response: { items: array<AnalysisSessionDTO>, total: integer }
+
+  # === 商品 ===
+  products:
+    - method: GET
+      path: /products
+      query_params: { arch_type: enum, gait_pattern: enum, page: integer }
+      response: { items: array<ProductDTO>, total: integer }
+
+    - method: GET
+      path: /products/{id}
+      response: ProductDTO
+
+  # === 购物车 ===
+  cart:
+    - method: GET
+      path: /cart
+      response: CartDTO
+
+    - method: POST
+      path: /cart/items
+      request: { product_id: uuid, quantity: integer }
+      response: CartDTO
+
+    - method: PATCH
+      path: /cart/items/{id}
+      request: { quantity: integer }
+      response: CartDTO
+
+    - method: DELETE
+      path: /cart/items/{id}
+      response: CartDTO
+
+  # === 订单 & 支付 ===
+  orders:
+    - method: POST
+      path: /orders
+      description: 从购物车创建订单，同时创建 Stripe PaymentIntent
+      request:
+        address_id: uuid
+        cart_id: uuid
+      response:
+        order: OrderDTO
+        payment_intent: PaymentIntentDTO  # 前端用此初始化 Stripe SDK
+
+    - method: POST
+      path: /orders/{id}/confirm-payment
+      description: Stripe 支付成功后确认（前端调用）
+      request: { payment_intent_id: string }
+      response: OrderDTO
+
+    - method: GET
+      path: /orders
+      query_params: { page: integer, per_page: integer }
+      response: { items: array<OrderDTO>, total: integer }
+
+    - method: GET
+      path: /orders/{id}
+      response: OrderDTO
+
+  # === Webhooks（内部，不暴露给前端）===
+  webhooks:
+    - method: POST
+      path: /webhooks/stripe
+      description: Stripe 支付事件回调（payment_intent.succeeded 等）
+      auth: Stripe-Signature header 验签

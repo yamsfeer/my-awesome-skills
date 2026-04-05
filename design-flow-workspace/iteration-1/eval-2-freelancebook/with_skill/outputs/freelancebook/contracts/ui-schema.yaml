@@ -1,0 +1,519 @@
+# UI 层数据契约 - FreelanceBook
+# 说明：定义 UI 组件直接消费的数据格式，包含展示规则和多态状态
+# 金额字段由前端格式化为 "¥19.90" 形式展示
+
+# ========== 全局格式化规则 ==========
+
+format_rules:
+  date:
+    - condition: "距今 < 1 分钟"
+      format: "刚刚"
+    - condition: "距今 < 60 分钟"
+      format: "N 分钟前"
+    - condition: "距今 < 24 小时"
+      format: "N 小时前"
+    - condition: "今年内"
+      format: "M月D日"
+    - condition: "跨年"
+      format: "YYYY年M月D日"
+
+  date_full:
+    format: "YYYY年M月D日"
+    example: "2024年3月15日"
+
+  month_year:
+    format: "YYYY年M月"
+    example: "2024年3月"
+
+  currency:
+    unit: "分（整数存储）"
+    display: "元（保留两位小数）"
+    example: "存储 199000 → 显示 ¥1,990.00"
+    format: "¥{amount/100:.2f}"
+    thousand_separator: true
+
+  currency_k:
+    condition: "≥ 10,000 分"
+    format: "¥{amount/100000:.1f}万"
+    example: "存储 5000000 → 显示 ¥5.0万"
+
+  percentage:
+    format: "{value*100:.1f}%"
+    example: "0.035 → 3.5%"
+
+  invoice_status:
+    mapping:
+      draft: { label: "草稿", color: neutral, icon: "edit" }
+      sent: { label: "已发送", color: info, icon: "send" }
+      paid: { label: "已收款", color: success, icon: "check" }
+      overdue: { label: "逾期", color: error, icon: "alert" }
+
+  project_status:
+    mapping:
+      active: { label: "进行中", color: info }
+      completed: { label: "已完成", color: success }
+      cancelled: { label: "已取消", color: neutral }
+      paused: { label: "已暂停", color: warning }
+
+
+# ========== 页面 / 组件定义 ==========
+
+pages:
+
+  # ---------- 仪表盘首页 ----------
+  DashboardPage:
+    route: "/"
+    data_source: "GET /api/v1/stats/income?year=2024"
+
+    states:
+      loading:
+        ui: 骨架屏（统计卡片 + 图表占位）
+        trigger: 页面挂载时
+
+      success:
+        ui: 完整仪表盘
+        trigger: 数据加载成功
+
+      error:
+        ui: 错误提示 + [重试] 按钮
+        trigger: 接口返回错误
+
+    components:
+      - name: StatCard
+        data_source: "GET /api/v1/stats/income"
+        fields:
+          - field: total_income
+            format: "¥X,XXX.XX 或 ¥X.X万"
+            source: total_income
+
+          - field: total_unpaid
+            format: "¥X,XXX.XX，红色高亮"
+            source: total_unpaid
+
+          - field: total_overdue
+            format: "¥X,XXX.XX，红色高亮 + 警告图标"
+            source: total_overdue
+
+      - name: IncomeChart
+        data_source: "GET /api/v1/stats/income"
+        fields:
+          - field: monthly_data
+            format: "折线图，X轴月份，Y轴金额"
+            source: by_month
+
+          - field: client_distribution
+            format: "饼图，按客户收入占比"
+            source: by_client
+
+      - name: RecentInvoices
+        data_source: "GET /api/v1/invoices?per_page=5"
+        fields:
+          - field: invoice_list
+            format: "最近 5 条发票记录"
+            source: items[]
+
+  # ---------- 客户列表页 ----------
+  ClientListPage:
+    route: "/clients"
+    data_source: "GET /api/v1/clients"
+
+    states:
+      loading:
+        ui: 骨架屏列表（5 行）
+
+      success:
+        ui: 客户卡片列表
+
+      empty:
+        ui: 空状态插画 + "还没有客户" + [添加客户] 按钮
+        trigger: items.length === 0
+
+      error:
+        ui: 错误提示 + [重试] 按钮
+
+      loading_more:
+        ui: 列表末尾加载动画
+        trigger: 滚动到底部
+
+    components:
+      - name: ClientCard
+        data_source: "GET /api/v1/clients (items[])"
+        fields:
+          - field: name
+            format: "1 行，超出省略号，粗体"
+            source: items[].name
+
+          - field: company_name
+            format: "1 行，灰色，可选"
+            source: items[].company_name
+
+          - field: tags
+            format: "标签组，最多 3 个"
+            source: items[].tags
+
+          - field: unpaid_amount
+            format: "¥X,XXX.XX，红色（如 >0）"
+            source: items[].unpaid_amount
+
+          - field: primary_contact
+            format: "联系人头像 + 姓名"
+            source: items[].primary_contact
+
+  # ---------- 客户详情页 ----------
+  ClientDetailPage:
+    route: "/clients/:id"
+    data_source: "GET /api/v1/clients/:id"
+
+    states:
+      loading:
+        ui: 头部骨架屏 + Tab 内容占位
+
+      success:
+        ui: 完整客户详情
+
+      not_found:
+        ui: "客户不存在或已被删除" + [返回客户列表] 按钮
+        trigger: API 返回 404
+
+      error:
+        ui: 通用错误提示
+
+    components:
+      - name: ClientHeader
+        fields:
+          - field: name
+            format: "大标题"
+            source: name
+
+          - field: company_info
+            format: "公司名 + 税号"
+            source: "company_name + tax_id"
+
+          - field: contact_actions
+            format: "[编辑] [删除] 按钮"
+
+      - name: ContactList
+        fields:
+          - field: contacts
+            format: "联系人列表，主联系人置顶"
+            source: contacts[]
+
+      - name: ClientInvoices
+        data_source: "GET /api/v1/invoices?client_id=:id"
+        fields:
+          - field: invoices
+            format: "该客户的发票列表"
+            source: items[]
+
+  # ---------- 项目列表页 ----------
+  ProjectListPage:
+    route: "/projects"
+    data_source: "GET /api/v1/projects"
+
+    states:
+      loading:
+        ui: 骨架屏列表
+
+      success:
+        ui: 项目卡片列表
+
+      empty:
+        ui: 空状态 + [新建项目] 按钮
+
+      error:
+        ui: 错误提示
+
+    components:
+      - name: ProjectCard
+        data_source: "GET /api/v1/projects (items[])"
+        fields:
+          - field: title
+            format: "1 行，粗体"
+            source: items[].title
+
+          - field: client_name
+            format: "客户名，灰色"
+            source: items[].client.name
+
+          - field: status_badge
+            format: "状态标签（进行中/已完成等）"
+            source: items[].status
+
+          - field: contract_amount
+            format: "¥X,XXX.XX"
+            source: items[].contract_amount
+
+          - field: progress
+            format: "进度条（paid_amount / contract_amount）"
+            source: "paid_amount + contract_amount"
+
+          - field: date_range
+            format: "YYYY.MM.DD - YYYY.MM.DD"
+            source: "start_date + end_date"
+
+  # ---------- 项目详情页 ----------
+  ProjectDetailPage:
+    route: "/projects/:id"
+    data_source: "GET /api/v1/projects/:id"
+
+    states:
+      loading:
+        ui: 骨架屏
+
+      success:
+        ui: 完整项目详情
+
+      not_found:
+        ui: "项目不存在"
+
+      error:
+        ui: 错误提示
+
+    components:
+      - name: ProjectHeader
+        fields:
+          - field: title
+            format: "大标题"
+            source: title
+
+          - field: client
+            format: "客户卡片链接"
+            source: client
+
+          - field: status
+            format: "状态标签 + 状态切换下拉"
+            source: status
+
+          - field: description
+            format: "多行文本"
+            source: description
+
+      - name: ProjectFinance
+        fields:
+          - field: contract_amount
+            format: "合同金额：¥X,XXX.XX"
+            source: contract_amount
+
+          - field: paid_amount
+            format: "已收款：¥X,XXX.XX（绿色）"
+            source: paid_amount
+
+          - field: pending_amount
+            format: "待收款：¥X,XXX.XX（橙色）"
+            source: pending_amount
+
+      - name: ProjectInvoices
+        data_source: "GET /api/v1/invoices?project_id=:id"
+        fields:
+          - field: invoices
+            format: "该项目的发票列表"
+            source: items[]
+
+  # ---------- 发票列表页 ----------
+  InvoiceListPage:
+    route: "/invoices"
+    data_source: "GET /api/v1/invoices"
+
+    states:
+      loading:
+        ui: 骨架屏列表
+
+      success:
+        ui: 发票表格/卡片列表
+
+      empty:
+        ui: 空状态 + [新建发票] 按钮
+
+      error:
+        ui: 错误提示
+
+      filtering:
+        ui: 筛选面板 + 列表
+        trigger: 用户点击筛选按钮
+
+    components:
+      - name: InvoiceFilterBar
+        fields:
+          - field: status_filter
+            format: "下拉选择：全部/草稿/已发送/已收款/逾期"
+
+          - field: date_range
+            format: "日期范围选择器"
+
+          - field: client_filter
+            format: "客户下拉选择"
+
+      - name: InvoiceRow
+        data_source: "GET /api/v1/invoices (items[])"
+        fields:
+          - field: invoice_number
+            format: "蓝色链接，可点击"
+            source: items[].invoice_number
+
+          - field: title
+            format: "1 行"
+            source: items[].title
+
+          - field: client_name
+            format: "客户名"
+            source: items[].client.name
+
+          - field: amount
+            format: "¥X,XXX.XX，右对齐"
+            source: items[].amount
+
+          - field: status_badge
+            format: "状态标签（带颜色）"
+            source: items[].status
+
+          - field: due_date
+            format: "YYYY-MM-DD，逾期标红"
+            source: items[].due_date
+
+  # ---------- 发票详情页 ----------
+  InvoiceDetailPage:
+    route: "/invoices/:id"
+    data_source: "GET /api/v1/invoices/:id"
+
+    states:
+      loading:
+        ui: 骨架屏
+
+      success:
+        ui: 完整发票详情
+
+      not_found:
+        ui: "发票不存在"
+
+      error:
+        ui: 错误提示
+
+    components:
+      - name: InvoiceHeader
+        fields:
+          - field: invoice_number
+            format: "大标题"
+            source: invoice_number
+
+          - field: status_badge
+            format: "状态标签 + 状态变更按钮"
+            source: status
+
+          - field: actions
+            format: "[编辑] [删除] [发送] [标记收款] [下载 PDF]"
+
+      - name: InvoiceInfo
+        fields:
+          - field: client_info
+            format: "客户卡片"
+            source: client
+
+          - field: project_info
+            format: "项目链接（如有）"
+            source: project
+
+          - field: issue_date
+            format: "开票日期：YYYY年M月D日"
+            source: issue_date
+
+          - field: due_date
+            format: "到期日期：YYYY年M月D日"
+            source: due_date
+
+      - name: InvoiceItemsTable
+        fields:
+          - field: items
+            format: "表格：描述 | 数量 | 单价 | 小计"
+            source: items[]
+
+          - field: subtotal
+            format: "合计：¥X,XXX.XX"
+            source: amount
+
+          - field: tax_amount
+            format: "税额：¥X,XXX.XX"
+            source: tax_amount
+
+          - field: total
+            format: "总计：¥X,XXX.XX（粗体）"
+            source: "amount + tax_amount"
+
+  # ---------- 税务预估页 ----------
+  TaxEstimatePage:
+    route: "/tax"
+    data_source: "GET /api/v1/tax/estimate?year=2024"
+
+    states:
+      loading:
+        ui: 骨架屏
+
+      success:
+        ui: 税务预估结果
+
+      error:
+        ui: 错误提示
+
+    components:
+      - name: TaxSummaryCard
+        fields:
+          - field: annual_income
+            format: "年度收入：¥X,XXX.XX"
+            source: annual_income
+
+          - field: taxable_income
+            format: "应税收入：¥X,XXX.XX"
+            source: taxable_income
+
+          - field: total_tax_estimate
+            format: "预估税负：¥X,XXX.XX（红色大字）"
+            source: total_tax_estimate
+
+          - field: effective_rate
+            format: "综合税率：X.X%"
+            source: effective_rate
+
+      - name: TaxBreakdown
+        fields:
+          - field: vat_estimate
+            format: "增值税：¥X,XXX.XX"
+            source: vat_estimate
+
+          - field: income_tax_estimate
+            format: "个人所得税：¥X,XXX.XX"
+            source: income_tax_estimate
+
+          - field: annual_exemption
+            format: "免征额：¥X,XXX.XX"
+            source: annual_exemption
+
+      - name: TaxSettingsForm
+        fields:
+          - field: annual_exemption_input
+            format: "数字输入框，单位元"
+
+          - field: vat_rate_input
+            format: "百分比输入框"
+
+
+# ========== 全局 UI 状态规范 ==========
+
+global_states:
+  network_error:
+    ui: 顶部 Toast，"网络连接失败，请检查网络"
+    duration: 3000ms
+
+  session_expired:
+    ui: 全屏遮罩 + 弹窗"登录已过期，请重新登录"
+    action: 跳转登录页，保存当前路由用于登录后回跳
+
+  permission_denied:
+    ui: Toast "无权限执行此操作"
+    duration: 2000ms
+
+  subscription_expired:
+    ui: 顶部横幅提示 "试用已到期，请订阅以继续使用"
+    action: 显示订阅引导弹窗
+
+  data_syncing:
+    ui: 页面角落小圆点 + "正在同步..."
+    trigger: 后台自动同步时

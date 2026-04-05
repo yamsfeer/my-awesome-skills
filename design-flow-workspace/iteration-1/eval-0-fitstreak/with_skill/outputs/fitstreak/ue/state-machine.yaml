@@ -1,0 +1,386 @@
+# FitStreak - UE 状态机
+# 说明：定义每个核心页面的状态、转换条件和异常路径
+
+pages:
+
+  # ========== 首页（今日打卡） ==========
+  HomePage:
+    page_name: HomePage
+    route: "/home"
+    description: "应用主入口，展示打卡状态、连续天数、月历"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        description: "页面未加载"
+        ui: 空白
+        transitions:
+          - event: page_mount
+            target: loading
+
+      loading:
+        description: "加载用户信息和打卡数据"
+        ui: "顶部骨架屏 + 日历占位"
+        transitions:
+          - event: fetch_success_not_checked
+            target: ready_not_checked
+            condition: "has_checked_today === false"
+          - event: fetch_success_checked
+            target: ready_checked
+            condition: "has_checked_today === true"
+          - event: fetch_error
+            target: error
+
+      ready_not_checked:
+        description: "今日未打卡，引导用户打卡"
+        ui: "连续天数 + 月历 + 橙色'今日打卡'主按钮（脉冲动效）"
+        transitions:
+          - event: checkin_button_tap
+            target: CheckinFormPage.idle
+          - event: pull_to_refresh
+            target: loading
+
+      ready_checked:
+        description: "今日已打卡"
+        ui: "连续天数+1动效 + 月历今日标记 + '已打卡 ✓'（绿色）"
+        transitions:
+          - event: pull_to_refresh
+            target: loading
+          - event: view_history_tap
+            target: CheckinHistoryPage.loading
+
+      error:
+        description: "加载失败"
+        ui: "错误插图 + '加载失败' + [重试] 按钮"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "网络断开"
+        handling: "显示缓存数据（如有）+ Toast 提示'离线模式，数据可能不是最新'"
+      - scenario: "Token 过期"
+        handling: "跳转登录页，登录后回跳首页"
+      - scenario: "服务器 500"
+        handling: "Toast 提示'服务繁忙，请稍后再试' + [重试] 按钮"
+
+
+  # ========== 打卡提交页 ==========
+  CheckinFormPage:
+    page_name: CheckinFormPage
+    route: "/checkin/new"
+    description: "今日运动打卡表单页"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        description: "表单初始状态，等待用户输入"
+        ui: "运动类型宫格 + 时长滑块 + 备注输入 + 照片上传 + [提交打卡] 按钮"
+        guard: "用户必须已登录"
+        transitions:
+          - event: workout_type_select
+            target: idle
+            action: "更新已选运动类型（高亮）"
+          - event: duration_change
+            target: idle
+            action: "更新时长值"
+          - event: photo_add
+            target: uploading_photo
+          - event: submit_tap
+            target: submitting
+            condition: "workout_type 已选 && duration_min >= 1"
+
+      uploading_photo:
+        description: "上传打卡配图"
+        ui: "照片位置显示上传进度"
+        transitions:
+          - event: upload_success
+            target: idle
+            action: "显示缩略图预览"
+          - event: upload_error
+            target: idle
+            action: "Toast 提示'上传失败，请重试'"
+
+      submitting:
+        description: "提交打卡请求"
+        ui: "[提交打卡] 按钮 loading 状态，表单禁用"
+        transitions:
+          - event: submit_success
+            target: success
+          - event: submit_error_409
+            target: idle
+            action: "Toast 提示'今日已打卡，每天只能打卡一次'"
+          - event: submit_error
+            target: idle
+            action: "Toast 提示'提交失败，请重试'"
+
+      success:
+        description: "打卡成功动效页"
+        ui: "全屏烟花动效 + ✓ 图标 + '连续第 N 天！' + 新成就弹窗（如有）"
+        transitions:
+          - event: animation_done
+            target: HomePage.ready_checked
+            condition: "动效播放完毕（约 2 秒）"
+          - event: achievement_tap
+            target: AchievementPage.loading
+          - event: skip_tap
+            target: HomePage.ready_checked
+
+    error_paths:
+      - scenario: "未登录访问"
+        handling: "🔴 强制跳转登录页，不允许访客打卡"
+      - scenario: "图片过大（>10MB）"
+        handling: "上传前客户端校验，提示'图片过大，请选择 10MB 以内的图片'"
+      - scenario: "网络断开后提交"
+        handling: "Toast 提示'网络不可用，请检查网络后重试'"
+
+
+  # ========== 好友排行榜页 ==========
+  LeaderboardPage:
+    page_name: LeaderboardPage
+    route: "/leaderboard"
+    description: "好友间连续打卡天数排行榜"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        transitions:
+          - event: page_mount
+            target: loading
+
+      loading:
+        ui: "骨架屏（3 个排行项占位）"
+        transitions:
+          - event: fetch_success_has_data
+            target: success
+            condition: "friends.length > 0"
+          - event: fetch_success_no_friends
+            target: empty_no_friends
+            condition: "friends.length === 0"
+          - event: fetch_error
+            target: error
+
+      success:
+        ui: "Top 3 领奖台 + 其余好友列表 + 自身排名 Banner"
+        transitions:
+          - event: pull_to_refresh
+            target: loading
+          - event: add_friend_tap
+            target: AddFriendPage.idle
+          - event: user_avatar_tap
+            target: FriendProfilePage.loading
+
+      empty_no_friends:
+        description: "没有好友，排行榜为空"
+        ui: "空状态插图 + '还没有好友，快去邀请吧' + [邀请好友] 按钮"
+        transitions:
+          - event: invite_tap
+            target: AddFriendPage.idle
+
+      error:
+        ui: "错误提示 + [重试] 按钮"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "好友数量超过高级版限制"
+        handling: "不存在此场景（添加好友时已限制）"
+      - scenario: "排行榜数据更新延迟"
+        handling: "数据展示上次缓存，加注'最后更新：N 分钟前'"
+
+
+  # ========== 挑战详情页 ==========
+  ChallengeDetailPage:
+    page_name: ChallengeDetailPage
+    route: "/challenges/:id"
+    description: "挑战赛详情 + 参与者排行"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        transitions:
+          - event: page_mount
+            target: loading
+
+      loading:
+        ui: "骨架屏（标题区域 + 参与者列表）"
+        transitions:
+          - event: fetch_success
+            target: success
+          - event: fetch_not_found
+            target: not_found
+            condition: "API 返回 404"
+          - event: fetch_error
+            target: error
+
+      success:
+        ui: "挑战标题、进度、排行榜"
+        transitions:
+          - event: pull_to_refresh
+            target: loading
+          - event: leave_tap
+            target: leave_confirm_dialog
+            condition: "status === 'pending'（进行中不可退出）"
+          - event: share_tap
+            target: share_sheet
+            action: "调用系统分享面板"
+
+      leave_confirm_dialog:
+        ui: "弹窗：'确认退出挑战？退出后不可重新加入' [取消] [确认退出]"
+        transitions:
+          - event: cancel_tap
+            target: success
+          - event: confirm_leave_tap
+            target: leaving
+
+      leaving:
+        ui: "按钮 loading 状态"
+        transitions:
+          - event: leave_success
+            target: ChallengePage.loading
+            action: "Toast 提示'已退出挑战'"
+          - event: leave_error
+            target: success
+            action: "Toast 提示'退出失败，请重试'"
+
+      not_found:
+        ui: "挑战不存在或已删除 + [返回] 按钮"
+
+      error:
+        ui: "错误提示 + [重试] 按钮"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+      share_sheet:
+        description: "系统分享面板（非自定义状态，调用 RN Share API）"
+
+    error_paths:
+      - scenario: "进行中退出挑战"
+        handling: "🔴 后端返回 422，前端提示'挑战进行中无法退出'"
+      - scenario: "邀请的好友未注册"
+        handling: "显示'该用户尚未注册，可分享链接邀请'"
+
+
+  # ========== 个人中心 / 身体数据页 ==========
+  ProfilePage:
+    page_name: ProfilePage
+    route: "/profile"
+    description: "个人数据中心，含打卡统计和体重趋势"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        transitions:
+          - event: page_mount
+            target: loading
+
+      loading:
+        ui: "骨架屏（头像区域 + 统计卡片 + 图表占位）"
+        transitions:
+          - event: fetch_success
+            target: success
+          - event: fetch_error
+            target: error
+
+      success:
+        ui: "完整个人中心"
+        transitions:
+          - event: edit_profile_tap
+            target: EditProfilePage.idle
+          - event: add_body_record_tap
+            target: BodyRecordFormPage.idle
+          - event: upgrade_tap
+            target: SubscriptionPage.idle
+            condition: "subscription_type === 'free'"
+          - event: pull_to_refresh
+            target: loading
+
+      error:
+        ui: "错误提示 + [重试] 按钮"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "非本人访问"
+        handling: "🔴 个人中心仅本人可访问，路由守卫阻止"
+      - scenario: "图表数据不足"
+        handling: "🟢 显示'暂无足够数据'提示，不展示图表"
+
+
+  # ========== 登录页 ==========
+  LoginPage:
+    page_name: LoginPage
+    route: "/login"
+    description: "手机号 + 验证码登录页"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        description: "输入手机号"
+        ui: "手机号输入框 + [获取验证码] 按钮"
+        transitions:
+          - event: get_code_tap
+            target: sending_code
+            condition: "phone 格式正确（11位数字）"
+
+      sending_code:
+        description: "发送验证码请求中"
+        ui: "[获取验证码] 按钮 loading"
+        transitions:
+          - event: send_success
+            target: code_sent
+          - event: send_error_429
+            target: idle
+            action: "Toast 提示'发送频率过高，请 N 秒后重试'"
+          - event: send_error
+            target: idle
+            action: "Toast 提示'发送失败，请重试'"
+
+      code_sent:
+        description: "验证码已发送，输入验证码"
+        ui: "验证码输入框（6位） + 倒计时 60s + [重新获取]（倒计时结束后可点）"
+        transitions:
+          - event: code_input_complete
+            target: verifying
+            condition: "code.length === 6"
+          - event: resend_tap
+            target: sending_code
+            condition: "倒计时结束"
+          - event: countdown_done
+            target: code_sent
+            action: "[重新获取] 按钮变为可点击"
+
+      verifying:
+        description: "验证码校验中"
+        ui: "验证码输入框 loading 状态"
+        transitions:
+          - event: verify_success
+            target: HomePage.loading
+            action: "存储 token，跳转首页"
+          - event: verify_error_invalid
+            target: code_sent
+            action: "Toast 提示'验证码错误，请重新输入'"
+          - event: verify_error
+            target: code_sent
+            action: "Toast 提示'验证失败，请重试'"
+
+    error_paths:
+      - scenario: "手机号格式错误"
+        handling: "客户端实时校验，输入框红色边框 + '请输入有效的手机号'"
+      - scenario: "已登录用户访问登录页"
+        handling: "路由守卫重定向到首页"

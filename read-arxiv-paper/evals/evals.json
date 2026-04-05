@@ -1,0 +1,89 @@
+{
+  "skill_name": "read-arxiv-paper",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "帮我精读这篇论文：https://arxiv.org/abs/2312.03818\n这是 Gaussian Splatting 相关的，我想深入理解它的方法和原理。",
+      "expected_output": "生成完整的中文阅读笔记，包含：一句话概括、问题与动机、核心方法、实验与结果、贡献与局限、讲解内容（含核心思路讲解、关键技术细节、与已有工作联系、读后思考）。笔记保存到 ~/papers/ 目录，文件名为中文。",
+      "files": [],
+      "assertions": [
+        {
+          "name": "note_saved_to_papers_dir",
+          "description": "~/papers/ 目录下存在至少一个新建的 .md 文件"
+        },
+        {
+          "name": "filename_is_chinese",
+          "description": "保存的笔记文件名包含中文字符（非 ASCII）"
+        },
+        {
+          "name": "has_required_sections",
+          "description": "笔记正文包含以下六个标题：一句话概括、问题与动机、核心方法、实验与结果、贡献与局限、讲解内容"
+        },
+        {
+          "name": "explanation_has_depth",
+          "description": "笔记中"讲解内容"章节的文本长度 ≥ 500 字"
+        },
+        {
+          "name": "paper_identity_correct",
+          "description": "笔记正确识别了 2312.03818 实际对应的论文（Alpha-CLIP），而非盲目相信用户说的 Gaussian Splatting；加分项：提醒用户 ID 可能有误"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "2401.04088\n这个 arxiv ID 对应什么论文？帮我详细解读一下，我对 AI agent 方向感兴趣。",
+      "expected_output": "能从纯 ID 解析出正确的 arxiv 链接，获取论文内容，生成包含讲解内容部分的结构化笔记。讲解内容要有深度，解释核心思路而不是简单复述摘要。",
+      "files": [],
+      "assertions": [
+        {
+          "name": "parsed_bare_id",
+          "description": "仅凭裸 arxiv ID（无 URL）仍成功生成了完整笔记（note.md 文件存在且非空）"
+        },
+        {
+          "name": "filename_is_chinese",
+          "description": "保存的笔记文件名包含中文字符（非 ASCII）"
+        },
+        {
+          "name": "has_required_sections",
+          "description": "笔记正文包含以下六个标题：一句话概括、问题与动机、核心方法、实验与结果、贡献与局限、讲解内容"
+        },
+        {
+          "name": "explanation_has_depth",
+          "description": "笔记中"讲解内容"章节的文本长度 ≥ 500 字"
+        },
+        {
+          "name": "addresses_ai_agent_topic",
+          "description": "笔记内容涉及 AI agent / 智能体 / 自主代理相关主题"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "帮我读一下这篇关于 RAG 的论文：arxiv.org/abs/2005.11401，我想了解它的核心方法，以及它和普通语言模型有什么本质区别。特别想看讲解部分。",
+      "expected_output": "正确处理不带 https:// 的 URL，获取论文内容（这是 2020 年的老论文，可能没有 HTML 版本，需要降级处理），生成完整笔记。讲解内容部分要结合用户的问题（和普通语言模型的区别）给出有针对性的解释。",
+      "files": [],
+      "assertions": [
+        {
+          "name": "handled_url_without_scheme",
+          "description": "成功处理了 arxiv.org/abs/2005.11401（无 https:// 前缀）格式的 URL，生成了笔记"
+        },
+        {
+          "name": "filename_is_chinese",
+          "description": "保存的笔记文件名包含中文字符（非 ASCII）"
+        },
+        {
+          "name": "has_required_sections",
+          "description": "笔记正文包含以下六个标题：一句话概括、问题与动机、核心方法、实验与结果、贡献与局限、讲解内容"
+        },
+        {
+          "name": "addresses_rag_vs_lm_difference",
+          "description": "讲解内容中明确讨论了 RAG 与普通语言模型（LLM）的本质区别"
+        },
+        {
+          "name": "handles_old_paper_gracefully",
+          "description": "若无 HTML 全文，笔记中注明了限制（降级处理），或通过摘要页面获取了足够内容，而非直接失败或笔记为空"
+        }
+      ]
+    }
+  ]
+}

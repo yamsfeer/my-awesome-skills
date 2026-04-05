@@ -1,0 +1,194 @@
+# footX - UI 层数据契约
+# 格式化规则、字段来源映射、组件多态状态
+
+# ─────────────────────────────────────────
+# 格式化规则
+# ─────────────────────────────────────────
+
+formatters:
+  price:
+    source_field: price_cents
+    rule: "cents / 100，格式化为 $XX.XX"
+    example: "2999 → $29.99"
+    locale: en-US
+    currency: USD
+
+  date:
+    source_fields: [created_at, paid_at, shipped_at]
+    rule: "Intl.DateTimeFormat('en-US', { dateStyle: 'medium' })"
+    example: "2024-03-15T10:00:00Z → Mar 15, 2024"
+
+  arch_type:
+    source_field: arch_type
+    labels:
+      high_arch: "High Arch"
+      normal:    "Normal Arch"
+      flat_foot: "Flat Foot"
+    icons:
+      high_arch: arch-high.svg
+      normal:    arch-normal.svg
+      flat_foot: arch-flat.svg
+
+  gait_pattern:
+    source_field: gait_pattern
+    labels:
+      neutral:      "Neutral"
+      overpronation: "Overpronation"
+      supination:   "Supination"
+
+  order_status:
+    source_field: status
+    labels:
+      pending_payment: "Awaiting Payment"
+      paid:            "Payment Confirmed"
+      processing:      "Preparing Order"
+      shipped:         "Shipped"
+      delivered:       "Delivered"
+      cancelled:       "Cancelled"
+      refunded:        "Refunded"
+    colors:
+      pending_payment: "#F59E0B"   # amber
+      paid:            "#10B981"   # green
+      processing:      "#3B82F6"   # blue
+      shipped:         "#8B5CF6"   # purple
+      delivered:       "#10B981"   # green
+      cancelled:       "#EF4444"   # red
+      refunded:        "#6B7280"   # gray
+
+  posture_score:
+    source_field: posture_score
+    rule: "0-100 分，转换为等级"
+    grades:
+      "80-100": { label: "Excellent", color: "#10B981" }
+      "60-79":  { label: "Good",      color: "#3B82F6" }
+      "40-59":  { label: "Fair",      color: "#F59E0B" }
+      "0-39":   { label: "Needs Attention", color: "#EF4444" }
+
+  analysis_status:
+    source_field: status
+    labels:
+      pending:    "Waiting to Process"
+      processing: "Analyzing..."
+      completed:  "Analysis Complete"
+      failed:     "Analysis Failed"
+
+  shoe_size:
+    source_fields: [shoe_size_us, shoe_size_eu]
+    rule: "优先展示 US 码，括号内展示 EU 码"
+    example: "US 9 (EU 42)"
+
+# ─────────────────────────────────────────
+# 页面级 UI 状态（多态）
+# ─────────────────────────────────────────
+
+pages:
+
+  OnboardingPage:
+    description: 首次登录后的引导流程
+    states:
+      - idle: 展示登录选项
+      - loading: 等待 OAuth 回调
+      - profile_incomplete: 引导填写足部档案
+      - success: 跳转首页
+
+  AnalysisFlowPage:
+    description: 足部分析完整流程（多步骤）
+    states:
+      - step_shoe_type: 选择鞋类类型
+      - step_recording: 拍摄/录制视频中
+      - step_uploading: 视频上传中（展示进度条）
+        extra: { upload_progress: 0-100 }
+      - step_processing: AI 分析中（展示动画，轮询 API）
+      - step_result: 展示分析报告
+      - error_upload: 上传失败，提供重试
+      - error_processing: AI 分析失败，提供重试
+
+  ReportPage:
+    description: 分析报告详情页
+    data_source: GET /analysis/sessions/{id}
+    states:
+      loading: 骨架屏（Skeleton）
+      success: 展示完整报告 + 推荐商品
+      error: 加载失败，重试按钮
+
+  ProductListPage:
+    description: 商品列表（来自 AI 推荐或直接浏览）
+    data_source: GET /products
+    states:
+      loading: 骨架屏列表
+      success: 商品卡片网格
+      empty: 无匹配商品空状态（插图 + 引导语）
+      error: 加载失败
+
+  CartPage:
+    data_source: GET /cart
+    states:
+      loading: 骨架屏
+      empty: 购物车为空（插图 + "Start Analysis" CTA）
+      has_items: 展示商品列表 + 合计 + 结算按钮
+      error: 加载失败
+
+  CheckoutPage:
+    description: 结算页
+    states:
+      idle: 地址选择 + 订单摘要 + 支付按钮
+      processing_payment: 支付处理中，按钮 loading，禁止重复点击
+      payment_success: 跳转订单确认页
+      payment_failed: 展示错误原因 + 重试
+
+  OrderDetailPage:
+    data_source: GET /orders/{id}
+    states:
+      loading: 骨架屏
+      success: 订单详情
+      error: 加载失败
+
+# ─────────────────────────────────────────
+# 关键 UI 组件字段映射
+# ─────────────────────────────────────────
+
+components:
+
+  AnalysisResultCard:
+    description: 分析报告摘要卡片（首页/历史列表使用）
+    data_source: AnalysisReportDTO
+    fields:
+      - field: arch_type,     display: formatters.arch_type.labels, icon: formatters.arch_type.icons
+      - field: gait_pattern,  display: formatters.gait_pattern.labels
+      - field: posture_score, display: formatters.posture_score.grades（颜色 + 等级标签）
+      - field: forward_head,  display: "Forward Head Posture Detected" | null（仅 true 时展示）
+      - field: created_at,    display: formatters.date
+
+  ProductCard:
+    description: 商品卡片（列表/推荐使用）
+    data_source: ProductSummaryDTO
+    fields:
+      - field: images[0],    display: 封面图（aspect-ratio 1:1）
+      - field: name,         display: 商品名（最多 2 行截断）
+      - field: price_cents,  display: formatters.price
+      - field: match_score,  display: "XX% Match"（百分比，仅推荐场景展示）
+      - field: in_stock,     display: "Out of Stock" badge（仅 false 时展示）
+
+  OrderStatusBadge:
+    description: 订单状态标签
+    data_source: OrderDTO.status
+    display: formatters.order_status.labels + formatters.order_status.colors（作为背景色/文字色）
+
+  AddressCard:
+    description: 地址卡片
+    data_source: AddressDTO
+    fields:
+      - field: full_name
+      - field: address_line1
+      - field: address_line2（可选，null 时不渲染）
+      - field: city + state + postal_code（拼接展示："{city}, {state} {postal_code}"）
+      - field: country
+      - field: is_default,   display: "Default" badge（仅 true 时展示）
+
+  PostureScoreRing:
+    description: 体态评分环形图表组件
+    data_source: AnalysisReportDTO.posture_score
+    display:
+      - 环形进度条（0-100）
+      - 中心显示: 分数数字 + 等级标签
+      - 颜色: formatters.posture_score.grades.color

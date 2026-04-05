@@ -1,0 +1,33 @@
+{
+  "eval_id": 0,
+  "eval_name": "fitstreak-fitness-app_with_skill",
+  "run_dir": "/Users/yams/my-awesome-skills/design-flow-workspace/iteration-1/eval-0-fitstreak/with_skill",
+  "expectations": [
+    {
+      "text": "核心文件是否创建: 检查 fitstreak/ 目录下至少存在 product-overview.md, contracts/domain.yaml, design/tokens.json",
+      "passed": true,
+      "evidence": "Found 3/3 core files: ['product-overview.md', 'contracts/domain.yaml', 'design/tokens.json']"
+    },
+    {
+      "text": "敏感字段是否标注: domain.yaml 中应有 ⚠️ 禁止暴露 的注释标记",
+      "passed": true,
+      "evidence": "Contains '禁止暴露' marker: True"
+    },
+    {
+      "text": "Design Token 是否冻结: tokens.json 中应有 _frozen: true 标记",
+      "passed": true,
+      "evidence": "Contains _frozen: true: True"
+    },
+    {
+      "text": "线框图是否创建: wireframes/ 目录下应至少有 1 个 .md 文件，且包含 ASCII 线框图和约束标记",
+      "passed": true,
+      "evidence": "Found 5 wireframes, ASCII art: True, constraint markers: True"
+    },
+    {
+      "text": "状态机是否创建: ue/state-machine.yaml 应存在，且包含 states 字段",
+      "passed": true,
+      "evidence": "Contains 'states:': True"
+    }
+  ],
+  "config": "with_skill"
+}

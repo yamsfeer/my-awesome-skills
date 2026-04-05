@@ -1,0 +1,546 @@
+# API 层数据契约 - FreelanceBook
+# 说明：定义前后端契约，聚合响应，过滤敏感字段。
+# 金额字段均以"分（整数）"存储并传输，前端负责格式化展示。
+
+version: "1.0"
+base_url: "/api/v1"
+auth: "Bearer Token (JWT)"
+
+
+# ========== 响应体定义 ==========
+
+responses:
+
+  # 通用结构
+  SuccessResponse:
+    code: 200
+    data: any
+    message: string
+
+  ErrorResponse:
+    code: number    # 400/401/403/404/422/500
+    error: string   # 错误类型标识
+    message: string # 用户可读的错误信息
+
+  PaginationMeta:
+    total: number
+    page: number
+    per_page: number
+    total_pages: number
+
+  # ---------- 用户相关 ----------
+  UserProfile:
+    id: string
+    name: string
+    avatar_url: string | null
+    subscription_days_left: number | null   # 试用剩余天数，-1 表示已订阅
+    subscription_plan: string               # "trial" | "active" | "expired"
+
+  UserDetail:
+    id: string
+    name: string
+    avatar_url: string | null
+    email_masked: string      # 脱敏邮箱，如 u***@example.com
+    subscription_plan: string
+    subscription_days_left: number | null
+    created_at: string        # ISO 8601
+
+  # ---------- 客户相关 ----------
+  ContactSummary:
+    id: string
+    name: string
+    title: string | null
+    email: string | null
+    phone: string | null
+    is_primary: boolean
+
+  ClientSummary:
+    id: string
+    name: string
+    company_name: string | null
+    currency: string
+    tags: string[]
+    primary_contact: ContactSummary | null  # 主要联系人（嵌套，避免多次请求）
+    invoice_count: number                   # 发票总数（聚合字段）
+    unpaid_amount: number                   # 未到账金额合计（分）
+    created_at: string
+
+  ClientDetail:
+    id: string
+    name: string
+    company_name: string | null
+    tax_id: string | null
+    email: string | null
+    phone: string | null
+    address: string | null
+    currency: string
+    tags: string[]
+    notes: string | null
+    contacts: ContactSummary[]              # 所有联系人列表
+    invoice_count: number
+    unpaid_amount: number
+    created_at: string
+    updated_at: string
+
+  ClientListResponse:
+    items: ClientSummary[]
+    pagination: PaginationMeta
+
+  # ---------- 项目相关 ----------
+  ProjectSummary:
+    id: string
+    title: string
+    client:
+      id: string
+      name: string
+    contract_amount: number   # 分
+    currency: string
+    status: string            # "active" | "completed" | "cancelled" | "paused"
+    start_date: string | null # YYYY-MM-DD
+    end_date: string | null
+    paid_amount: number       # 已收款合计（分，聚合）
+    invoice_count: number
+    created_at: string
+
+  ProjectDetail:
+    id: string
+    title: string
+    description: string | null
+    client: ClientSummary
+    contract_amount: number
+    currency: string
+    status: string
+    start_date: string | null
+    end_date: string | null
+    payment_terms: string | null
+    tags: string[]
+    paid_amount: number
+    pending_amount: number    # 待收款（分，聚合）
+    invoice_count: number
+    created_at: string
+    updated_at: string
+
+  ProjectListResponse:
+    items: ProjectSummary[]
+    pagination: PaginationMeta
+
+  # ---------- 发票相关 ----------
+  InvoiceItemDTO:
+    id: string
+    description: string
+    quantity: number
+    unit_price: number   # 分
+    amount: number       # 分
+    sort_order: number
+
+  InvoiceSummary:
+    id: string
+    invoice_number: string
+    title: string
+    client:
+      id: string
+      name: string
+    project:
+      id: string
+      title: string
+    amount: number         # 分
+    tax_amount: number     # 分
+    currency: string
+    status: string         # "draft" | "sent" | "paid" | "overdue"
+    issue_date: string     # YYYY-MM-DD
+    due_date: string
+    paid_at: string | null
+    created_at: string
+
+  InvoiceDetail:
+    id: string
+    invoice_number: string
+    title: string
+    client: ClientDetail
+    project: ProjectSummary | null
+    items: InvoiceItemDTO[]
+    amount: number
+    tax_amount: number
+    currency: string
+    status: string
+    issue_date: string
+    due_date: string
+    paid_at: string | null
+    notes: string | null
+    pdf_download_url: string | null   # 签名 URL，有效期 1 小时
+    created_at: string
+    updated_at: string
+
+  InvoiceListResponse:
+    items: InvoiceSummary[]
+    pagination: PaginationMeta
+
+  # ---------- 收入统计相关 ----------
+  MonthlyIncome:
+    month: string          # "2024-01"
+    total_amount: number   # 当月已收款合计（分）
+    invoice_count: number
+
+  IncomeStats:
+    period: string         # "2024" 或 "2024-Q1"
+    total_income: number   # 总收入（分）
+    total_unpaid: number   # 待收款（分）
+    total_overdue: number  # 逾期未收（分）
+    by_month: MonthlyIncome[]
+    by_client:
+      - client_id: string
+        client_name: string
+        amount: number
+        percentage: number
+    by_status:
+      draft: number
+      sent: number
+      paid: number
+      overdue: number
+
+  # ---------- 税务预估相关 ----------
+  TaxEstimate:
+    year: number
+    annual_income: number        # 年度收入（分）
+    annual_exemption: number     # 免征额（分）
+    taxable_income: number       # 应税收入（分）
+    vat_estimate: number         # 增值税预估（分）
+    income_tax_estimate: number  # 个税预估（分）
+    total_tax_estimate: number   # 总税负预估（分）
+    effective_rate: number       # 综合税率（0-1 浮点）
+    breakdown:
+      - item: string
+        amount: number
+        note: string
+
+
+# ========== 端点定义 ==========
+
+endpoints:
+
+  auth:
+    - method: POST
+      path: /auth/register
+      description: 注册新用户（开始 30 天试用）
+      auth_required: false
+      request_body:
+        name: string, required
+        email: string, required
+        password: string, required, min:8
+      response: UserDetail
+
+    - method: POST
+      path: /auth/login
+      description: 邮箱密码登录
+      auth_required: false
+      request_body:
+        email: string, required
+        password: string, required
+      response:
+        token: string
+        user: UserDetail
+
+    - method: POST
+      path: /auth/logout
+      description: 登出（使 token 失效）
+      auth_required: true
+      response: SuccessResponse
+
+    - method: POST
+      path: /auth/forgot-password
+      description: 发送重置密码邮件
+      auth_required: false
+      request_body:
+        email: string, required
+      response: SuccessResponse
+
+  user:
+    - method: GET
+      path: /users/me
+      description: 获取当前登录用户信息
+      auth_required: true
+      response: UserDetail
+
+    - method: PUT
+      path: /users/me
+      description: 更新个人资料
+      auth_required: true
+      request_body:
+        name: string, optional
+        avatar_url: string, optional
+      response: UserDetail
+
+  clients:
+    - method: GET
+      path: /clients
+      description: 获取客户列表
+      auth_required: true
+      query_params:
+        page: integer, default:1
+        per_page: integer, default:20, max:100
+        q: string, optional, 搜索客户名/公司名
+        tags: string[], optional, 按标签筛选
+      response: ClientListResponse
+
+    - method: POST
+      path: /clients
+      description: 创建新客户
+      auth_required: true
+      request_body:
+        name: string, required
+        company_name: string, optional
+        tax_id: string, optional
+        email: string, optional
+        phone: string, optional
+        address: string, optional
+        currency: string, optional, default:CNY
+        tags: string[], optional
+        notes: string, optional
+      response: ClientDetail
+
+    - method: GET
+      path: /clients/:id
+      description: 获取客户详情
+      auth_required: true
+      response: ClientDetail
+
+    - method: PUT
+      path: /clients/:id
+      description: 更新客户信息
+      auth_required: true
+      ownership_required: true
+      request_body:
+        name: string, optional
+        company_name: string, optional
+        tax_id: string, optional
+        email: string, optional
+        phone: string, optional
+        address: string, optional
+        currency: string, optional
+        tags: string[], optional
+        notes: string, optional
+      response: ClientDetail
+
+    - method: DELETE
+      path: /clients/:id
+      description: 软删除客户
+      auth_required: true
+      ownership_required: true
+      response: SuccessResponse
+
+    - method: POST
+      path: /clients/:id/contacts
+      description: 添加客户联系人
+      auth_required: true
+      request_body:
+        name: string, required
+        title: string, optional
+        email: string, optional
+        phone: string, optional
+        is_primary: boolean, optional, default:false
+      response: ContactSummary
+
+    - method: PUT
+      path: /clients/:id/contacts/:contactId
+      description: 更新联系人信息
+      auth_required: true
+      request_body:
+        name: string, optional
+        title: string, optional
+        email: string, optional
+        phone: string, optional
+        is_primary: boolean, optional
+      response: ContactSummary
+
+    - method: DELETE
+      path: /clients/:id/contacts/:contactId
+      description: 删除联系人
+      auth_required: true
+      response: SuccessResponse
+
+  projects:
+    - method: GET
+      path: /projects
+      description: 获取项目列表
+      auth_required: true
+      query_params:
+        page: integer, default:1
+        per_page: integer, default:20, max:100
+        client_id: string, optional
+        status: string, optional
+        q: string, optional, 搜索项目名
+      response: ProjectListResponse
+
+    - method: POST
+      path: /projects
+      description: 创建新项目
+      auth_required: true
+      request_body:
+        client_id: string, required
+        title: string, required
+        description: string, optional
+        contract_amount: integer, required, 单位分
+        currency: string, optional, default:CNY
+        start_date: string, optional, YYYY-MM-DD
+        end_date: string, optional
+        payment_terms: string, optional
+        tags: string[], optional
+      response: ProjectDetail
+
+    - method: GET
+      path: /projects/:id
+      description: 获取项目详情
+      auth_required: true
+      response: ProjectDetail
+
+    - method: PUT
+      path: /projects/:id
+      description: 更新项目信息
+      auth_required: true
+      ownership_required: true
+      request_body:
+        title: string, optional
+        description: string, optional
+        contract_amount: integer, optional
+        status: string, optional
+        start_date: string, optional
+        end_date: string, optional
+        payment_terms: string, optional
+        tags: string[], optional
+      response: ProjectDetail
+
+    - method: DELETE
+      path: /projects/:id
+      description: 软删除项目
+      auth_required: true
+      ownership_required: true
+      response: SuccessResponse
+
+  invoices:
+    - method: GET
+      path: /invoices
+      description: 获取发票列表
+      auth_required: true
+      query_params:
+        page: integer, default:1
+        per_page: integer, default:20, max:100
+        client_id: string, optional
+        project_id: string, optional
+        status: string, optional, draft/sent/paid/overdue
+        date_from: string, optional, YYYY-MM-DD
+        date_to: string, optional
+        q: string, optional, 搜索发票编号/标题
+      response: InvoiceListResponse
+
+    - method: POST
+      path: /invoices
+      description: 创建发票
+      auth_required: true
+      request_body:
+        client_id: string, required
+        project_id: string, optional
+        title: string, required
+        items:
+          - description: string, required
+            quantity: number, required
+            unit_price: integer, required, 单位分
+        tax_amount: integer, optional, default:0
+        currency: string, optional, default:CNY
+        issue_date: string, required, YYYY-MM-DD
+        due_date: string, required
+        notes: string, optional
+      response: InvoiceDetail
+
+    - method: GET
+      path: /invoices/:id
+      description: 获取发票详情
+      auth_required: true
+      response: InvoiceDetail
+
+    - method: PUT
+      path: /invoices/:id
+      description: 更新发票（仅 draft 状态可完整编辑）
+      auth_required: true
+      ownership_required: true
+      request_body:
+        title: string, optional
+        items: array, optional
+        tax_amount: integer, optional
+        issue_date: string, optional
+        due_date: string, optional
+        notes: string, optional
+      response: InvoiceDetail
+
+    - method: PATCH
+      path: /invoices/:id/status
+      description: 更新发票状态（业务操作）
+      auth_required: true
+      ownership_required: true
+      request_body:
+        status: string, required, draft/sent/paid/overdue
+        paid_at: string, optional, 状态改为paid时必填, YYYY-MM-DD
+      response: InvoiceDetail
+
+    - method: DELETE
+      path: /invoices/:id
+      description: 软删除发票（仅 draft 状态可删除）
+      auth_required: true
+      ownership_required: true
+      response: SuccessResponse
+
+    - method: POST
+      path: /invoices/:id/generate-pdf
+      description: 生成发票 PDF（异步，返回任务 ID）
+      auth_required: true
+      response:
+        task_id: string
+        status: string   # "pending"
+
+    - method: GET
+      path: /invoices/:id/download-pdf
+      description: 获取 PDF 下载签名 URL（有效期 1 小时）
+      auth_required: true
+      response:
+        url: string
+        expires_at: string
+
+  stats:
+    - method: GET
+      path: /stats/income
+      description: 收入统计（用于图表）
+      auth_required: true
+      query_params:
+        year: integer, required, 如 2024
+        period: string, optional, year/quarter/month, default:year
+      response: IncomeStats
+
+  tax:
+    - method: GET
+      path: /tax/estimate
+      description: 税务预估计算
+      auth_required: true
+      query_params:
+        year: integer, required
+      response: TaxEstimate
+
+    - method: PUT
+      path: /tax/settings
+      description: 更新税务配置
+      auth_required: true
+      request_body:
+        annual_exemption: integer, optional, 单位分
+        vat_rate: number, optional, 0-1 小数
+      response: SuccessResponse
+
+
+# ========== 错误码定义 ==========
+
+error_codes:
+  400: "请求参数错误"
+  401: "未登录或 Token 已过期"
+  403: "无权限执行此操作（如修改他人数据）"
+  404: "资源不存在"
+  409: "资源冲突（如邮箱已注册、发票编号重复）"
+  422: "业务逻辑错误（如非 draft 状态的发票不可删除）"
+  429: "请求频率超限"
+  500: "服务器内部错误"

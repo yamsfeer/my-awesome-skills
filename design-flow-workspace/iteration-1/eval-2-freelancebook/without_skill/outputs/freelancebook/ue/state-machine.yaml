@@ -1,0 +1,419 @@
+# FreelanceBook 页面状态机定义
+# 描述各页面/流程的状态转换逻辑
+
+version: "1.0.0"
+
+# ═══════════════════════════════════════════════════════════
+# 全局认证状态机
+# ═══════════════════════════════════════════════════════════
+auth_flow:
+  id: auth_flow
+  description: 用户认证与授权状态流转
+  initial: checking_auth
+  states:
+    checking_auth:
+      description: 应用启动时检查本地 token
+      type: transient
+      transitions:
+        - condition: "has_valid_token"
+          target: authenticated
+        - condition: "no_token || token_expired"
+          target: unauthenticated
+
+    unauthenticated:
+      description: 未登录状态，显示登录/注册页
+      on:
+        SUBMIT_LOGIN:
+          target: logging_in
+        GO_TO_REGISTER:
+          target: registering
+
+    logging_in:
+      description: 登录请求进行中
+      type: loading
+      on:
+        LOGIN_SUCCESS:
+          target: authenticated
+        LOGIN_FAILED:
+          target: unauthenticated
+          side_effects:
+            - show_error: "邮箱或密码错误"
+
+    registering:
+      description: 注册请求进行中
+      type: loading
+      on:
+        REGISTER_SUCCESS:
+          target: authenticated
+          side_effects:
+            - show_toast: "注册成功！已激活30天免费试用"
+        REGISTER_FAILED:
+          target: unauthenticated
+          side_effects:
+            - show_error: "注册失败，请检查信息后重试"
+
+    authenticated:
+      description: 已登录，检查订阅状态
+      type: transient
+      transitions:
+        - condition: "subscription_status in ['trial', 'active']"
+          target: active_user
+        - condition: "subscription_status in ['expired', 'cancelled']"
+          target: readonly_user
+
+    active_user:
+      description: 订阅有效，完整功能访问
+      on:
+        LOGOUT:
+          target: unauthenticated
+        SUBSCRIPTION_EXPIRED:
+          target: readonly_user
+
+    readonly_user:
+      description: 订阅过期，只读模式
+      on:
+        UPGRADE:
+          target: upgrading
+        LOGOUT:
+          target: unauthenticated
+
+    upgrading:
+      description: 订阅购买流程中
+      on:
+        PAYMENT_SUCCESS:
+          target: active_user
+          side_effects:
+            - show_toast: "订阅成功！"
+        PAYMENT_CANCELLED:
+          target: readonly_user
+
+# ═══════════════════════════════════════════════════════════
+# 发票状态机（核心业务）
+# ═══════════════════════════════════════════════════════════
+invoice_status_machine:
+  id: invoice_status
+  description: 发票状态流转
+  initial: draft
+  states:
+    draft:
+      description: 草稿，尚未发送给客户
+      label: "草稿"
+      color: "neutral"
+      actions_available:
+        - EDIT
+        - DELETE
+        - SEND
+      transitions:
+        SEND:
+          target: sent
+          guard: "has_at_least_one_item && has_client"
+          side_effects:
+            - update_status: "sent"
+            - record_sent_at: "now()"
+            - show_toast: "发票已标记为已发送"
+        DELETE:
+          target: deleted
+          guard: "confirm_dialog"
+          side_effects:
+            - delete_record
+
+    sent:
+      description: 已发送给客户，等待付款
+      label: "已发送"
+      color: "primary"
+      actions_available:
+        - MARK_PAID
+        - MARK_OVERDUE
+        - VIEW_PDF
+      transitions:
+        MARK_PAID:
+          target: paid
+          guard: "paid_date_provided"
+          side_effects:
+            - update_status: "paid"
+            - update_paid_date: "input.paid_date"
+            - auto_create_payment_record
+            - show_toast: "已标记为已付款 🎉"
+        MARK_OVERDUE:
+          target: overdue
+          side_effects:
+            - update_status: "overdue"
+            - show_toast: "已标记为逾期"
+        AUTO_OVERDUE:
+          target: overdue
+          trigger: "due_date < today() && status == 'sent'"
+          side_effects:
+            - update_status: "overdue"
+            - send_notification: "invoice_overdue"
+
+    paid:
+      description: 已收款
+      label: "已付款"
+      color: "success"
+      actions_available:
+        - VIEW_PDF
+        - VIEW_PAYMENT
+      is_terminal: true
+
+    overdue:
+      description: 逾期未付
+      label: "逾期"
+      color: "error"
+      actions_available:
+        - MARK_PAID
+        - SEND_REMINDER
+      transitions:
+        MARK_PAID:
+          target: paid
+          guard: "paid_date_provided"
+          side_effects:
+            - update_status: "paid"
+            - update_paid_date: "input.paid_date"
+            - auto_create_payment_record
+        SEND_REMINDER:
+          side_effects:
+            - send_email: "overdue_reminder"
+            - show_toast: "催款提醒已发送"
+
+    deleted:
+      description: 已删除（逻辑删除）
+      is_terminal: true
+      hidden: true
+
+  auto_transitions:
+    - description: "每日检查逾期"
+      trigger: "cron: 0 9 * * *"
+      condition: "status == 'sent' && due_date < today()"
+      action: "AUTO_OVERDUE"
+
+# ═══════════════════════════════════════════════════════════
+# 客户表单状态机
+# ═══════════════════════════════════════════════════════════
+client_form_machine:
+  id: client_form
+  description: 客户新建/编辑表单状态
+  initial: idle
+  states:
+    idle:
+      description: 表单初始状态（空白或加载完成）
+      on:
+        INPUT_CHANGE:
+          target: dirty
+        LOAD_FOR_EDIT:
+          target: loading_data
+
+    loading_data:
+      description: 加载已有客户数据
+      type: loading
+      on:
+        LOAD_SUCCESS:
+          target: idle
+        LOAD_ERROR:
+          target: error
+
+    dirty:
+      description: 用户已修改表单，有未保存变更
+      on:
+        INPUT_CHANGE:
+          target: dirty  # 自环
+        SUBMIT:
+          target: validating
+        RESET:
+          target: idle
+          guard: "confirm_discard_changes"
+
+    validating:
+      description: 前端校验中
+      type: transient
+      transitions:
+        - condition: "validation_passed"
+          target: submitting
+        - condition: "validation_failed"
+          target: dirty
+          side_effects:
+            - show_field_errors
+
+    submitting:
+      description: 提交 API 请求中
+      type: loading
+      on:
+        SUBMIT_SUCCESS:
+          target: success
+        SUBMIT_ERROR:
+          target: dirty
+          side_effects:
+            - show_error: "保存失败，请重试"
+
+    success:
+      description: 保存成功
+      on:
+        _entry:
+          side_effects:
+            - show_toast: "客户信息已保存"
+            - navigate_to: "/clients"
+
+    error:
+      description: 加载数据失败
+      on:
+        RETRY:
+          target: loading_data
+
+# ═══════════════════════════════════════════════════════════
+# 发票表单状态机
+# ═══════════════════════════════════════════════════════════
+invoice_form_machine:
+  id: invoice_form
+  description: 发票创建/编辑表单状态
+  initial: idle
+  context:
+    items: []
+    selected_client: null
+    total_amount: 0
+
+  states:
+    idle:
+      on:
+        SELECT_CLIENT:
+          target: client_selected
+          actions:
+            - set_context: "selected_client = event.client"
+        LOAD_FOR_EDIT:
+          target: loading_data
+
+    loading_data:
+      type: loading
+      on:
+        LOAD_SUCCESS:
+          target: client_selected
+        LOAD_ERROR:
+          target: error
+
+    client_selected:
+      description: 已选择客户，可继续填写
+      on:
+        ADD_ITEM:
+          target: has_items
+          actions:
+            - push_context: "items.push(event.item)"
+            - recalculate_totals
+        CHANGE_FIELD:
+          target: client_selected  # 自环
+
+    has_items:
+      description: 至少有一个明细行
+      on:
+        ADD_ITEM:
+          target: has_items
+          actions:
+            - push_context: "items.push(event.item)"
+            - recalculate_totals
+        REMOVE_ITEM:
+          target: check_items_count
+          actions:
+            - remove_context: "items = items.filter(i => i.id != event.id)"
+            - recalculate_totals
+        UPDATE_ITEM:
+          actions:
+            - update_context: "items[event.index] = event.item"
+            - recalculate_totals
+        SUBMIT:
+          target: validating
+
+    check_items_count:
+      type: transient
+      transitions:
+        - condition: "context.items.length > 0"
+          target: has_items
+        - condition: "context.items.length == 0"
+          target: client_selected
+
+    validating:
+      type: transient
+      transitions:
+        - condition: "validation_passed && items.length > 0"
+          target: submitting
+        - condition: "validation_failed || items.length == 0"
+          target: has_items
+          side_effects:
+            - show_field_errors
+
+    submitting:
+      type: loading
+      on:
+        SUBMIT_SUCCESS:
+          target: success
+        SUBMIT_ERROR:
+          target: has_items
+          side_effects:
+            - show_error: "保存失败，请重试"
+
+    success:
+      on:
+        _entry:
+          side_effects:
+            - show_toast: "发票已创建"
+            - navigate_to: "/invoices"
+
+    error:
+      on:
+        RETRY:
+          target: loading_data
+
+# ═══════════════════════════════════════════════════════════
+# 订阅购买流程状态机
+# ═══════════════════════════════════════════════════════════
+subscription_flow_machine:
+  id: subscription_flow
+  description: 订阅升级/续费流程
+  initial: plan_selection
+  states:
+    plan_selection:
+      description: 选择订阅方案
+      on:
+        SELECT_MONTHLY:
+          target: payment
+          actions:
+            - set_context: "plan = 'monthly', amount = 3900"
+        SELECT_YEARLY:
+          target: payment
+          actions:
+            - set_context: "plan = 'yearly', amount = 39000"
+
+    payment:
+      description: 支付页面，展示二维码
+      on:
+        PAYMENT_SUCCESS:
+          target: processing
+        PAYMENT_TIMEOUT:
+          target: plan_selection
+          side_effects:
+            - show_error: "支付超时，请重新发起"
+        CANCEL:
+          target: plan_selection
+
+    processing:
+      description: 支付成功，服务端验证中
+      type: loading
+      on:
+        VERIFY_SUCCESS:
+          target: completed
+        VERIFY_FAILED:
+          target: payment_failed
+
+    completed:
+      description: 订阅激活成功
+      on:
+        _entry:
+          side_effects:
+            - update_user_subscription
+            - show_toast: "订阅成功！感谢您的支持"
+            - navigate_to: "/"
+
+    payment_failed:
+      description: 支付验证失败
+      on:
+        RETRY:
+          target: plan_selection
+        CONTACT_SUPPORT:
+          side_effects:
+            - open_support_chat

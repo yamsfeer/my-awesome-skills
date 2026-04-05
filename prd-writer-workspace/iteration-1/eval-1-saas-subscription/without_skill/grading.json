@@ -1,0 +1,39 @@
+{
+  "eval_id": 1,
+  "run": "without_skill",
+  "expectations": [
+    {
+      "text": "has-product-vision-section: 文档包含产品愿景或产品定位章节",
+      "passed": true,
+      "evidence": "1.2节「产品定位」描述了产品是什么，1.4节「产品目标」描述了成功目标，但无「差异化优势」对比表"
+    },
+    {
+      "text": "has-target-user-section: 文档包含目标用户章节，并描述了独立开发者的特征",
+      "passed": true,
+      "evidence": "1.3节「目标用户」描述了主要用户为独立开发者，订阅规模10-10000人"
+    },
+    {
+      "text": "has-user-story-map: 功能需求部分使用用户故事地图或用户旅程方式组织",
+      "passed": false,
+      "evidence": "第2章功能需求按技术模块组织（用户管理、订阅状态管理、邮件功能、产品管理），第4章虽有「用户旅程」但只是流程图补充，不是功能的组织方式。没有「用户活动→用户任务→系统功能」的层级结构"
+    },
+    {
+      "text": "has-priority-labels: 功能需求中标注了优先级（P0/P1/P2 或类似方式）",
+      "passed": false,
+      "evidence": "功能需求章节中未发现P0/P1/P2等优先级标注，功能列表不分优先级"
+    },
+    {
+      "text": "covers-core-features: 涵盖了订阅管理和邮件通知两个核心功能模块",
+      "passed": true,
+      "evidence": "2.1-2.2节订阅状态管理完整，2.3节邮件功能包含模板、自动化触发、发送配置"
+    },
+    {
+      "text": "has-non-functional-requirements: 文档包含非功能需求章节",
+      "passed": true,
+      "evidence": "第3章「非功能性需求」包含性能、安全性、可靠性、可扩展性、合规性5个子章节"
+    }
+  ],
+  "pass_rate": 0.667,
+  "total_passed": 4,
+  "total_assertions": 6
+}

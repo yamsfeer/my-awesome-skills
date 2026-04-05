@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FreelanceBook — 交互状态机查看器</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #f8fafc; color: #1e293b; }
+
+  .header {
+    background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .header-title { font-size: 16px; font-weight: 700; color: #0f172a; }
+  .header-subtitle { font-size: 12px; color: #64748b; margin-top: 2px; }
+  .page-filter {
+    padding: 6px 12px; border: 1px solid #e2e8f0; border-radius: 6px;
+    font-size: 13px; background: #fff; cursor: pointer; outline: none;
+    color: #374151;
+  }
+  .page-filter:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
+
+  .main { display: grid; grid-template-columns: 1fr 360px; height: calc(100vh - 57px); }
+
+  .diagram-panel {
+    padding: 20px;
+    overflow: auto;
+    background: #fff;
+    border-right: 1px solid #e2e8f0;
+  }
+  .diagram-panel h3 { font-size: 13px; color: #64748b; margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  #diagram-container { min-height: 300px; }
+  #diagram-container svg { max-width: 100%; cursor: default; }
+
+  .detail-panel {
+    background: #f8fafc;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .detail-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    gap: 8px;
+    padding: 40px;
+    text-align: center;
+  }
+  .detail-empty .icon { font-size: 40px; }
+  .detail-empty p { font-size: 13px; }
+
+  .state-detail { padding: 20px; display: none; }
+  .state-detail.visible { display: block; }
+
+  .state-header { margin-bottom: 16px; }
+  .page-badge {
+    display: inline-block;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .state-name { font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+  .trigger-label { font-size: 12px; color: #64748b; }
+  .trigger-text { font-style: italic; }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
+    margin: 16px 0 8px;
+  }
+
+  .wireframe-box {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .wireframe-header {
+    background: #f1f5f9;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 6px 12px;
+    font-size: 11px;
+    color: #64748b;
+    font-weight: 600;
+  }
+  .wireframe-content {
+    font-family: 'Courier New', 'Menlo', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    padding: 12px;
+    white-space: pre;
+    overflow-x: auto;
+    color: #1e293b;
+    background: #fff;
+  }
+
+  .constraints-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .constraint-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .constraint-item.hard { background: #fef2f2; color: #991b1b; }
+  .constraint-item.soft { background: #eff6ff; color: #1d4ed8; }
+  .constraint-item.tip  { background: #f0fdf4; color: #166534; }
+  .constraint-badge { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+  .state-list { display: flex; flex-direction: column; gap: 4px; }
+  .state-item {
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .state-item:hover { background: #f1f5f9; border-color: #e2e8f0; }
+  .state-item.active { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; font-weight: 600; }
+  .state-item-page { font-size: 11px; color: #94a3b8; }
+  .state-item.active .state-item-page { color: #93c5fd; }
+  .state-dot { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; flex-shrink: 0; }
+  .state-item.active .state-dot { background: #3b82f6; }
+
+  .sidebar { padding: 16px; background: #fff; border-right: 1px solid #e2e8f0; overflow-y: auto; }
+  .sidebar-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; margin-bottom: 12px; }
+
+  .loading-msg { padding: 40px; text-align: center; color: #94a3b8; font-size: 13px; }
+
+  @media (max-width: 768px) {
+    .main { grid-template-columns: 1fr; }
+    .detail-panel { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">FreelanceBook</div>
+    <div class="header-subtitle">交互状态机查看器 · 点击状态节点查看线框图</div>
+  </div>
+  <select class="page-filter" id="pageFilter" onchange="filterPage(this.value)">
+    <option value="all">全部页面</option>
+    <option value="auth">登录/注册页</option>
+    <option value="dashboard">仪表板</option>
+    <option value="client-list">客户列表</option>
+    <option value="invoice-detail">发票详情</option>
+    <option value="stats">收入统计</option>
+    <option value="tax">税务预估</option>
+  </select>
+</div>
+
+<div class="main">
+  <div class="diagram-panel">
+    <h3>状态流程图</h3>
+    <div id="diagram-container">
+      <div class="loading-msg">⏳ 加载状态图...</div>
+    </div>
+  </div>
+
+  <div class="detail-panel" id="detailPanel">
+    <div class="detail-empty" id="detailEmpty">
+      <div class="icon">🖱️</div>
+      <p>点击左侧状态节点<br>查看对应线框图和约束</p>
+    </div>
+    <div class="state-detail" id="stateDetail"></div>
+  </div>
+</div>
+
+<script>
+mermaid.initialize({
+  startOnLoad: false,
+  securityLevel: 'loose',
+  theme: 'default',
+  stateDiagram: { useMaxWidth: false }
+});
+
+// ============================================================
+// 状态数据
+// ============================================================
+const STATES = {
+  "auth_idle": {
+    page: "登录/注册页",
+    pageKey: "auth",
+    label: "默认待输入",
+    trigger: "页面初始加载",
+    wireframe:
+`┌─────────────────────────────────────────────┐
+│          FreelanceBook                      │
+│      自由职业者收入管理工具                  │
+├─────────────────────────────────────────────┤
+│   [  登录  ]      [  注册  ]                │
+│   ─────────                                 │
+│   邮箱                                      │
+│   [________________________________]        │
+│   密码                                      │
+│   [________________________________] [👁]   │
+│                                             │
+│   [         登 录         ]                 │
+│                                             │
+│         忘记密码？                           │
+└─────────────────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "邮箱和密码均为必填" },
+      { level: "soft", text: "密码默认隐藏，可点击👁切换" }
+    ]
+  },
+  "auth_logging_in": {
+    page: "登录/注册页",
+    pageKey: "auth",
+    label: "登录中",
+    trigger: "点击登录按钮",
+    wireframe:
+`┌─────────────────────────────────────────────┐
+│          FreelanceBook                      │
+├─────────────────────────────────────────────┤
+│   [  登录  ]      [  注册  ]                │
+│   邮箱  [______________________]            │
+│   密码  [______________________] [👁]       │
+│                                             │
+│   [      ⏳ 登录中...         ]             │
+└─────────────────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "按钮 loading 态，禁止重复点击" },
+      { level: "soft", text: "输入框全部禁用，不可修改" }
+    ]
+  },
+  "auth_login_error": {
+    page: "登录/注册页",
+    pageKey: "auth",
+    label: "登录失败",
+    trigger: "账号或密码错误（API 返回 401）",
+    wireframe:
+`┌─────────────────────────────────────────────┐
+│          FreelanceBook                      │
+├─────────────────────────────────────────────┤
+│   [  登录  ]      [  注册  ]                │
+│   ┌─────────────────────────────────────┐   │
+│   │ ⚠️  邮箱或密码不正确，请重试          │   │
+│   └─────────────────────────────────────┘   │
+│   邮箱  [______________________]            │
+│   密码  [______________________] [👁]       │
+│                                             │
+│   [         重新登录         ]              │
+└─────────────────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "红色错误提示紧贴表单顶部" },
+      { level: "soft", text: "密码字段内容自动清空，邮箱保留" }
+    ]
+  },
+  "auth_registering": {
+    page: "登录/注册页",
+    pageKey: "auth",
+    label: "注册中",
+    trigger: "点击注册按钮",
+    wireframe:
+`┌─────────────────────────────────────────────┐
+│          FreelanceBook                      │
+├─────────────────────────────────────────────┤
+│   [  登录  ]      [  注册  ]                │
+│               ─────────                    │
+│   姓名  [______________________]            │
+│   邮箱  [______________________]            │
+│   密码  [______________________] [👁]       │
+│                                             │
+│   [    ⏳ 注册中...    ]                     │
+└─────────────────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "注册成功后自动开启 30 天免费试用" },
+      { level: "hard", text: "按钮禁止重复点击" }
+    ]
+  },
+  "auth_email_error": {
+    page: "登录/注册页",
+    pageKey: "auth",
+    label: "邮箱已被注册",
+    trigger: "API 返回 409 邮箱冲突",
+    wireframe:
+`┌─────────────────────────────────────────────┐
+│          FreelanceBook                      │
+├─────────────────────────────────────────────┤
+│   [  登录  ]      [  注册  ]                │
+│               ─────────                    │
+│   姓名  [______________________]            │
+│   邮箱  [______________________]            │  ← 标红
+│   ✗ 该邮箱已注册，去登录？                  │
+│   密码  [______________________] [👁]       │
+│                                             │
+│   [    开始 30 天免费试用    ]               │
+└─────────────────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "邮箱字段边框标红，字段下方显示错误文字" },
+      { level: "tip", text: "错误提示中包含'去登录'跳转链接" }
+    ]
+  },
+  "dash_loading": {
+    page: "仪表板",
+    pageKey: "dashboard",
+    label: "数据加载中",
+    trigger: "页面挂载",
+    wireframe:
+`┌────────────────────────────────────────────────────────────┐
+│  FreelanceBook  [仪表板][客户][项目][发票][统计][税务]      │
+├────────────────────────────────────────────────────────────┤
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐       │
+│  │ ░░░░░░  │  │ ░░░░░░  │  │ ░░░░░░  │  │ ░░░░░░  │       │
+│  │ ░░░░░   │  │ ░░░░░   │  │ ░░░░░   │  │ ░░░░░   │       │
+│  └─────────┘  └─────────┘  └─────────┘  └─────────┘       │
+│  ┌───────────────────────────────────────────────────────┐ │
+│  │  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   │ │
+│  │  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░         │ │
+│  └───────────────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────────────────┘`,
+    constraints: [
+      { level: "soft", text: "KPI 卡片和图表区域均显示骨架屏" }
+    ]
+  },
+  "dash_success": {
+    page: "仪表板",
+    pageKey: "dashboard",
+    label: "正常展示",
+    trigger: "数据加载成功且存在收入记录",
+    wireframe:
+`┌────────────────────────────────────────────────────────────┐
+│  FreelanceBook  [仪表板][客户][项目][发票][统计][税务]      │
+├────────────────────────────────────────────────────────────┤
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌─────────┐    │
+│  │ 本月收入  │  │已收款发票│  │  逾期发票 │  │ 待收款  │   │
+│  │ ¥8,500   │  │  3 张    │  │ ⚠️ 1 张  │  │ ¥3,200  │   │
+│  └──────────┘  └──────────┘  └──────────┘  └─────────┘    │
+│  月度收入趋势                                               │
+│  ┌───────────────────────────────────────────────────────┐ │
+│  │   ████  ████  ████  ████  ████  ████                  │ │
+│  └───────────────────────────────────────────────────────┘ │
+│  逾期发票提醒                                               │
+│  │ INV-008 · 腾讯科技 · ¥5,000 · 逾期 3 天 ⚠️            │ │
+└────────────────────────────────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "逾期发票数量 > 0 时用红色警示色显示" },
+      { level: "soft", text: "月度图表默认展示当年 12 个月" },
+      { level: "tip", text: "逾期发票列表最多显示 3 条，超出显示'查看全部'" }
+    ]
+  },
+  "dash_empty": {
+    page: "仪表板",
+    pageKey: "dashboard",
+    label: "新用户空状态",
+    trigger: "用户刚注册，无任何收入数据",
+    wireframe:
+`┌────────────────────────────────────────────────────────────┐
+│  FreelanceBook  [仪表板][客户][项目][发票][统计][税务]      │
+├────────────────────────────────────────────────────────────┤
+│                                                            │
+│                  [  欢迎插画  ]                             │
+│                                                            │
+│             欢迎使用 FreelanceBook！                        │
+│         开始管理你的自由职业收入，                          │
+│         先创建第一个客户                                    │
+│                                                            │
+│             [  + 创建第一个客户  ]                          │
+│                                                            │
+└────────────────────────────────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "引导按钮为主 CTA，颜色突出" },
+      { level: "tip", text: "空状态建议使用友好插画提升新用户好感" }
+    ]
+  },
+  "dash_error": {
+    page: "仪表板",
+    pageKey: "dashboard",
+    label: "加载失败",
+    trigger: "接口返回 4xx/5xx 或网络超时",
+    wireframe:
+`┌────────────────────────────────────────────────────────────┐
+│  FreelanceBook  [仪表板][客户][项目][发票][统计][税务]      │
+├────────────────────────────────────────────────────────────┤
+│                                                            │
+│                  ⚠️ 数据加载失败                            │
+│             网络连接异常，请检查网络后重试                   │
+│                                                            │
+│                   [    重试    ]                            │
+│                                                            │
+└────────────────────────────────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "必须提供重试按钮" }
+    ]
+  },
+  "cl_loading": {
+    page: "客户列表",
+    pageKey: "client-list",
+    label: "列表加载中",
+    trigger: "页面挂载或筛选条件变化",
+    wireframe:
+`┌────────────────────────────────────────────────────────────┐
+│  客户                                  [+ 添加客户]         │
+│  [🔍 搜索客户名称或公司...]                                 │
+│  [全部] [活跃] [已归档]                                     │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │ ░░░░░░░░░░░  │  │ ░░░░░░░░░░░  │  │ ░░░░░░░░░░░  │      │
+│  │ ░░░░░░░░░    │  │ ░░░░░░░░░    │  │ ░░░░░░░░░    │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+└────────────────────────────────────────────────────────────┘`,
+    constraints: [
+      { level: "soft", text: "骨架屏显示 3 个卡片占位" }
+    ]
+  },
+  "cl_success": {
+    page: "客户列表",
+    pageKey: "client-list",
+    label: "正常列表",
+    trigger: "数据加载成功，items.length > 0",
+    wireframe:
+`┌────────────────────────────────────────────────────────────┐
+│  客户 (5)                              [+ 添加客户]         │
+│  [🔍 搜索客户名称或公司...]                                 │
+│  [全部 5] [活跃 4] [已归档 1]                               │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │ 张三丰       │  │ 腾讯科技     │  │ 字节跳动     │      │
+│  │ 腾讯科技     │  │ 科技公司     │  │ 科技公司     │      │
+│  │ 3 个项目     │  │ 2 个项目     │  │ 1 个项目     │      │
+│  │ 累计 ¥42,000 │  │ 累计 ¥25,000 │  │ 累计 ¥18,000 │      │
+│  │ [活跃]       │  │ [活跃]       │  │ [活跃]       │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+└────────────────────────────────────────────────────────────┘`,
+    constraints: [
+      { level: "soft", text: "桌面端 3 列卡片网格，平板 2 列" },
+      { level: "tip", text: "已归档客户用灰色样式区分" }
+    ]
+  },
+  "cl_empty": {
+    page: "客户列表",
+    pageKey: "client-list",
+    label: "无客户记录",
+    trigger: "items.length === 0",
+    wireframe:
+`┌────────────────────────────────────────────────────────────┐
+│  客户                                  [+ 添加客户]         │
+│                                                            │
+│                   [  空状态插画  ]                          │
+│                   还没有任何客户                            │
+│           添加第一个客户，开始记录自由职业收入               │
+│                                                            │
+│                 [  + 添加第一个客户  ]                      │
+└────────────────────────────────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "提供明确的添加引导按钮" }
+    ]
+  },
+  "id_loading": {
+    page: "发票详情",
+    pageKey: "invoice-detail",
+    label: "发票加载中",
+    trigger: "进入发票详情页面",
+    wireframe:
+`┌────────────────────────────────────────────────────────────┐
+│  [← 返回发票列表]                                          │
+├────────────────────────────────────────────────────────────┤
+│  ░░░░░░░░░░░░░░░░  (骨架)                                  │
+│  ░░░░░░░░  ·  ░░░░░░░░  ·  ░░░░░░                          │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   │   │
+│  └─────────────────────────────────────────────────────┘   │
+└────────────────────────────────────────────────────────────┘`,
+    constraints: [
+      { level: "soft", text: "骨架屏模拟发票信息卡片布局" }
+    ]
+  },
+  "id_success": {
+    page: "发票详情",
+    pageKey: "invoice-detail",
+    label: "正常展示（已发送）",
+    trigger: "发票数据加载成功，status=sent",
+    wireframe:
+`┌────────────────────────────────────────────────────────────┐
+│  [← 返回发票列表]                                          │
+├────────────────────────────────────────────────────────────┤
+│  INV-2026-008                            [已发送]           │
+│  腾讯科技 · UI 设计改版项目                                  │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  金额 ¥5,000   开具 2026-03-01   到期 2026-03-31    │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  [  + 记录收款  ]          [  标记为逾期  ]                 │
+│  ─── 收款记录 ─────────────────────────────────────────    │
+│  暂无收款记录                                               │
+└────────────────────────────────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "状态流转：draft→sent→paid/overdue，不可逆转" },
+      { level: "soft", text: "已发送状态不允许编辑发票金额" }
+    ]
+  },
+  "id_updating_status": {
+    page: "发票详情",
+    pageKey: "invoice-detail",
+    label: "状态更新中",
+    trigger: "点击状态操作按钮（标记已发送/逾期）",
+    wireframe:
+`┌────────────────────────────────────────────────────────────┐
+│  INV-2026-008                            [已发送]           │
+│  腾讯科技 · UI 设计改版项目                                  │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  金额 ¥5,000   开具 2026-03-01   到期 2026-03-31    │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  [  ⏳ 更新中...  ]          [  标记为逾期  ]               │
+└────────────────────────────────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "操作按钮显示 loading，防止重复点击" }
+    ]
+  },
+  "id_payment_dialog": {
+    page: "发票详情",
+    pageKey: "invoice-detail",
+    label: "记录收款弹窗",
+    trigger: "点击'记录收款'按钮",
+    wireframe:
+`┌────────────────────────────────────────────────────────────┐
+│  （背景页面半透明遮罩）                                     │
+│       ┌────────────────────────────────────────┐           │
+│       │  记录收款                        [✕]   │           │
+│       ├────────────────────────────────────────┤           │
+│       │  收款金额（元）                        │           │
+│       │  [____________________________]        │           │
+│       │  收款日期                             │           │
+│       │  [____________________________]        │           │
+│       │  收款方式  [银行转账 ▼]               │           │
+│       │  备注      [____________________________]│          │
+│       │  [  取消  ]    [  确认收款  ]          │           │
+│       └────────────────────────────────────────┘           │
+└────────────────────────────────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "收款金额和收款日期为必填" },
+      { level: "soft", text: "收款日期默认为今天" },
+      { level: "tip", text: "全额收款后自动将发票状态更新为 paid" }
+    ]
+  },
+  "st_loading": {
+    page: "收入统计",
+    pageKey: "stats",
+    label: "统计加载中",
+    trigger: "页面挂载或切换年度/周期",
+    wireframe:
+`┌────────────────────────────────────────────────────────────┐
+│  收入统计                   2026年 [< 上年] [下年 >]        │
+│  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   │
+│  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   │
+│  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░                              │
+└────────────────────────────────────────────────────────────┘`,
+    constraints: [
+      { level: "soft", text: "图表区域骨架屏，保持布局稳定" }
+    ]
+  },
+  "st_success": {
+    page: "收入统计",
+    pageKey: "stats",
+    label: "统计正常展示",
+    trigger: "统计数据加载成功",
+    wireframe:
+`┌────────────────────────────────────────────────────────────┐
+│  收入统计                   2026年 [< 上年] [下年 >]        │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐          │
+│  │¥180,000 │ │¥162,000 │ │ ¥5,000  │ │  8 位   │          │
+│  └─────────┘ └─────────┘ └─────────┘ └─────────┘          │
+│  [月度] [季度]                                              │
+│  ┌───────────────────────────────────────────────────────┐ │
+│  │ 柱状图 ████ ████ ████ ████ ████ ████                  │ │
+│  └───────────────────────────────────────────────────────┘ │
+│  ┌──────────────────┐  ┌─────────────────────────────────┐ │
+│  │  饼图            │  │ 腾讯科技 ¥62,000 34%            │ │
+│  │                  │  │ 字节跳动 ¥45,000 25%            │ │
+│  └──────────────────┘  └─────────────────────────────────┘ │
+└────────────────────────────────────────────────────────────┘`,
+    constraints: [
+      { level: "soft", text: "柱状图 Y 轴单位为元，支持千分位格式" },
+      { level: "tip", text: "点击饼图扇区可跳转到对应客户详情" }
+    ]
+  },
+  "tax_loading": {
+    page: "税务预估",
+    pageKey: "tax",
+    label: "税务数据加载中",
+    trigger: "页面挂载",
+    wireframe:
+`┌────────────────────────────────────────────────────────────┐
+│  税务预估                       2026年度 [▼]                │
+│  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   │
+│  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░                              │
+└────────────────────────────────────────────────────────────┘`,
+    constraints: []
+  },
+  "tax_success": {
+    page: "税务预估",
+    pageKey: "tax",
+    label: "正常展示",
+    trigger: "税务数据加载成功",
+    wireframe:
+`┌────────────────────────────────────────────────────────────┐
+│  税务预估                       2026年度 [▼]                │
+│  ⚠️ 仅供参考，以税务局实际申报为准                           │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  年度总收入             ¥180,000.00                  │   │
+│  │  基本减除费用           -¥60,000.00                  │   │
+│  │  专项附加扣除           -¥36,000.00                  │   │
+│  │  应纳税所得额            ¥84,000.00                  │   │
+│  │  预计应缴税              ¥14,280.00  ← 红色强调      │   │
+│  │  综合税率                     17.0%                  │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  专项扣除配置              [保存配置]                       │
+│  子女教育    [________] 元/年                               │
+│  住房贷款    [________] 元/年                               │
+└────────────────────────────────────────────────────────────┘`,
+    constraints: [
+      { level: "hard", text: "免责声明必须在结果卡片顶部显示" },
+      { level: "hard", text: "预计应缴税金额用红色大字强调" },
+      { level: "soft", text: "修改扣除项后 500ms 防抖触发重算" }
+    ]
+  },
+  "tax_recalculating": {
+    page: "税务预估",
+    pageKey: "tax",
+    label: "重算中",
+    trigger: "用户修改扣除项输入框（防抖 500ms 后触发）",
+    wireframe:
+`┌────────────────────────────────────────────────────────────┐
+│  税务预估                       2026年度 [▼]                │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │                                                     │   │
+│  │              ⏳ 正在重新计算...                      │   │
+│  │                                                     │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  子女教育    [12000  ] 元/年  ← 用户刚修改                  │
+└────────────────────────────────────────────────────────────┘`,
+    constraints: [
+      { level: "soft", text: "结果卡片轻微 loading 遮罩，不完全遮挡" }
+    ]
+  }
+};
+
+// ============================================================
+// 图表定义（按页面过滤）
+// ============================================================
+const DIAGRAMS = {
+  all: `stateDiagram-v2
+  [*] --> auth_idle
+  state "登录/注册页" as AuthPage {
+    [*] --> auth_idle
+    auth_idle --> auth_logging_in : 点击登录
+    auth_idle --> auth_registering : 点击注册
+    auth_logging_in --> auth_idle : 登录成功→跳转
+    auth_logging_in --> auth_login_error : 凭证错误
+    auth_login_error --> auth_idle : 重新输入
+    auth_registering --> auth_idle : 注册成功→跳转
+    auth_registering --> auth_email_error : 邮箱重复
+    auth_email_error --> auth_idle : 修改邮箱
+  }
+  state "仪表板" as DashPage {
+    [*] --> dash_loading
+    dash_loading --> dash_success : 有数据
+    dash_loading --> dash_empty : 新用户
+    dash_loading --> dash_error : 失败
+    dash_success --> dash_loading : 刷新
+    dash_error --> dash_loading : 重试
+  }
+  state "客户列表" as CLPage {
+    [*] --> cl_loading
+    cl_loading --> cl_success : 有数据
+    cl_loading --> cl_empty : 无数据
+    cl_error --> cl_loading : 重试
+  }
+  state "发票详情" as IDPage {
+    [*] --> id_loading
+    id_loading --> id_success : 成功
+    id_loading --> id_not_found : 404
+    id_loading --> id_error : 失败
+    id_success --> id_updating_status : 更新状态
+    id_updating_status --> id_success : 完成
+    id_success --> id_payment_dialog : 记录收款
+    id_payment_dialog --> id_success : 取消
+    id_error --> id_loading : 重试
+  }
+  state "收入统计" as StPage {
+    [*] --> st_loading
+    st_loading --> st_success : 有数据
+    st_loading --> st_empty : 无数据
+    st_success --> st_loading : 切换年度
+    st_error --> st_loading : 重试
+  }
+  state "税务预估" as TaxPage {
+    [*] --> tax_loading
+    tax_loading --> tax_success : 成功
+    tax_success --> tax_recalculating : 修改扣除项
+    tax_recalculating --> tax_success : 完成
+  }`,
+
+  auth: `stateDiagram-v2
+  [*] --> auth_idle
+  auth_idle --> auth_logging_in : 点击登录
+  auth_idle --> auth_registering : 点击注册
+  auth_logging_in --> auth_idle : 登录成功
+  auth_logging_in --> auth_login_error : 凭证错误
+  auth_login_error --> auth_idle : 重新输入
+  auth_registering --> auth_idle : 注册成功
+  auth_registering --> auth_email_error : 邮箱已存在
+  auth_email_error --> auth_idle : 修改邮箱`,
+
+  dashboard: `stateDiagram-v2
+  [*] --> dash_loading
+  dash_loading --> dash_success : 有数据
+  dash_loading --> dash_empty : 新用户无数据
+  dash_loading --> dash_error : 加载失败
+  dash_success --> dash_loading : 下拉刷新
+  dash_error --> dash_loading : 点击重试`,
+
+  "client-list": `stateDiagram-v2
+  [*] --> cl_loading
+  cl_loading --> cl_success : items > 0
+  cl_loading --> cl_empty : items = 0
+  cl_loading --> cl_error : 加载失败
+  cl_success --> cl_searching : 输入搜索
+  cl_searching --> cl_success : 有结果
+  cl_searching --> cl_search_empty : 无结果
+  cl_search_empty --> cl_success : 清除搜索
+  cl_error --> cl_loading : 重试`,
+
+  "invoice-detail": `stateDiagram-v2
+  [*] --> id_loading
+  id_loading --> id_success : 加载成功
+  id_loading --> id_not_found : 404
+  id_loading --> id_error : 加载失败
+  id_success --> id_updating_status : 更新状态
+  id_updating_status --> id_success : 更新完成
+  id_success --> id_payment_dialog : 记录收款
+  id_payment_dialog --> id_saving_payment : 确认
+  id_payment_dialog --> id_success : 取消
+  id_saving_payment --> id_success : 保存成功
+  id_saving_payment --> id_payment_dialog : 保存失败
+  id_error --> id_loading : 重试`,
+
+  stats: `stateDiagram-v2
+  [*] --> st_loading
+  st_loading --> st_success : 有数据
+  st_loading --> st_empty : 无数据
+  st_loading --> st_error : 加载失败
+  st_success --> st_loading : 切换年度或周期
+  st_error --> st_loading : 重试`,
+
+  tax: `stateDiagram-v2
+  [*] --> tax_loading
+  tax_loading --> tax_success : 加载成功
+  tax_loading --> tax_error : 加载失败
+  tax_success --> tax_recalculating : 修改扣除项
+  tax_recalculating --> tax_success : 重算完成
+  tax_success --> tax_saving : 保存配置
+  tax_saving --> tax_success : 保存完成
+  tax_error --> tax_loading : 重试`
+};
+
+// ============================================================
+// 核心逻辑
+// ============================================================
+let currentPage = 'all';
+let currentState = null;
+
+async function renderDiagram(pageKey) {
+  const container = document.getElementById('diagram-container');
+  container.innerHTML = '<div class="loading-msg">⏳ 渲染状态图...</div>';
+  const def = DIAGRAMS[pageKey] || DIAGRAMS['all'];
+  try {
+    const { svg } = await mermaid.render('mermaid-svg-' + Date.now(), def);
+    container.innerHTML = svg;
+    bindNodeClicks(container);
+  } catch(e) {
+    container.innerHTML = '<div class="loading-msg" style="color:#ef4444">⚠️ 状态图渲染失败：' + e.message + '</div>';
+  }
+}
+
+function bindNodeClicks(container) {
+  // 尝试通过 SVG text 内容匹配状态名
+  const textEls = container.querySelectorAll('text');
+  textEls.forEach(el => {
+    const txt = el.textContent.trim();
+    if (STATES[txt]) {
+      const parent = el.closest('g') || el;
+      parent.style.cursor = 'pointer';
+      parent.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectState(txt);
+      });
+      // 添加 hover 效果
+      parent.addEventListener('mouseenter', () => {
+        parent.style.opacity = '0.8';
+      });
+      parent.addEventListener('mouseleave', () => {
+        parent.style.opacity = '';
+      });
+    }
+  });
+}
+
+function selectState(stateId) {
+  currentState = stateId;
+  const state = STATES[stateId];
+  if (!state) return;
+
+  document.getElementById('detailEmpty').style.display = 'none';
+  const detail = document.getElementById('stateDetail');
+  detail.classList.add('visible');
+
+  const constraintHTML = (state.constraints || []).map(c => {
+    const cls = c.level === 'hard' ? 'hard' : c.level === 'soft' ? 'soft' : 'tip';
+    const icon = c.level === 'hard' ? '🔴' : c.level === 'soft' ? '🔵' : '🟢';
+    return `<li class="constraint-item ${cls}"><span class="constraint-badge">${icon}</span>${escapeHtml(c.text)}</li>`;
+  }).join('');
+
+  detail.innerHTML = `
+    <div class="state-header">
+      <div class="page-badge">${escapeHtml(state.page)}</div>
+      <div class="state-name">${escapeHtml(state.label)}</div>
+      <div class="trigger-label">触发条件：<span class="trigger-text">${escapeHtml(state.trigger)}</span></div>
+    </div>
+    <div class="section-title">线框图</div>
+    <div class="wireframe-box">
+      <div class="wireframe-header">ASCII 低保真线框</div>
+      <pre class="wireframe-content">${escapeHtml(state.wireframe)}</pre>
+    </div>
+    ${constraintHTML ? `<div class="section-title">约束标记</div><ul class="constraints-list">${constraintHTML}</ul>` : ''}
+    <div style="height:20px"></div>
+  `;
+
+  // 高亮对应的状态 ID（URL hash 方式）
+  window.location.hash = stateId;
+}
+
+function filterPage(pageKey) {
+  currentPage = pageKey;
+  renderDiagram(pageKey);
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// 初始化
+window.addEventListener('load', () => {
+  renderDiagram('all');
+  // 若 URL 有 hash，自动选中对应状态
+  const hash = window.location.hash.replace('#', '');
+  if (hash && STATES[hash]) {
+    setTimeout(() => selectState(hash), 1500);
+  }
+});
+</script>
+</body>
+</html>

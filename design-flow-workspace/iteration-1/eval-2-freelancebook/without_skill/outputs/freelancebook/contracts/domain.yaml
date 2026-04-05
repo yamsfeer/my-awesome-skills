@@ -1,0 +1,440 @@
+# FreelanceBook — 数据实体定义
+# 说明：
+#   sensitive: true  => 禁止在前端响应/日志/分析中直接暴露，需脱敏或加密处理
+#   nullable: true   => 允许为 null/空
+#   金额字段统一单位：分（整数），前端展示时除以 100
+
+version: "1.0.0"
+domain: freelancebook
+
+entities:
+
+  # ─────────────────────────────────────────
+  # 用户（租户主体）
+  # ─────────────────────────────────────────
+  User:
+    description: 注册用户，也是租户主体
+    table: users
+    fields:
+      id:
+        type: uuid
+        primary: true
+        description: 用户唯一标识
+      email:
+        type: string
+        format: email
+        unique: true
+        sensitive: true        # 禁止暴露：用于登录，不可出现在公开接口响应
+        description: 登录邮箱
+      password_hash:
+        type: string
+        sensitive: true        # 禁止暴露：加密存储，永远不返回给前端
+        description: 密码 bcrypt 哈希
+      display_name:
+        type: string
+        max_length: 100
+        description: 用户昵称/显示名
+      avatar_url:
+        type: string
+        nullable: true
+        description: 头像 URL
+      phone:
+        type: string
+        nullable: true
+        sensitive: true        # 禁止暴露：手机号，仅用于通知，不对外返回
+        description: 手机号（可选）
+      tax_id:
+        type: string
+        nullable: true
+        sensitive: true        # 禁止暴露：纳税人识别号，敏感财务信息
+        description: 个人纳税人识别号
+      subscription_status:
+        type: enum
+        values: [trial, active, expired, cancelled]
+        default: trial
+        description: 订阅状态
+      trial_ends_at:
+        type: datetime
+        nullable: true
+        description: 试用期结束时间
+      created_at:
+        type: datetime
+        auto: true
+      updated_at:
+        type: datetime
+        auto: true
+
+  # ─────────────────────────────────────────
+  # 客户
+  # ─────────────────────────────────────────
+  Client:
+    description: 自由职业者的客户（公司或个人）
+    table: clients
+    fields:
+      id:
+        type: uuid
+        primary: true
+      user_id:
+        type: uuid
+        references: User.id
+        description: 所属用户（租户隔离键）
+      name:
+        type: string
+        max_length: 200
+        description: 客户名称（公司名或个人名）
+      company_name:
+        type: string
+        nullable: true
+        max_length: 200
+        description: 公司全称（开票用）
+      tax_number:
+        type: string
+        nullable: true
+        sensitive: true        # 禁止暴露：客户税号，仅用于开票，不对外返回
+        description: 客户统一社会信用代码 / 税号
+      address:
+        type: string
+        nullable: true
+        sensitive: true        # 禁止暴露：客户地址，隐私信息
+        description: 客户注册地址
+      bank_account:
+        type: string
+        nullable: true
+        sensitive: true        # 禁止暴露：银行账号，严格保密
+        description: 客户银行账号（用于电汇核对）
+      currency:
+        type: string
+        default: CNY
+        description: 该客户默认结算币种
+      tags:
+        type: array
+        items: string
+        nullable: true
+        description: 客户标签列表，如 ["长期", "优先"]
+      notes:
+        type: string
+        nullable: true
+        max_length: 2000
+        description: 备注
+      is_archived:
+        type: boolean
+        default: false
+        description: 是否已归档
+      created_at:
+        type: datetime
+        auto: true
+      updated_at:
+        type: datetime
+        auto: true
+
+  # ─────────────────────────────────────────
+  # 客户联系人（一客户多联系人）
+  # ─────────────────────────────────────────
+  Contact:
+    description: 客户下的联系人
+    table: contacts
+    fields:
+      id:
+        type: uuid
+        primary: true
+      client_id:
+        type: uuid
+        references: Client.id
+        on_delete: CASCADE
+      name:
+        type: string
+        max_length: 100
+        description: 联系人姓名
+      email:
+        type: string
+        format: email
+        nullable: true
+        sensitive: true        # 禁止暴露：联系人邮箱，隐私信息
+        description: 联系邮箱
+      phone:
+        type: string
+        nullable: true
+        sensitive: true        # 禁止暴露：联系人电话
+        description: 联系电话
+      role:
+        type: string
+        nullable: true
+        max_length: 100
+        description: 职位/角色，如"财务负责人"
+      is_primary:
+        type: boolean
+        default: false
+        description: 是否为主要联系人
+      created_at:
+        type: datetime
+        auto: true
+
+  # ─────────────────────────────────────────
+  # 项目 / 合同
+  # ─────────────────────────────────────────
+  Project:
+    description: 与客户签订的项目或合同
+    table: projects
+    fields:
+      id:
+        type: uuid
+        primary: true
+      user_id:
+        type: uuid
+        references: User.id
+      client_id:
+        type: uuid
+        references: Client.id
+      name:
+        type: string
+        max_length: 200
+        description: 项目名称
+      description:
+        type: string
+        nullable: true
+        max_length: 5000
+        description: 项目描述 / 范围
+      contract_amount:
+        type: integer
+        description: 合同总金额（分），例如 500000 = ¥5000.00
+      currency:
+        type: string
+        default: CNY
+      status:
+        type: enum
+        values: [active, completed, cancelled, paused]
+        default: active
+      start_date:
+        type: date
+        nullable: true
+      end_date:
+        type: date
+        nullable: true
+      created_at:
+        type: datetime
+        auto: true
+      updated_at:
+        type: datetime
+        auto: true
+
+  # ─────────────────────────────────────────
+  # 发票
+  # ─────────────────────────────────────────
+  Invoice:
+    description: 向客户开具的发票
+    table: invoices
+    fields:
+      id:
+        type: uuid
+        primary: true
+      user_id:
+        type: uuid
+        references: User.id
+      client_id:
+        type: uuid
+        references: Client.id
+      project_id:
+        type: uuid
+        references: Project.id
+        nullable: true
+        description: 关联项目（可选）
+      invoice_number:
+        type: string
+        max_length: 50
+        unique_per_user: true
+        description: 发票编号，如 INV-2026-001
+      status:
+        type: enum
+        values: [draft, sent, paid, overdue]
+        default: draft
+        description: |
+          发票状态流转：
+            draft   -> 草稿，尚未发送
+            sent    -> 已发送给客户，等待付款
+            paid    -> 客户已付款
+            overdue -> 超过 due_date 仍未收款，系统自动标记
+      amount:
+        type: integer
+        description: 发票金额（分）
+      tax_amount:
+        type: integer
+        default: 0
+        description: 税额（分），0 表示不含税
+      total_amount:
+        type: integer
+        description: 含税总金额（分），= amount + tax_amount
+      currency:
+        type: string
+        default: CNY
+      issue_date:
+        type: date
+        description: 开票日期
+      due_date:
+        type: date
+        nullable: true
+        description: 付款截止日期
+      paid_date:
+        type: date
+        nullable: true
+        description: 实际收款日期
+      notes:
+        type: string
+        nullable: true
+        max_length: 2000
+        description: 备注 / 付款说明
+      pdf_url:
+        type: string
+        nullable: true
+        description: 生成的发票 PDF 文件 URL
+      created_at:
+        type: datetime
+        auto: true
+      updated_at:
+        type: datetime
+        auto: true
+
+  # ─────────────────────────────────────────
+  # 发票行项目
+  # ─────────────────────────────────────────
+  InvoiceItem:
+    description: 发票中的明细行
+    table: invoice_items
+    fields:
+      id:
+        type: uuid
+        primary: true
+      invoice_id:
+        type: uuid
+        references: Invoice.id
+        on_delete: CASCADE
+      description:
+        type: string
+        max_length: 500
+        description: 服务描述
+      quantity:
+        type: number
+        description: 数量
+      unit_price:
+        type: integer
+        description: 单价（分）
+      amount:
+        type: integer
+        description: 小计（分），= quantity × unit_price
+      sort_order:
+        type: integer
+        default: 0
+        description: 排序序号
+
+  # ─────────────────────────────────────────
+  # 收款记录
+  # ─────────────────────────────────────────
+  Payment:
+    description: 实际收到的款项记录
+    table: payments
+    fields:
+      id:
+        type: uuid
+        primary: true
+      user_id:
+        type: uuid
+        references: User.id
+      invoice_id:
+        type: uuid
+        references: Invoice.id
+        nullable: true
+        description: 关联发票（可无发票直接收款）
+      client_id:
+        type: uuid
+        references: Client.id
+      amount:
+        type: integer
+        description: 实收金额（分）
+      currency:
+        type: string
+        default: CNY
+      payment_date:
+        type: date
+        description: 收款日期
+      payment_method:
+        type: enum
+        values: [bank_transfer, wechat_pay, alipay, cash, other]
+        nullable: true
+        description: 付款方式
+      reference_number:
+        type: string
+        nullable: true
+        sensitive: true        # 禁止暴露：银行流水号，金融敏感信息
+        description: 银行流水号 / 交易参考号
+      notes:
+        type: string
+        nullable: true
+        max_length: 1000
+      created_at:
+        type: datetime
+        auto: true
+
+  # ─────────────────────────────────────────
+  # 订阅记录
+  # ─────────────────────────────────────────
+  Subscription:
+    description: 用户订阅记录
+    table: subscriptions
+    fields:
+      id:
+        type: uuid
+        primary: true
+      user_id:
+        type: uuid
+        references: User.id
+      plan:
+        type: enum
+        values: [trial, monthly, yearly]
+      status:
+        type: enum
+        values: [active, expired, cancelled, past_due]
+      amount:
+        type: integer
+        description: 订阅金额（分），monthly=3900，yearly=39000
+      starts_at:
+        type: datetime
+      ends_at:
+        type: datetime
+      payment_order_id:
+        type: string
+        nullable: true
+        sensitive: true        # 禁止暴露：支付订单号
+        description: 第三方支付订单号
+      created_at:
+        type: datetime
+        auto: true
+
+# ─────────────────────────────────────────
+# 实体关系说明
+# ─────────────────────────────────────────
+relationships:
+  - "User 1 ──< Client        (user_id)"
+  - "Client 1 ──< Contact     (client_id)"
+  - "User 1 ──< Project       (user_id)"
+  - "Client 1 ──< Project     (client_id)"
+  - "User 1 ──< Invoice       (user_id)"
+  - "Client 1 ──< Invoice     (client_id)"
+  - "Project 1 ──< Invoice    (project_id, nullable)"
+  - "Invoice 1 ──< InvoiceItem (invoice_id)"
+  - "Invoice 1 ──< Payment    (invoice_id, nullable)"
+  - "User 1 ──< Subscription  (user_id)"
+
+# ─────────────────────────────────────────
+# 敏感字段汇总（禁止在 API 响应 / 日志中暴露）
+# ─────────────────────────────────────────
+sensitive_fields_summary:
+  - User.email
+  - User.password_hash
+  - User.phone
+  - User.tax_id
+  - Client.tax_number
+  - Client.address
+  - Client.bank_account
+  - Contact.email
+  - Contact.phone
+  - Payment.reference_number
+  - Subscription.payment_order_id

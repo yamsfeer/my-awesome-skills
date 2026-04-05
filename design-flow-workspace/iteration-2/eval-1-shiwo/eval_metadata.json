@@ -1,0 +1,12 @@
+{
+  "eval_id": 1,
+  "eval_name": "shiwo-campus-marketplace",
+  "prompt": "我想设计一个二手闲置物品交易小程序，请帮我做完整设计规划，自动完成所有阶段无需等我确认，遇到技术决策自行判断。\n\n已知信息：\n- 产品名：闲鱼仿品「拾物」\n- 痛点：大学校园内同学间的闲置物品处置麻烦，邮寄费用高，希望面交\n- 目标用户：在校大学生，18-24岁，有大量闲置教材/电子产品/生活用品\n- 核心功能：1.发布商品（拍照+描述+定价）2.分类浏览/搜索 3.私信洽谈+预约面交 4.校区/地点筛选 5.诚信评分系统\n- 平台：微信小程序\n- 商业模式：免费，后期收取成交额2%的服务费\n\n输出目录：shiwo-marketplace/",
+  "assertions": [
+    {"id": "files_created", "text": "shiwo-marketplace/ 目录下存在 product-overview.md 和 contracts/ 目录"},
+    {"id": "api_endpoints", "text": "api.yaml 包含 endpoints 字段且有至少 5 个端点定义"},
+    {"id": "domain_sensitive_markers", "text": "domain.yaml 中有 ⚠️ 禁止暴露 的注释"},
+    {"id": "tokens_frozen", "text": "tokens.json 包含 _frozen 字段"},
+    {"id": "interactive_html", "text": "shiwo-marketplace/ue/state-machine-interactive.html 存在且包含 const STATES = { JS 数据对象"}
+  ]
+}

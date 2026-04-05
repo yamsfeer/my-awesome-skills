@@ -1,0 +1,401 @@
+# FitStreak UE 状态机
+# 说明：定义每个核心页面的状态、转换条件和异常路径
+
+pages:
+
+  # ========== 启动页 / 引导页 ==========
+  SplashPage:
+    page_name: SplashPage
+    route: "/splash"
+    description: "App 启动检查，决定跳转登录页还是首页"
+    initial_state: checking
+
+    states:
+      checking:
+        description: "检查本地 Token 是否有效"
+        ui: "Logo + 品牌动画"
+        transitions:
+          - event: token_valid
+            target: HomePage.loading
+            condition: "本地 Token 存在且未过期"
+          - event: token_invalid
+            target: LoginPage.idle
+            condition: "无 Token 或 Token 过期"
+
+    error_paths:
+      - scenario: "网络无法连接"
+        handling: "若有本地缓存数据，跳转首页（离线模式）；否则跳登录页"
+
+
+  # ========== 登录页 ==========
+  LoginPage:
+    page_name: LoginPage
+    route: "/login"
+    description: "手机号验证码登录，自动注册新用户"
+    initial_state: idle
+
+    states:
+      idle:
+        description: "输入手机号，等待用户操作"
+        ui: "手机号输入框 + [获取验证码] 按钮"
+        transitions:
+          - event: send_code_tap
+            target: code_sending
+            condition: "手机号格式正确（11位数字）"
+
+      code_sending:
+        description: "正在发送验证码"
+        ui: "按钮 loading 态，倒计时未开始"
+        transitions:
+          - event: code_sent
+            target: code_input
+            condition: "短信发送成功"
+          - event: send_error
+            target: idle
+            action: "Toast 提示发送失败原因"
+
+      code_input:
+        description: "输入验证码"
+        ui: "手机号已锁定 + 6位验证码输入框 + 倒计时（60s）"
+        transitions:
+          - event: code_complete
+            target: verifying
+            condition: "输入满6位自动触发验证"
+          - event: resend_tap
+            target: code_sending
+            condition: "倒计时结束后可重发"
+          - event: change_phone_tap
+            target: idle
+
+      verifying:
+        description: "正在验证验证码"
+        ui: "输入框禁用 + 验证动画"
+        transitions:
+          - event: verify_success
+            target: HomePage.loading
+            condition: "验证通过，获得 Token"
+          - event: verify_error_wrong_code
+            target: code_input
+            action: "Toast '验证码错误，请重试'，输入框清空"
+          - event: verify_error_expired
+            target: code_input
+            action: "Toast '验证码已过期，请重新获取'，显示重发按钮"
+
+    error_paths:
+      - scenario: "频繁发送验证码"
+        handling: "服务端限流 429，提示'操作太频繁，请稍后再试'"
+      - scenario: "手机号格式错误"
+        handling: "前端实时校验，输入非数字或不足11位时 [获取验证码] 按钮禁用"
+
+
+  # ========== 首页 ==========
+  HomePage:
+    page_name: HomePage
+    route: "/home"
+    description: "打卡动态流 + 今日打卡状态展示"
+    initial_state: loading
+
+    states:
+      loading:
+        description: "加载用户信息和好友动态"
+        ui: "顶部用户卡片骨架屏 + 3个动态卡片骨架"
+        transitions:
+          - event: load_success_not_checked
+            target: success_not_checked
+            condition: "数据加载成功且今日未打卡"
+          - event: load_success_checked
+            target: success_checked
+            condition: "数据加载成功且今日已打卡"
+          - event: load_error
+            target: error
+
+      success_not_checked:
+        description: "今日未打卡状态，强调打卡入口"
+        ui: "橙色大打卡按钮 + 好友动态列表"
+        transitions:
+          - event: checkin_tap
+            target: CheckInPage.loading
+          - event: pull_to_refresh
+            target: loading
+          - event: scroll_to_bottom
+            target: loading_more_feed
+          - event: friend_card_tap
+            target: ProfilePage.loading
+          - event: streak_broken_detected
+            target: streak_broken_dialog
+
+      success_checked:
+        description: "今日已打卡状态"
+        ui: "绿色已打卡徽章 + Streak 展示 + 好友动态"
+        transitions:
+          - event: pull_to_refresh
+            target: loading
+          - event: scroll_to_bottom
+            target: loading_more_feed
+          - event: friend_card_tap
+            target: ProfilePage.loading
+
+      loading_more_feed:
+        description: "加载更多好友动态"
+        ui: "列表底部 loading 动画"
+        transitions:
+          - event: load_more_success
+            target: success_checked
+            action: "追加新动态到列表"
+          - event: load_more_error
+            target: success_checked
+            action: "Toast '加载失败，请重试'"
+          - event: no_more_data
+            target: success_feed_end
+            action: "显示'已显示全部动态'"
+
+      success_feed_end:
+        description: "动态已全部加载"
+        ui: "列表末尾显示'没有更多了'"
+
+      streak_broken_dialog:
+        description: "Streak 断了提示弹窗"
+        ui: "全屏弹窗：昨日未打卡，streak 已重置，[继续加油]"
+        transitions:
+          - event: dialog_confirm
+            target: success_not_checked
+
+      error:
+        description: "加载失败"
+        ui: "错误图标 + 错误信息 + [重试] 按钮"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "Token 过期"
+        handling: "全局拦截跳登录页，登录后回跳"
+      - scenario: "网络断开"
+        handling: "Toast 提示，展示上次缓存的动态数据"
+
+
+  # ========== 打卡页 ==========
+  CheckInPage:
+    page_name: CheckInPage
+    route: "/checkin"
+    description: "创建今日打卡记录"
+    initial_state: loading
+
+    states:
+      loading:
+        description: "检查今日是否已打卡"
+        ui: "加载动画"
+        transitions:
+          - event: check_not_done
+            target: idle
+            condition: "今日未打卡"
+          - event: check_already_done
+            target: already_checked
+            condition: "今日已打卡"
+
+      idle:
+        description: "打卡表单等待输入"
+        ui: "运动类型网格 + 时长滑块 + 心情选择 + 备注 + 提交按钮"
+        transitions:
+          - event: submit_tap
+            target: submitting
+            condition: "运动类型和时长已填写"
+          - event: back_tap
+            target: HomePage.success_not_checked
+
+      submitting:
+        description: "提交打卡中"
+        ui: "提交按钮 loading，表单禁用"
+        transitions:
+          - event: submit_success
+            target: success_animation
+          - event: submit_error_duplicate
+            target: already_checked
+            action: "Toast '今天已经打卡了'"
+          - event: submit_error
+            target: idle
+            action: "Toast 错误提示，表单恢复可用"
+
+      success_animation:
+        description: "打卡成功庆祝动画"
+        ui: "烟花动画 + Streak 增加动效 + [好的] 按钮"
+        transitions:
+          - event: animation_done
+            target: HomePage.success_checked
+            action: "自动跳转（3秒后）或点击[好的]"
+
+      already_checked:
+        description: "今日已打卡，展示已有记录"
+        ui: "今日打卡记录摘要 + [返回首页] 按钮"
+        transitions:
+          - event: back_tap
+            target: HomePage.success_checked
+
+    error_paths:
+      - scenario: "上传图片失败"
+        handling: "图片上传失败时提示'图片上传失败，可以先不附图打卡'，允许跳过图片继续提交"
+      - scenario: "打卡提交超时"
+        handling: "30秒超时后显示'提交超时，请检查网络'，恢复表单可用"
+
+
+  # ========== 社交/排行榜页 ==========
+  SocialPage:
+    page_name: SocialPage
+    route: "/social"
+    description: "好友排行榜 + 好友列表 + 挑战入口"
+    initial_state: loading
+
+    states:
+      loading:
+        description: "加载排行榜和好友数据"
+        ui: "排行榜骨架屏"
+        transitions:
+          - event: load_success_has_friends
+            target: success
+            condition: "好友列表非空"
+          - event: load_success_no_friends
+            target: empty_friends
+            condition: "好友列表为空"
+          - event: load_error
+            target: error
+
+      success:
+        description: "展示排行榜和好友列表"
+        ui: "排行榜 Top 列表 + 好友打卡数对比 + 进行中的挑战卡片"
+        transitions:
+          - event: tab_switch_week
+            target: loading
+            action: "切换至本周排行"
+          - event: tab_switch_month
+            target: loading
+            action: "切换至本月排行"
+          - event: add_friend_tap
+            target: AddFriendPage.idle
+          - event: challenge_tap
+            target: ChallengePage.loading
+          - event: create_challenge_tap
+            target: CreateChallengePage.idle
+          - event: friend_tap
+            target: ProfilePage.loading
+
+      empty_friends:
+        description: "无好友状态"
+        ui: "插画 + '还没有好友，快去添加' + [添加好友] 按钮"
+        transitions:
+          - event: add_friend_tap
+            target: AddFriendPage.idle
+
+      error:
+        description: "加载失败"
+        ui: "错误提示 + [重试]"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "网络断开"
+        handling: "Toast 提示，展示上次缓存的排行榜数据"
+
+
+  # ========== 个人主页 ==========
+  ProfilePage:
+    page_name: ProfilePage
+    route: "/profile"
+    description: "个人资料 + 成就徽章 + 身体数据趋势"
+    initial_state: loading
+
+    states:
+      loading:
+        description: "加载个人信息"
+        ui: "头部骨架屏"
+        transitions:
+          - event: load_success_self
+            target: success_self
+            condition: "查看自己的主页"
+          - event: load_success_other
+            target: success_other
+            condition: "查看他人主页"
+          - event: load_error
+            target: error
+
+      success_self:
+        description: "自己的主页，可编辑"
+        ui: "头像 + 昵称 + 统计数据 + 徽章墙 + 体重趋势图 + [编辑资料]"
+        transitions:
+          - event: edit_profile_tap
+            target: EditProfilePage.idle
+          - event: badge_tap
+            target: BadgeDetailPage.loading
+          - event: add_body_record_tap
+            target: AddBodyRecordPage.idle
+          - event: upgrade_tap
+            target: SubscribePage.idle
+            condition: "is_premium === false"
+
+      success_other:
+        description: "他人主页，仅查看"
+        ui: "头像 + 昵称 + 公开统计数据 + 已获得徽章（仅展示）"
+        transitions:
+          - event: back_tap
+            target: SocialPage.success
+          - event: add_friend_tap
+            target: SocialPage.success
+            action: "发送好友申请 API"
+
+      error:
+        description: "加载失败"
+        ui: "通用错误提示 + [重试]"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "用户不存在"
+        handling: "API 返回 404，Toast '该用户不存在'，返回上一页"
+
+
+  # ========== 运动计划页 ==========
+  PlanPage:
+    page_name: PlanPage
+    route: "/plan"
+    description: "制定和查看运动计划，追踪本周完成度"
+    initial_state: loading
+
+    states:
+      loading:
+        description: "加载当前激活计划"
+        ui: "骨架屏"
+        transitions:
+          - event: load_success_has_plan
+            target: success_has_plan
+          - event: load_success_no_plan
+            target: success_no_plan
+          - event: load_error
+            target: error
+
+      success_has_plan:
+        description: "有激活计划，展示进度"
+        ui: "计划名 + 圆形进度环（本周N/M天）+ Streak + [修改计划]"
+        transitions:
+          - event: edit_plan_tap
+            target: EditPlanPage.idle
+          - event: create_new_plan_tap
+            target: CreatePlanPage.idle
+
+      success_no_plan:
+        description: "无计划，引导创建"
+        ui: "插画 + '还没有运动计划' + [制定计划] 大按钮"
+        transitions:
+          - event: create_plan_tap
+            target: CreatePlanPage.idle
+
+      error:
+        description: "加载失败"
+        ui: "通用错误提示 + [重试]"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "创建计划后接口失败"
+        handling: "Toast '创建失败，请重试'，保持表单内容不丢失"

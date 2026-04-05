@@ -1,0 +1,11 @@
+{
+  "eval_id": 3,
+  "eval_name": "contract-validator",
+  "prompt": "这个项目目录 /Users/yams/my-awesome-skills/design-flow/evals/test-broken-contracts/ 已有三层数据契约文件，但可能存在一些问题。\n请帮我运行契约校验脚本 python3 /Users/yams/my-awesome-skills/design-flow/references/validate.py /Users/yams/my-awesome-skills/design-flow/evals/test-broken-contracts/ 对这个项目进行数据契约校验。\n汇报检测到的所有问题（错误和警告），并给出每个问题的修复建议。",
+  "assertions": [
+    {"id": "validator_runs", "text": "validate.py 脚本成功运行并输出校验报告，不抛出 Python 异常"},
+    {"id": "catches_sensitive_leak", "text": "输出中包含 A03 错误，指出 password_hash 字段在 API 响应中直接暴露"},
+    {"id": "catches_missing_response_type", "text": "输出中包含 A01 错误，指出端点引用了未定义的响应类型 NonExistentType"},
+    {"id": "catches_invalid_endpoint", "text": "输出中包含 U01 警告，指出 UserProfilePage 的 data_source 在 api.yaml 中找不到对应端点"}
+  ]
+}

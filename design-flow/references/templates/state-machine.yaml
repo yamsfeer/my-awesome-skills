@@ -1,0 +1,170 @@
+# UE 状态机模板
+# 说明：定义每个核心页面的状态、转换条件和异常路径
+# 使用方式：每个核心页面复制一份，填写具体状态和转换
+
+pages:
+
+  # ========== 示例：内容列表页 ==========
+  ExampleListPage:
+    page_name: ExampleListPage
+    route: "/items"
+    description: "内容浏览列表页"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        description: "页面尚未加载"
+        ui: 空白
+        transitions:
+          - event: page_mount
+            target: loading
+            condition: "页面组件挂载完成"
+
+      loading:
+        description: "正在加载第一页数据"
+        ui: "骨架屏（3 个卡片占位）"
+        transitions:
+          - event: fetch_success
+            target: success
+            condition: "API 返回 200 且 items.length > 0"
+          - event: fetch_empty
+            target: empty
+            condition: "API 返回 200 且 items.length === 0"
+          - event: fetch_error
+            target: error
+            condition: "API 返回 4xx/5xx 或网络超时"
+
+      success:
+        description: "数据加载成功，展示列表"
+        ui: "内容卡片列表"
+        transitions:
+          - event: scroll_to_bottom
+            target: loading_more
+            condition: "还有更多数据（current_page < total_pages）"
+          - event: pull_to_refresh
+            target: loading
+          - event: item_tap
+            target: ExampleDetailPage.loading
+            condition: "用户点击某个卡片"
+          - event: filter_change
+            target: loading
+            condition: "用户切换筛选条件"
+
+      loading_more:
+        description: "正在加载更多数据"
+        ui: "列表末尾显示加载动画"
+        transitions:
+          - event: load_more_success
+            target: success
+            action: "将新数据追加到列表"
+          - event: load_more_error
+            target: success
+            action: "Toast 提示'加载失败'，保持现有列表"
+          - event: no_more_data
+            target: success_all_loaded
+            action: "显示'已加载全部内容'"
+
+      success_all_loaded:
+        description: "已加载所有数据"
+        ui: "列表末尾显示'没有更多了'"
+
+      empty:
+        description: "没有内容"
+        ui: "空状态插画 + 文案 + 引导操作按钮"
+        transitions:
+          - event: create_tap
+            target: ExampleCreatePage.idle
+
+      error:
+        description: "加载失败"
+        ui: "错误图标 + 错误信息 + [重试] 按钮"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "网络断开"
+        handling: "Toast 提示'网络异常，请检查网络连接'，保持上次加载的内容"
+      - scenario: "Token 过期"
+        handling: "跳转登录页，登录后回跳当前路由"
+      - scenario: "服务器 500"
+        handling: "显示'服务繁忙，请稍后再试' + [重试] 按钮"
+
+
+  # ========== 示例：内容详情页 ==========
+  ExampleDetailPage:
+    page_name: ExampleDetailPage
+    route: "/items/:id"
+    description: "内容详情展示页"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        transitions:
+          - event: page_mount
+            target: loading
+
+      loading:
+        ui: "头部骨架屏（标题+作者），内容区域加载动画"
+        transitions:
+          - event: fetch_success
+            target: success
+          - event: fetch_not_found
+            target: not_found
+            condition: "API 返回 404"
+          - event: fetch_error
+            target: error
+
+      success:
+        ui: "完整详情内容"
+        transitions:
+          - event: back_tap
+            target: ExampleListPage.success
+          - event: edit_tap
+            target: ExampleEditPage.idle
+            condition: "current_user.id === item.author.id"
+          - event: delete_tap
+            target: delete_confirm_dialog
+            condition: "current_user.id === item.author.id"
+
+      delete_confirm_dialog:
+        ui: "弹窗：确认删除？[取消] [确认删除]"
+        transitions:
+          - event: cancel_tap
+            target: success
+          - event: confirm_delete_tap
+            target: deleting
+
+      deleting:
+        ui: "按钮 loading 状态"
+        transitions:
+          - event: delete_success
+            target: ExampleListPage.loading
+            action: "Toast 提示'已删除'，跳转列表页"
+          - event: delete_error
+            target: success
+            action: "Toast 提示'删除失败'"
+
+      not_found:
+        ui: "'内容不存在或已删除' + [返回首页] 按钮"
+
+      error:
+        ui: "通用错误提示 + [重试] 按钮"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "无权限编辑"
+        handling: "编辑/删除按钮对非作者不可见（前端隐藏 + 后端鉴权）"
+      - scenario: "并发删除（他人先删）"
+        handling: "操作后 API 返回 404，提示'内容已被删除'，跳转列表"
+
+
+  # ========== 添加更多页面状态机 ==========
+  # ExampleCreatePage:
+  #   ...

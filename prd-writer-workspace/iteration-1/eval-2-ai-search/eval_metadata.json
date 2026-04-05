@@ -1,0 +1,31 @@
+{
+  "eval_id": 2,
+  "eval_name": "enterprise-ai-search-feature",
+  "prompt": "我们公司有个企业知识库产品，现在想加一个 AI 搜索功能。用户以前搜索是关键词匹配，现在想升级成自然语言搜索，比如可以直接问「上周财务部门提交了哪些审批」这样的问题，系统直接给出答案。帮我把这个功能需求写成 PRD。",
+  "assertions": [
+    {
+      "name": "has-product-vision-section",
+      "description": "文档包含功能背景/目标章节，说明为什么要做 AI 搜索"
+    },
+    {
+      "name": "has-target-user-section",
+      "description": "文档描述了使用知识库的企业员工场景"
+    },
+    {
+      "name": "has-user-story-map",
+      "description": "功能需求按用户操作流程组织（输入→理解→搜索→展示→反馈）"
+    },
+    {
+      "name": "has-priority-labels",
+      "description": "功能标注了优先级"
+    },
+    {
+      "name": "covers-core-features",
+      "description": "涵盖了自然语言理解和答案展示等核心 AI 搜索功能"
+    },
+    {
+      "name": "has-non-functional-requirements",
+      "description": "包含响应时间或准确率等性能要求"
+    }
+  ]
+}

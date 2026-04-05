@@ -1,0 +1,26 @@
+{
+  "eval_id": 3,
+  "config": "without_skill",
+  "expectations": [
+    {
+      "text": "校验脚本是否成功运行",
+      "passed": true,
+      "evidence": "报告存在，含 Traceback=False"
+    },
+    {
+      "text": "是否检测到敏感字段泄露 (A03)",
+      "passed": true,
+      "evidence": "报告含 A03/password_hash + 敏感描述=True"
+    },
+    {
+      "text": "是否检测到响应类型错误 (A01)",
+      "passed": true,
+      "evidence": "报告含 A01/NonExistentType=True"
+    },
+    {
+      "text": "是否检测到 UI 端点错误 (U01)",
+      "passed": true,
+      "evidence": "报告含 U01/UserProfilePage/users/profile=True"
+    }
+  ]
+}

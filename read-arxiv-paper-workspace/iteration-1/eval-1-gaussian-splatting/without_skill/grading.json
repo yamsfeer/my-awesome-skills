@@ -1,0 +1,38 @@
+{
+  "expectations": [
+    {
+      "text": "note_saved_to_papers_dir: ~/papers/ 目录下存在至少一个新建的 .md 文件（from this run, not previous runs）",
+      "passed": true,
+      "evidence": "~/papers/Alpha-CLIP：让CLIP聚焦于你关心的任意区域.md 存在，修改时间为 2026-03-22 02:42，与本次 eval run 吻合。"
+    },
+    {
+      "text": "filename_is_chinese: 保存的笔记文件名包含中文字符（非 ASCII）",
+      "passed": true,
+      "evidence": "文件名为 'Alpha-CLIP：让CLIP聚焦于你关心的任意区域.md'，包含多个中文字符（让、聚焦、于、你、关心、的、任意、区域）。"
+    },
+    {
+      "text": "has_required_sections: 笔记正文包含以下六个标题：一句话概括、问题与动机、核心方法、实验与结果、贡献与局限、讲解内容",
+      "passed": true,
+      "evidence": "~/papers/ 笔记文件中六个标题全部存在：'## 1. 一句话概括'、'## 2. 问题与动机'、'## 3. 核心方法'、'## 4. 实验与结果'、'## 5. 贡献与局限'、'## 6. 讲解内容'，逐一验证均找到。"
+    },
+    {
+      "text": "explanation_has_depth: 讲解内容章节的文本长度 >= 500 字",
+      "passed": true,
+      "evidence": "'讲解内容' 章节文本长度为 1998 个字符（含标题），远超 500 字要求。内容涵盖核心思路讲解、关键技术细节、与已有工作的联系及读后思考等四个子节。"
+    },
+    {
+      "text": "paper_identity_correct: 笔记正确识别了 2312.03818 实际对应的论文（Alpha-CLIP），而非盲目相信用户说的 Gaussian Splatting",
+      "passed": true,
+      "evidence": "笔记开头明确说明 'arXiv ID（2312.03818）对应的是 Alpha-CLIP，而非 Gaussian Splatting 相关论文'，正确识别论文为 Alpha-CLIP: A CLIP Model Focusing on Wherever You Want（CVPR 2024），并在讲解内容中解释了 Gaussian Splatting 的关联仅为间接联系。"
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1.0
+  },
+  "timing": {
+    "executor_duration_seconds": 235.6
+  }
+}

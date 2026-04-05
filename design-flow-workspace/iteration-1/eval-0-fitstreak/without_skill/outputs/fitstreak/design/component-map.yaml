@@ -1,0 +1,647 @@
+# FitStreak 组件映射表
+# version: 1.0.0
+# updated: 2026-03-22
+# 描述：UI 组件与前端实现组件的映射关系，包含组件库选择和自定义组件定义
+
+# ─────────────────────────────────────────
+# 组件库选择
+# ─────────────────────────────────────────
+library_selection:
+  primary_ui_library:
+    name: "react-native-paper"
+    version: "^5.x"
+    reason: "Material Design 3 风格，组件丰富，社区活跃，支持主题定制"
+
+  icon_library:
+    name: "react-native-vector-icons"
+    package: "@expo/vector-icons"
+    icon_sets:
+      - "Ionicons"        # 主要图标
+      - "MaterialCommunityIcons"  # 运动相关图标
+      - "FontAwesome5"    # 社交/成就图标
+
+  chart_library:
+    name: "react-native-chart-kit"
+    version: "^6.x"
+    reason: "轻量级，支持折线图、柱状图、饼图，适合健身数据展示"
+
+  calendar_library:
+    name: "react-native-calendars"
+    version: "^1.x"
+    reason: "支持自定义样式，可渲染热力图效果"
+
+  animation_library:
+    name: "react-native-reanimated"
+    version: "^3.x"
+    reason: "高性能动画，支持手势交互"
+
+  gesture_library:
+    name: "react-native-gesture-handler"
+    version: "^2.x"
+    reason: "与 Reanimated 配合，实现流畅手势"
+
+# ─────────────────────────────────────────
+# 组件映射表
+# ─────────────────────────────────────────
+component_map:
+
+  # ══════════════════════════════════════
+  # 基础组件（来自 UI 库）
+  # ══════════════════════════════════════
+
+  Button:
+    library: react-native-paper
+    component: Button
+    import: "import { Button } from 'react-native-paper'"
+    variants:
+      primary:
+        props:
+          mode: "contained"
+          buttonColor: "tokens.colors.primary.base"
+          textColor: "tokens.colors.neutral.white"
+          style: "{ borderRadius: 24, height: 48 }"
+      secondary:
+        props:
+          mode: "contained"
+          buttonColor: "tokens.colors.primary.lighter"
+          textColor: "tokens.colors.primary.base"
+          style: "{ borderRadius: 24, height: 48 }"
+      ghost:
+        props:
+          mode: "outlined"
+          textColor: "tokens.colors.primary.base"
+          style: "{ borderRadius: 24, height: 48 }"
+      text:
+        props:
+          mode: "text"
+          textColor: "tokens.colors.primary.base"
+    customizations:
+      - "调整 borderRadius 为 24（完全圆角）"
+      - "调整 height 为 48（标准按钮高度）"
+
+  TextInput:
+    library: react-native-paper
+    component: TextInput
+    import: "import { TextInput } from 'react-native-paper'"
+    props:
+      mode: "outlined"
+      outlineColor: "tokens.colors.border.light"
+      activeOutlineColor: "tokens.colors.primary.base"
+      style: "{ borderRadius: 12, backgroundColor: tokens.colors.background.secondary }"
+    customizations:
+      - "设置 borderRadius 为 12"
+      - "设置 backgroundColor 为浅灰背景"
+
+  Card:
+    library: react-native-paper
+    component: Card
+    import: "import { Card } from 'react-native-paper'"
+    props:
+      style: "{ borderRadius: 16, elevation: 2 }"
+    customizations:
+      - "设置 borderRadius 为 16"
+      - "添加阴影效果"
+
+  Avatar:
+    library: react-native-paper
+    component: Avatar
+    import: "import { Avatar } from 'react-native-paper'"
+    variants:
+      small:
+        props:
+          size: 32
+      medium:
+        props:
+          size: 40
+      large:
+        props:
+          size: 56
+      xlarge:
+        props:
+          size: 80
+
+  Badge:
+    library: react-native-paper
+    component: Badge
+    import: "import { Badge } from 'react-native-paper'"
+    props:
+      size: 16
+      style: "{ backgroundColor: tokens.colors.error.base }"
+
+  Chip:
+    library: react-native-paper
+    component: Chip
+    import: "import { Chip } from 'react-native-paper'"
+    props:
+      style: "{ borderRadius: 16 }"
+
+  Divider:
+    library: react-native-paper
+    component: Divider
+    import: "import { Divider } from 'react-native-paper'"
+    props:
+      style: "{ backgroundColor: tokens.colors.neutral.200 }"
+
+  List:
+    library: react-native-paper
+    component: "List.Item"
+    import: "import { List } from 'react-native-paper'"
+
+  # ══════════════════════════════════════
+  # 自定义业务组件
+  # ══════════════════════════════════════
+
+  CheckinCard:
+    type: custom
+    file: "components/CheckinCard.tsx"
+    description: "首页今日打卡状态卡片（核心组件）"
+    props:
+      - name: status
+        type: "'checked_in' | 'not_checked_in'"
+        required: true
+      - name: checkinData
+        type: "CheckinData | null"
+        required: false
+      - name: currentStreak
+        type: number
+        required: true
+      - name: onCheckinPress
+        type: "() => void"
+        required: true
+      - name: onSharePress
+        type: "() => void"
+        required: false
+    states:
+      - not_checked_in:
+          background: "linear-gradient(135deg, tokens.colors.primary.base, tokens.colors.primary.dark)"
+          text_color: tokens.colors.neutral.white
+          cta: "立即打卡"
+      - checked_in:
+          background: "linear-gradient(135deg, tokens.colors.success.lighter, tokens.colors.neutral.white)"
+          text_color: tokens.colors.text.primary
+          cta: "查看详情"
+
+  StreakCalendar:
+    type: custom
+    file: "components/StreakCalendar.tsx"
+    description: "30天打卡热力图组件"
+    props:
+      - name: checkinDates
+        type: "string[]"
+        description: "已打卡日期列表（YYYY-MM-DD格式）"
+        required: true
+      - name: currentStreak
+        type: number
+        required: true
+      - name: longestStreak
+        type: number
+        required: true
+      - name: onDatePress
+        type: "(date: string) => void"
+        required: false
+    dependencies:
+      - "react-native-calendars"
+    customizations:
+      - "自定义 dayComponent 渲染"
+      - "使用 tokens.colors.primary.base 标记已打卡"
+      - "使用 tokens.colors.neutral.100 标记未打卡"
+
+  StatsRow:
+    type: custom
+    file: "components/StatsRow.tsx"
+    description: "本周统计数据横向排列组件"
+    props:
+      - name: weekCheckins
+        type: number
+        required: true
+      - name: weekDuration
+        type: number
+        description: "本周总时长（分钟）"
+        required: true
+      - name: longestStreak
+        type: number
+        required: true
+      - name: onPress
+        type: "(statType: string) => void"
+        required: false
+
+  FriendFeedItem:
+    type: custom
+    file: "components/FriendFeedItem.tsx"
+    description: "好友动态列表项"
+    props:
+      - name: avatar
+        type: string
+        description: "头像URL"
+        required: true
+      - name: nickname
+        type: string
+        required: true
+      - name: exerciseName
+        type: string
+        required: true
+      - name: duration
+        type: number
+        required: true
+      - name: streak
+        type: number
+        required: true
+      - name: timestamp
+        type: string
+        description: "ISO 8601 格式时间"
+        required: true
+      - name: onPress
+        type: "() => void"
+        required: false
+
+  AchievementBadge:
+    type: custom
+    file: "components/AchievementBadge.tsx"
+    description: "成就徽章展示组件"
+    props:
+      - name: icon
+        type: string
+        description: "徽章图标URL"
+        required: true
+      - name: title
+        type: string
+        required: true
+      - name: isUnlocked
+        type: boolean
+        required: true
+      - name: isPremium
+        type: boolean
+        required: false
+      - name: size
+        type: "'small' | 'medium' | 'large'"
+        default: "medium"
+    styles:
+      unlocked:
+        filter: none
+        border: "2px solid tokens.colors.special.gold"
+      locked:
+        filter: "grayscale(100%)"
+        opacity: 0.5
+        overlay: "锁图标"
+      premium_locked:
+        overlay: "皇冠图标 + 半透明遮罩"
+
+  ExerciseTypeGrid:
+    type: custom
+    file: "components/ExerciseTypeGrid.tsx"
+    description: "运动类型网格选择器"
+    props:
+      - name: exerciseTypes
+        type: "ExerciseType[]"
+        required: true
+      - name: selectedId
+        type: "string | null"
+        required: true
+      - name: onSelect
+        type: "(id: string) => void"
+        required: true
+      - name: columns
+        type: number
+        default: 3
+
+  DurationPicker:
+    type: custom
+    file: "components/DurationPicker.tsx"
+    description: "运动时长选择器（滚轮 + 快捷选项）"
+    props:
+      - name: value
+        type: number
+        description: "当前值（分钟）"
+        required: true
+      - name: onChange
+        type: "(value: number) => void"
+        required: true
+      - name: quickOptions
+        type: "number[]"
+        default: "[15, 30, 45, 60, 90]"
+
+  ProgressBar:
+    type: custom
+    file: "components/ProgressBar.tsx"
+    description: "进度条组件"
+    props:
+      - name: progress
+        type: number
+        description: "0-1 之间的值"
+        required: true
+      - name: color
+        type: string
+        default: "tokens.colors.primary.base"
+      - name: height
+        type: number
+        default: 8
+      - name: showLabel
+        type: boolean
+        default: false
+
+  LeaderboardItem:
+    type: custom
+    file: "components/LeaderboardItem.tsx"
+    description: "排行榜列表项"
+    props:
+      - name: rank
+        type: number
+        required: true
+      - name: avatar
+        type: string
+        required: true
+      - name: nickname
+        type: string
+        required: true
+      - name: value
+        type: number
+        description: "排行榜数值（打卡次数）"
+        required: true
+      - name: streak
+        type: number
+        required: false
+      - name: isSelf
+        type: boolean
+        default: false
+    styles:
+      rank_1:
+        rank_color: tokens.colors.special.gold
+        icon: "trophy"
+      rank_2:
+        rank_color: "#C0C0C0"
+      rank_3:
+        rank_color: "#CD7F32"
+
+  ChallengeCard:
+    type: custom
+    file: "components/ChallengeCard.tsx"
+    description: "挑战赛卡片"
+    props:
+      - name: title
+        type: string
+        required: true
+      - name: type
+        type: string
+        description: "挑战类型"
+        required: true
+      - name: progress
+        type: number
+        description: "当前进度"
+        required: true
+      - name: target
+        type: number
+        description: "目标值"
+        required: true
+      - name: daysRemaining
+        type: number
+        required: true
+      - name: participants
+        type: "UserPreview[]"
+        required: true
+      - name: myRank
+        type: number
+        required: false
+
+  BodyMetricChart:
+    type: custom
+    file: "components/BodyMetricChart.tsx"
+    description: "体征数据趋势图（Premium）"
+    props:
+      - name: data
+        type: "BodyMetricPoint[]"
+        required: true
+      - name: metricType
+        type: "'weight' | 'body_fat' | 'muscle_mass' | 'bmi'"
+        required: true
+      - name: timeRange
+        type: "'1month' | '3months' | '6months'"
+        required: true
+    dependencies:
+      - "react-native-chart-kit"
+
+  PremiumPaywall:
+    type: custom
+    file: "components/PremiumPaywall.tsx"
+    description: "Premium 订阅引导弹窗"
+    props:
+      - name: isVisible
+        type: boolean
+        required: true
+      - name: onClose
+        type: "() => void"
+        required: true
+      - name: onSubscribe
+        type: "(planType: string) => void"
+        required: true
+
+  ConfettiView:
+    type: custom
+    file: "components/ConfettiView.tsx"
+    description: "打卡成功彩带动画"
+    props:
+      - name: isActive
+        type: boolean
+        required: true
+      - name: onComplete
+        type: "() => void"
+        required: false
+    dependencies:
+      - "react-native-reanimated"
+
+  # ══════════════════════════════════════
+  # 导航组件
+  # ══════════════════════════════════════
+
+  TabBar:
+    library: "@react-navigation/bottom-tabs"
+    component: BottomTabBar
+    import: "import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'"
+    customizations:
+      - "自定义 TabBar 样式，使用 tokens 颜色"
+      - "中间按钮（打卡）使用特殊样式"
+
+  Header:
+    library: "@react-navigation/native-stack"
+    component: NativeStackHeader
+    customizations:
+      - "统一标题样式"
+      - "返回按钮使用 Ionicons"
+
+  # ══════════════════════════════════════
+  # 布局组件
+  # ══════════════════════════════════════
+
+  SafeArea:
+    library: react-native-safe-area-context
+    component: SafeAreaView
+    import: "import { SafeAreaView } from 'react-native-safe-area-context'"
+
+  ScrollView:
+    library: react-native
+    component: ScrollView
+    props:
+      showsVerticalScrollIndicator: false
+      refreshControl: "PullToRefresh"
+
+  FlatList:
+    library: react-native
+    component: FlatList
+    props:
+      showsVerticalScrollIndicator: false
+      keyExtractor: "(item) => item.id"
+
+# ─────────────────────────────────────────
+# 页面级组件（Screens）
+# ─────────────────────────────────────────
+screens:
+  HomeScreen:
+    file: "screens/HomeScreen.tsx"
+    components_used:
+      - CheckinCard
+      - StreakCalendar
+      - StatsRow
+      - FriendFeedItem
+      - Card (Paper)
+      - Avatar (Paper)
+    data_sources:
+      - "useUserProfile()"
+      - "useTodayCheckin()"
+      - "useFriendFeed(limit: 3)"
+
+  CheckinScreen:
+    file: "screens/CheckinScreen.tsx"
+    components_used:
+      - ExerciseTypeGrid
+      - DurationPicker
+      - TextInput (Paper)
+      - Button (Paper)
+    data_sources:
+      - "useExerciseTypes()"
+      - "useCreateCheckin()"
+
+  ProfileScreen:
+    file: "screens/ProfileScreen.tsx"
+    components_used:
+      - Avatar (Paper)
+      - AchievementBadge
+      - Card (Paper)
+      - List (Paper)
+      - Button (Paper)
+    data_sources:
+      - "useUserProfile()"
+      - "useUserAchievements()"
+      - "useBodyMetrics()"
+
+  SocialScreen:
+    file: "screens/SocialScreen.tsx"
+    components_used:
+      - LeaderboardItem
+      - FriendFeedItem
+      - ChallengeCard
+      - Tab (自定义)
+    data_sources:
+      - "useLeaderboard(period)"
+      - "useFriends()"
+      - "useChallenges()"
+
+  PlansScreen:
+    file: "screens/PlansScreen.tsx"
+    components_used:
+      - Card (Paper)
+      - Chip (Paper)
+      - Button (Paper)
+      - ProgressBar
+    data_sources:
+      - "useWorkoutPlans()"
+      - "useActivePlan()"
+
+  AchievementsScreen:
+    file: "screens/AchievementsScreen.tsx"
+    components_used:
+      - AchievementBadge
+      - ProgressBar
+      - Card (Paper)
+    data_sources:
+      - "useAllAchievements()"
+
+# ─────────────────────────────────────────
+# Hooks 映射
+# ─────────────────────────────────────────
+hooks:
+  useUserProfile:
+    file: "hooks/useUserProfile.ts"
+    description: "获取当前用户信息"
+    returns: "UserProfile | null"
+
+  useTodayCheckin:
+    file: "hooks/useTodayCheckin.ts"
+    description: "获取今日打卡状态"
+    returns: "CheckinRecord | null"
+
+  useCreateCheckin:
+    file: "hooks/useCreateCheckin.ts"
+    description: "创建打卡记录"
+    returns: "{ mutate, isLoading, error }"
+
+  useExerciseTypes:
+    file: "hooks/useExerciseTypes.ts"
+    description: "获取运动类型列表"
+    returns: "ExerciseType[]"
+
+  useFriendFeed:
+    file: "hooks/useFriendFeed.ts"
+    description: "获取好友动态"
+    returns: "FriendFeedItem[]"
+
+  useLeaderboard:
+    file: "hooks/useLeaderboard.ts"
+    description: "获取排行榜数据"
+    returns: "LeaderboardItem[]"
+
+  useUserAchievements:
+    file: "hooks/useUserAchievements.ts"
+    description: "获取用户成就"
+    returns: "Achievement[]"
+
+  useBodyMetrics:
+    file: "hooks/useBodyMetrics.ts"
+    description: "获取体征数据（Premium）"
+    returns: "BodyMetric[]"
+
+  useChallenges:
+    file: "hooks/useChallenges.ts"
+    description: "获取挑战赛列表（Premium）"
+    returns: "Challenge[]"
+
+  useWorkoutPlans:
+    file: "hooks/useWorkoutPlans.ts"
+    description: "获取运动计划列表"
+    returns: "WorkoutPlan[]"
+
+  useActivePlan:
+    file: "hooks/useActivePlan.ts"
+    description: "获取当前激活的计划"
+    returns: "UserPlanSubscription | null"
+
+# ─────────────────────────────────────────
+# 样式工具
+# ─────────────────────────────────────────
+style_utils:
+  theme_provider:
+    file: "theme/ThemeProvider.tsx"
+    description: "Paper Provider 包装，注入 tokens"
+
+  style_sheet:
+    file: "theme/styles.ts"
+    description: "通用样式工具函数"
+    exports:
+      - "createSpacing(scale: number) => number"
+      - "createShadow(size: 'small' | 'medium' | 'large') => ViewStyle"
+      - "createGradient(colors: string[]) => LinearGradientProps"
+
+  responsive:
+    file: "theme/responsive.ts"
+    description: "响应式布局工具"
+    exports:
+      - "useScreenWidth() => number"
+      - "useIsTablet() => boolean"

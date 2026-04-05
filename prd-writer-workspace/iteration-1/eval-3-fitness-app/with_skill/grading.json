@@ -1,0 +1,39 @@
+{
+  "eval_id": 3,
+  "run": "with_skill",
+  "expectations": [
+    {
+      "text": "has-product-vision-section: 文档包含产品愿景/定位章节",
+      "passed": true,
+      "evidence": "第1章「产品愿景」包含一句话定位、5条核心价值主张、与Keep等竞品的差异化对比表、6个月成功指标"
+    },
+    {
+      "text": "has-target-user-section: 文档描述了健身爱好者用户画像",
+      "passed": true,
+      "evidence": "第2章「目标用户」包含18-35岁上班族/学生的详细画像（年龄、职业、运动频率、行为特征）、3个具体使用场景、5条痛点分析"
+    },
+    {
+      "text": "has-user-story-map: 功能需求使用用户故事地图或用户旅程方式组织",
+      "passed": true,
+      "evidence": "第3章「3.1用户活动总览」明确标注「注册与设置 → 创建训练计划 → 日常打卡记录 → 查看进步数据 → 好友互动鼓励」，每个任务有「用户目标」字段"
+    },
+    {
+      "text": "has-priority-labels: 功能标注了优先级",
+      "passed": true,
+      "evidence": "每个用户任务均有「优先级：P0/P1/P2」，3.2节功能优先级总览表列出21个功能的优先级"
+    },
+    {
+      "text": "covers-core-features: 涵盖了训练计划、打卡记录、进步曲线、社交鼓励四个核心功能",
+      "passed": true,
+      "evidence": "活动二「创建训练计划」、活动三「日常打卡记录」、任务4.2「查看进步曲线」、活动五「好友互动鼓励」全部覆盖"
+    },
+    {
+      "text": "has-non-functional-requirements: 文档包含非功能需求章节",
+      "passed": true,
+      "evidence": "第4章「非功能需求」包含性能（冷启动P95<2s）、安全、兼容性（iOS 14+, Android 8.0+）、数据与隐私要求"
+    }
+  ],
+  "pass_rate": 1.0,
+  "total_passed": 6,
+  "total_assertions": 6
+}

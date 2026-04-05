@@ -1,0 +1,366 @@
+# 领域层数据契约 - 拾物（shiwo-marketplace）
+# 说明：包含所有字段，含敏感字段。后端内部使用，禁止直接暴露给前端。
+# 设计决策：金额以"分（整数）"存储；用户绑定单一校区；软删除统一用 deleted_at
+
+entities:
+
+  User:
+    description: 用户账户（微信小程序用户）
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key, indexed
+      openid:
+        type: string
+        constraints: unique, indexed, required
+        note: "⚠️ 禁止暴露 - 微信 openid，后端鉴权专用"
+      unionid:
+        type: string
+        constraints: unique, nullable
+        note: "⚠️ 禁止暴露 - 微信 unionid"
+      nickname:
+        type: string
+        constraints: required, max_length:30
+      avatar_url:
+        type: string
+        constraints: nullable
+      phone:
+        type: string
+        constraints: nullable, unique
+        note: "⚠️ 禁止暴露 - 手机号，需脱敏后返回"
+      campus_id:
+        type: uuid
+        constraints: foreign_key(Campus.id), indexed, required
+      is_verified:
+        type: boolean
+        default: false
+        note: "是否通过学生身份验证"
+      trust_score:
+        type: decimal(3,2)
+        default: 5.00
+        note: "诚信评分，范围 1.00-5.00"
+      trade_count:
+        type: integer
+        default: 0
+        note: "累计完成交易次数"
+      role:
+        type: enum
+        values: [user, admin]
+        default: user
+        note: "⚠️ 禁止暴露 - 权限控制"
+      is_banned:
+        type: boolean
+        default: false
+        note: "⚠️ 禁止暴露 - 封号标记"
+      created_at:
+        type: timestamp
+        constraints: auto_set
+      updated_at:
+        type: timestamp
+        constraints: auto_update
+      deleted_at:
+        type: timestamp
+        constraints: nullable
+        note: "⚠️ 禁止暴露 - 软删除标记"
+
+  Campus:
+    description: 校区信息
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      name:
+        type: string
+        constraints: required, max_length:50
+      university:
+        type: string
+        constraints: required, max_length:100
+      city:
+        type: string
+        constraints: required, max_length:50
+      address:
+        type: string
+        constraints: nullable
+      is_active:
+        type: boolean
+        default: true
+      created_at:
+        type: timestamp
+        constraints: auto_set
+
+  Category:
+    description: 商品分类
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      name:
+        type: string
+        constraints: required, max_length:20
+      icon:
+        type: string
+        constraints: required
+        note: "图标标识符，如 'textbook'、'electronics'"
+      sort_order:
+        type: integer
+        default: 0
+      is_active:
+        type: boolean
+        default: true
+
+  Product:
+    description: 商品（闲置物品）
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key, indexed
+      seller_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed
+      category_id:
+        type: uuid
+        constraints: foreign_key(Category.id), indexed
+      campus_id:
+        type: uuid
+        constraints: foreign_key(Campus.id), indexed
+      title:
+        type: string
+        constraints: required, max_length:60
+      description:
+        type: text
+        constraints: nullable, max_length:1000
+      price:
+        type: integer
+        constraints: required, min:1
+        note: "单位：分（整数）。如 ¥19.90 存储为 1990"
+      original_price:
+        type: integer
+        constraints: nullable
+        note: "原价（分），用于展示折扣率"
+      condition:
+        type: enum
+        values: [new, like_new, good, fair, poor]
+        default: good
+        note: "成色：全新/近新/良好/一般/较差"
+      images:
+        type: jsonb
+        note: "图片 URL 数组，最多 9 张"
+      status:
+        type: enum
+        values: [draft, on_sale, reserved, sold, removed]
+        default: draft
+        note: "draft=草稿, on_sale=在售, reserved=已预约, sold=已售出, removed=已下架"
+      view_count:
+        type: integer
+        default: 0
+      favorite_count:
+        type: integer
+        default: 0
+      audit_status:
+        type: enum
+        values: [pending, approved, rejected]
+        default: approved
+        note: "⚠️ 禁止暴露 - 内容审核状态"
+      audit_reason:
+        type: string
+        constraints: nullable
+        note: "⚠️ 禁止暴露 - 审核拒绝原因"
+      created_at:
+        type: timestamp
+        constraints: auto_set
+      updated_at:
+        type: timestamp
+        constraints: auto_update
+      deleted_at:
+        type: timestamp
+        constraints: nullable
+        note: "⚠️ 禁止暴露 - 软删除标记"
+
+  Message:
+    description: 私信消息
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      conversation_id:
+        type: uuid
+        constraints: foreign_key(Conversation.id), indexed
+      sender_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed
+      content:
+        type: text
+        constraints: required, max_length:500
+      msg_type:
+        type: enum
+        values: [text, appointment_card, system]
+        default: text
+        note: "text=普通文字, appointment_card=预约面交卡片, system=系统消息"
+      extra_data:
+        type: jsonb
+        constraints: nullable
+        note: "预约卡片数据（时间、地点等）"
+      is_read:
+        type: boolean
+        default: false
+      created_at:
+        type: timestamp
+        constraints: auto_set
+
+  Conversation:
+    description: 会话（买卖双方对话）
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      product_id:
+        type: uuid
+        constraints: foreign_key(Product.id), indexed
+      buyer_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed
+      seller_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed
+      last_message_at:
+        type: timestamp
+        constraints: nullable
+      created_at:
+        type: timestamp
+        constraints: auto_set
+
+  Trade:
+    description: 交易记录
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      product_id:
+        type: uuid
+        constraints: foreign_key(Product.id), indexed
+      buyer_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed
+      seller_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed
+      final_price:
+        type: integer
+        constraints: required
+        note: "实际成交价（分）"
+      meet_location:
+        type: string
+        constraints: nullable, max_length:100
+      meet_time:
+        type: timestamp
+        constraints: nullable
+      status:
+        type: enum
+        values: [pending, completed, cancelled]
+        default: pending
+      completed_at:
+        type: timestamp
+        constraints: nullable
+      created_at:
+        type: timestamp
+        constraints: auto_set
+
+  Review:
+    description: 交易评价
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      trade_id:
+        type: uuid
+        constraints: foreign_key(Trade.id), indexed
+      reviewer_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed
+      reviewee_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed
+      role:
+        type: enum
+        values: [buyer, seller]
+        note: "评价方角色"
+      score:
+        type: integer
+        constraints: required, min:1, max:5
+      comment:
+        type: string
+        constraints: nullable, max_length:200
+      created_at:
+        type: timestamp
+        constraints: auto_set
+
+  Favorite:
+    description: 商品收藏
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      user_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed
+      product_id:
+        type: uuid
+        constraints: foreign_key(Product.id), indexed
+      created_at:
+        type: timestamp
+        constraints: auto_set
+
+
+relationships:
+  - "User ──N:1──> Campus (via campus_id，用户绑定单一校区)"
+  - "User ──1:N──> Product (via seller_id，一个用户可发布多件商品)"
+  - "Product ──N:1──> Category (via category_id)"
+  - "Product ──N:1──> Campus (via campus_id)"
+  - "Conversation ──N:1──> Product (via product_id)"
+  - "Conversation ──N:1──> User buyer (via buyer_id)"
+  - "Conversation ──N:1──> User seller (via seller_id)"
+  - "Message ──N:1──> Conversation (via conversation_id)"
+  - "Trade ──N:1──> Product (via product_id)"
+  - "Review ──N:1──> Trade (via trade_id)"
+  - "Favorite ──N:M──> Product (via user_id + product_id，联合唯一)"
+
+indexes:
+  - table: Product
+    fields: [campus_id, status, created_at]
+    type: composite
+    purpose: "校区内在售商品列表（最核心查询）"
+  - table: Product
+    fields: [category_id, campus_id, status]
+    type: composite
+    purpose: "按分类+校区筛选"
+  - table: Product
+    fields: [seller_id, status]
+    type: composite
+    purpose: "用户发布列表"
+  - table: Message
+    fields: [conversation_id, created_at]
+    type: composite
+    purpose: "会话消息时序查询"
+  - table: Conversation
+    fields: [buyer_id, last_message_at]
+    type: composite
+    purpose: "买家消息列表（按最新消息排序）"
+  - table: Conversation
+    fields: [seller_id, last_message_at]
+    type: composite
+    purpose: "卖家消息列表"
+  - table: Favorite
+    fields: [user_id, product_id]
+    type: unique_composite
+    purpose: "防重复收藏"
+
+sensitive_fields_summary:
+  - "User.openid - 微信鉴权专用，永远不暴露"
+  - "User.unionid - 微信鉴权专用，永远不暴露"
+  - "User.phone - 需脱敏后返回（如 138****8888）"
+  - "User.role - 权限控制，不暴露"
+  - "User.is_banned - 封号标记，不暴露"
+  - "User.deleted_at - 软删除标记"
+  - "Product.audit_status - 内容审核状态，不暴露给非管理员"
+  - "Product.audit_reason - 审核原因，不暴露给非管理员"
+  - "Product.deleted_at - 软删除标记"

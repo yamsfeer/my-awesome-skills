@@ -1,0 +1,27 @@
+{
+  "eval_id": 1,
+  "eval_name": "shiwo-campus-marketplace",
+  "prompt": "我想设计一个二手闲置物品交易小程序，请帮我做完整设计规划，自动完成所有阶段无需等我确认，遇到技术决策自行判断。\n\n已知信息：\n- 产品名：闲鱼仿品「拾物」\n- 痛点：大学校园内同学间的闲置物品处置麻烦，邮寄费用高，希望面交\n- 目标用户：在校大学生，18-24岁，有大量闲置教材/电子产品/生活用品\n- 核心功能：1.发布商品（拍照+描述+定价）2.分类浏览/搜索 3.私信洽谈+预约面交 4.校区/地点筛选 5.诚信评分系统\n- 平台：微信小程序\n- 商业模式：免费，后期收取成交额2%的服务费\n\n输出目录：shiwo-marketplace/",
+  "assertions": [
+    {
+      "id": "files_created",
+      "name": "核心文件是否创建",
+      "description": "检查 shiwo-marketplace/ 目录下存在 product-overview.md 和 contracts/ 目录"
+    },
+    {
+      "id": "api_endpoints",
+      "name": "API 契约是否包含端点",
+      "description": "api.yaml 应包含 endpoints 字段，且有至少 5 个端点定义"
+    },
+    {
+      "id": "domain_sensitive_markers",
+      "name": "敏感字段是否标注",
+      "description": "domain.yaml 中应有 ⚠️ 禁止暴露 的注释"
+    },
+    {
+      "id": "tokens_frozen",
+      "name": "Design Token 是否冻结",
+      "description": "tokens.json 包含 _frozen 字段"
+    }
+  ]
+}

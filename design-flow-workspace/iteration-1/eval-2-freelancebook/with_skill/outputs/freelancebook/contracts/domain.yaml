@@ -1,0 +1,381 @@
+# 领域层数据契约 - FreelanceBook
+# 说明：包含所有字段，含敏感字段。后端内部使用，禁止直接暴露给前端。
+# 技术决策：金额统一用分（整数）存储；客户可有多个联系人；发票状态：draft/sent/paid/overdue
+
+entities:
+
+  User:
+    description: 自由职业者账户
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key, indexed
+      email:
+        type: string
+        constraints: unique, indexed, required
+        note: "⚠️ 禁止暴露 - 需脱敏后才可返回给前端"
+      password_hash:
+        type: string
+        note: "⚠️ 禁止暴露 - 永远不返回给前端"
+      name:
+        type: string
+        constraints: required, max_length:100
+      avatar_url:
+        type: string
+        constraints: nullable
+      subscription_status:
+        type: enum
+        values: [trial, active, expired, cancelled]
+        default: trial
+        note: "⚠️ 禁止暴露 - 订阅状态，由后端控制"
+      trial_ends_at:
+        type: timestamp
+        constraints: nullable
+        note: "⚠️ 禁止暴露 - 试用到期时间"
+      tax_id:
+        type: string
+        constraints: nullable, max_length:30
+        note: "纳税人识别号，用于税务预估"
+      tax_type:
+        type: enum
+        values: [individual, small_biz, general_biz]
+        default: individual
+        note: "⚠️ 禁止暴露 - 税务类型（个人/小规模/一般纳税人）"
+      created_at:
+        type: timestamp
+        constraints: auto_set
+      updated_at:
+        type: timestamp
+        constraints: auto_update
+      deleted_at:
+        type: timestamp
+        constraints: nullable
+        note: "⚠️ 禁止暴露 - 软删除标记"
+
+  Client:
+    description: 客户（甲方公司或个人）
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key, indexed
+      user_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed, required
+      name:
+        type: string
+        constraints: required, max_length:200
+      company_name:
+        type: string
+        constraints: nullable, max_length:200
+      tax_id:
+        type: string
+        constraints: nullable, max_length:30
+        note: "客户税号，用于开票"
+      email:
+        type: string
+        constraints: nullable
+      phone:
+        type: string
+        constraints: nullable
+      address:
+        type: text
+        constraints: nullable
+      tags:
+        type: jsonb
+        constraints: nullable
+        note: "标签数组，如 ['重要客户', '长期合作']"
+      notes:
+        type: text
+        constraints: nullable
+      currency:
+        type: string
+        default: "CNY"
+        constraints: max_length:3
+      created_at:
+        type: timestamp
+        constraints: auto_set
+      updated_at:
+        type: timestamp
+        constraints: auto_update
+      deleted_at:
+        type: timestamp
+        constraints: nullable
+        note: "⚠️ 禁止暴露 - 软删除标记"
+
+  ClientContact:
+    description: 客户联系人（一个客户可有多个联系人）
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      client_id:
+        type: uuid
+        constraints: foreign_key(Client.id), indexed, required
+      name:
+        type: string
+        constraints: required, max_length:100
+      title:
+        type: string
+        constraints: nullable, max_length:100
+        note: "职位/头衔，如 '财务总监'"
+      email:
+        type: string
+        constraints: nullable
+      phone:
+        type: string
+        constraints: nullable
+      is_primary:
+        type: boolean
+        default: false
+        note: "是否为主要联系人"
+      created_at:
+        type: timestamp
+        constraints: auto_set
+
+  Project:
+    description: 项目/合同记录
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key, indexed
+      user_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed, required
+      client_id:
+        type: uuid
+        constraints: foreign_key(Client.id), indexed, required
+      title:
+        type: string
+        constraints: required, max_length:200
+      description:
+        type: text
+        constraints: nullable
+      contract_amount:
+        type: integer
+        constraints: required
+        note: "合同总金额，单位：分（整数）"
+      currency:
+        type: string
+        default: "CNY"
+        constraints: max_length:3
+      status:
+        type: enum
+        values: [active, completed, cancelled, paused]
+        default: active
+      start_date:
+        type: date
+        constraints: nullable
+      end_date:
+        type: date
+        constraints: nullable
+      payment_terms:
+        type: text
+        constraints: nullable
+        note: "付款条款描述，如'项目完成后30天内付款'"
+      tags:
+        type: jsonb
+        constraints: nullable
+      created_at:
+        type: timestamp
+        constraints: auto_set
+      updated_at:
+        type: timestamp
+        constraints: auto_update
+      deleted_at:
+        type: timestamp
+        constraints: nullable
+        note: "⚠️ 禁止暴露 - 软删除标记"
+
+  Invoice:
+    description: 发票/收款记录
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key, indexed
+      user_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed, required
+      client_id:
+        type: uuid
+        constraints: foreign_key(Client.id), indexed, required
+      project_id:
+        type: uuid
+        constraints: foreign_key(Project.id), indexed, nullable
+        note: "可不绑定项目（零散收款）"
+      invoice_number:
+        type: string
+        constraints: unique, indexed, required
+        note: "发票编号，如 INV-2024-001"
+      title:
+        type: string
+        constraints: required, max_length:200
+      amount:
+        type: integer
+        constraints: required
+        note: "发票金额，单位：分（整数）"
+      tax_amount:
+        type: integer
+        default: 0
+        note: "税额，单位：分（整数）"
+      currency:
+        type: string
+        default: "CNY"
+        constraints: max_length:3
+      status:
+        type: enum
+        values: [draft, sent, paid, overdue]
+        default: draft
+      issue_date:
+        type: date
+        constraints: required
+      due_date:
+        type: date
+        constraints: required
+      paid_at:
+        type: timestamp
+        constraints: nullable
+      notes:
+        type: text
+        constraints: nullable
+      pdf_url:
+        type: string
+        constraints: nullable
+        note: "⚠️ 禁止暴露 - 内部存储路径"
+      created_at:
+        type: timestamp
+        constraints: auto_set
+      updated_at:
+        type: timestamp
+        constraints: auto_update
+      deleted_at:
+        type: timestamp
+        constraints: nullable
+        note: "⚠️ 禁止暴露 - 软删除标记"
+
+  InvoiceItem:
+    description: 发票明细行
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      invoice_id:
+        type: uuid
+        constraints: foreign_key(Invoice.id), indexed, required
+      description:
+        type: string
+        constraints: required, max_length:500
+      quantity:
+        type: decimal
+        constraints: required
+        note: "数量（支持小数，如0.5天）"
+      unit_price:
+        type: integer
+        constraints: required
+        note: "单价，单位：分（整数）"
+      amount:
+        type: integer
+        constraints: required
+        note: "小计 = quantity * unit_price，单位：分"
+      sort_order:
+        type: integer
+        default: 0
+        note: "排列顺序"
+
+  TaxSetting:
+    description: 用户税务配置（税务预估计算器使用）
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      user_id:
+        type: uuid
+        constraints: foreign_key(User.id), unique, required
+        note: "每个用户只有一条税务配置"
+      annual_exemption:
+        type: integer
+        default: 6000000
+        note: "年度免征额，默认6万元（分）"
+      vat_rate:
+        type: decimal
+        default: 0.03
+        note: "增值税税率，小规模默认3%"
+      income_tax_rate:
+        type: decimal
+        constraints: nullable
+        note: "⚠️ 禁止暴露 - 手动覆盖税率（通常自动计算）"
+      deduction_items:
+        type: jsonb
+        constraints: nullable
+        note: "⚠️ 禁止暴露 - 专项扣除项（保险、公积金等）"
+      updated_at:
+        type: timestamp
+        constraints: auto_update
+
+
+relationships:
+  - "User ──1:N──> Client (via client.user_id)"
+  - "Client ──1:N──> ClientContact (via client_contact.client_id)"
+  - "User ──1:N──> Project (via project.user_id)"
+  - "Client ──1:N──> Project (via project.client_id)"
+  - "User ──1:N──> Invoice (via invoice.user_id)"
+  - "Client ──1:N──> Invoice (via invoice.client_id)"
+  - "Project ──1:N──> Invoice (via invoice.project_id, nullable)"
+  - "Invoice ──1:N──> InvoiceItem (via invoice_item.invoice_id)"
+  - "User ──1:1──> TaxSetting (via tax_setting.user_id)"
+
+
+indexes:
+  - table: Client
+    fields: [user_id, created_at]
+    type: composite
+    purpose: "用户的客户列表分页查询"
+
+  - table: Client
+    fields: [user_id, deleted_at]
+    type: composite
+    purpose: "软删除过滤"
+
+  - table: Project
+    fields: [user_id, status, created_at]
+    type: composite
+    purpose: "按状态筛选项目列表"
+
+  - table: Project
+    fields: [client_id, status]
+    type: composite
+    purpose: "客户下的项目列表"
+
+  - table: Invoice
+    fields: [user_id, status, due_date]
+    type: composite
+    purpose: "逾期发票查询和提醒"
+
+  - table: Invoice
+    fields: [user_id, issue_date]
+    type: composite
+    purpose: "收入统计时间范围查询"
+
+  - table: Invoice
+    fields: [client_id, status]
+    type: composite
+    purpose: "按客户查看收款情况"
+
+  - table: Invoice
+    fields: [invoice_number]
+    type: unique
+    purpose: "发票编号唯一性约束"
+
+
+sensitive_fields_summary:
+  - "User.email - 需脱敏（返回 u***@example.com）"
+  - "User.password_hash - 永远不暴露"
+  - "User.subscription_status - 后端控制，不直接暴露原始值"
+  - "User.trial_ends_at - 不暴露原始时间戳，转换为剩余天数"
+  - "User.tax_type - 内部税务配置"
+  - "User.deleted_at - 软删除标记"
+  - "Client.deleted_at - 软删除标记"
+  - "Invoice.pdf_url - 内部存储路径，通过签名 URL 访问"
+  - "Invoice.deleted_at - 软删除标记"
+  - "Project.deleted_at - 软删除标记"
+  - "TaxSetting.income_tax_rate - 内部覆盖参数"
+  - "TaxSetting.deduction_items - 敏感财务信息"

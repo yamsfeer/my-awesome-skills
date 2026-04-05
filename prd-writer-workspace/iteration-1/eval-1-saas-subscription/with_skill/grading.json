@@ -1,0 +1,39 @@
+{
+  "eval_id": 1,
+  "run": "with_skill",
+  "expectations": [
+    {
+      "text": "has-product-vision-section: 文档包含产品愿景或产品定位章节",
+      "passed": true,
+      "evidence": "第1章「产品愿景」包含产品定位、核心价值主张、差异化优势表格、6个月成功指标"
+    },
+    {
+      "text": "has-target-user-section: 文档包含目标用户章节，并描述了独立开发者的特征",
+      "passed": true,
+      "evidence": "第2章「目标用户」详细描述了独立开发者/个人SaaS创始人的职业、收入、技术能力、工具偏好和痛点，包含3个具体使用场景"
+    },
+    {
+      "text": "has-user-story-map: 功能需求部分使用用户故事地图或用户旅程方式组织",
+      "passed": true,
+      "evidence": "第3章功能需求明确标注「用户活动（主干）：接入产品 → 查看订阅数据 → 识别风险用户 → 邮件触达用户 → 账号与产品管理」，每个任务都有「用户目标」字段"
+    },
+    {
+      "text": "has-priority-labels: 功能需求中标注了优先级（P0/P1/P2 或类似方式）",
+      "passed": true,
+      "evidence": "每个功能任务均有「优先级：P0/P1/P2」标注，3.6节还有功能优先级总览表（P0 11项，P1 3项，P2 3项）"
+    },
+    {
+      "text": "covers-core-features: 涵盖了订阅管理和邮件通知两个核心功能模块",
+      "passed": true,
+      "evidence": "3.1-3.3节涵盖订阅数据查看和风险用户识别，3.4节「邮件触达用户」完整覆盖自动化邮件、模板管理、发送日志"
+    },
+    {
+      "text": "has-non-functional-requirements: 文档包含非功能需求章节",
+      "passed": true,
+      "evidence": "第4章「非功能需求」包含性能（P95指标）、安全（API Key加密）、兼容性要求"
+    }
+  ],
+  "pass_rate": 1.0,
+  "total_passed": 6,
+  "total_assertions": 6
+}

@@ -1,0 +1,400 @@
+# FitStreak 组件-数据映射表
+# 说明：将 API 数据字段与 UI 组件绑定，定义每个组件的数据来源和渲染规则
+
+version: "1.0"
+
+components:
+
+  # ===== 首页组件 =====
+
+  - name: TodayStatusCard
+    description: "首页顶部今日打卡状态卡片"
+    page: HomePage
+    data_source:
+      - api: GET /api/v1/users/me
+        alias: user
+      - api: GET /api/v1/checkins?today=true
+        alias: today_checkin
+      - api: GET /api/v1/plans/active
+        alias: plan
+    fields:
+      - field: streak_count
+        component: StreakDisplay
+        source: user.current_streak
+        format: "🔥 N天（N=0时显示'开始你的第一天'）"
+        style: "fontSize.streak, fontWeight.extrabold, color.semantic.streak"
+
+      - field: today_status
+        component: CheckInStatusBadge
+        source: "today_checkin != null"
+        render_if_checked: "绿色 ✅ 今日已打卡 + 今日记录摘要"
+        render_if_not_checked: "橙色大按钮 [+ 今日打卡]"
+
+      - field: weekly_progress
+        component: ProgressText
+        source: "plan.this_week_completed / plan.this_week_target"
+        format: "本周目标 N/M 天"
+        fallback: "制定运动计划，追踪每周目标"
+
+  - name: FriendFeedCard
+    description: "好友打卡动态卡片"
+    page: HomePage
+    data_source: GET /api/v1/checkins/feed → items[]
+    fields:
+      - field: avatar
+        component: Avatar
+        source: items[].user.avatar_url
+        size: "40px"
+        shape: circle
+        fallback: "用户昵称首字母，背景色 primary.100，文字 primary.600"
+
+      - field: nickname
+        component: Text
+        source: items[].user.nickname
+        style: "fontSize.base, fontWeight.medium, color.neutral.800"
+        max_lines: 1
+
+      - field: exercise_badge
+        component: ExerciseBadge
+        source: items[].exercise_type
+        format: "图标+文字，如 🏃 跑步"
+        background: "primary.50"
+        color: "primary.700"
+
+      - field: duration
+        component: Text
+        source: items[].duration_minutes
+        format: "< 60分钟 → 'N分钟'；>= 60 → 'N小时M分钟'"
+        style: "fontSize.sm, color.neutral.500"
+
+      - field: time_ago
+        component: Text
+        source: items[].checkin_at
+        format: "相对时间（刚刚/N分钟前/N小时前/M月D日）"
+        style: "fontSize.xs, color.neutral.400"
+
+      - field: photo
+        component: Image
+        source: items[].photo_url
+        aspect_ratio: "4:3"
+        border_radius: "radius.lg"
+        show_when: "photo_url != null"
+
+      - field: mood_emoji
+        component: Text
+        source: items[].mood
+        mapping:
+          great: "😄"
+          good: "😊"
+          ok: "😐"
+          tired: "😅"
+          exhausted: "😩"
+        show_when: "mood != null"
+
+
+  # ===== 打卡组件 =====
+
+  - name: ExerciseTypeGrid
+    description: "运动类型选择宫格"
+    page: CheckInPage
+    fields:
+      - field: exercise_options
+        component: IconGrid
+        columns: 4
+        items:
+          - { value: running,    icon: "🏃", label: "跑步" }
+          - { value: gym,        icon: "💪", label: "健身" }
+          - { value: swimming,   icon: "🏊", label: "游泳" }
+          - { value: cycling,    icon: "🚴", label: "骑行" }
+          - { value: yoga,       icon: "🧘", label: "瑜伽" }
+          - { value: basketball, icon: "🏀", label: "篮球" }
+          - { value: soccer,     icon: "⚽", label: "足球" }
+          - { value: other,      icon: "🎯", label: "其他" }
+        selected_style: "background primary.500, text white, border primary.500"
+        unselected_style: "background neutral.50, text neutral.600, border neutral.200"
+
+  - name: DurationSlider
+    description: "运动时长滑块"
+    page: CheckInPage
+    fields:
+      - field: duration
+        component: Slider
+        min: 10
+        max: 180
+        step: 5
+        default: 30
+        track_color: "primary.200"
+        thumb_color: "primary.500"
+        display_format: "N分钟（>= 60时显示 N小时M分钟）"
+
+  - name: MoodSelector
+    description: "心情选择条"
+    page: CheckInPage
+    fields:
+      - field: mood
+        component: EmojiSelector
+        options:
+          - { value: great,     emoji: "😄", label: "超棒" }
+          - { value: good,      emoji: "😊", label: "不错" }
+          - { value: ok,        emoji: "😐", label: "还行" }
+          - { value: tired,     emoji: "😅", label: "有点累" }
+          - { value: exhausted, emoji: "😩", label: "很累" }
+        selection_style: "选中背景 primary.50，边框 primary.300"
+
+  - name: CheckInSuccessAnimation
+    description: "打卡成功烟花庆祝动画"
+    page: CheckInPage
+    fields:
+      - field: streak_number
+        component: AnimatedNumber
+        source: user.current_streak
+        style: "fontSize.streak, fontWeight.extrabold, color.semantic.streak"
+        animation: "scale-up spring 600ms"
+
+      - field: exercise_summary
+        component: Text
+        source: "checkin.exercise_type + checkin.duration_minutes"
+        format: "今日完成：{type_label} {duration}"
+
+      - field: weekly_dots
+        component: DotProgress
+        source: "plan.this_week_completed / plan.this_week_target"
+        dot_size: "12px"
+        done_color: "primary.500"
+        todo_color: "neutral.200"
+
+
+  # ===== 排行榜组件 =====
+
+  - name: LeaderboardRow
+    description: "排行榜行"
+    page: SocialPage
+    data_source: GET /api/v1/leaderboard → items[]
+    fields:
+      - field: rank_icon
+        component: RankBadge
+        source: items[].rank
+        render_1st: "🥇 金色"
+        render_2nd: "🥈 银色"
+        render_3rd: "🥉 铜色"
+        render_other: "数字，color neutral.500"
+
+      - field: user_avatar
+        component: Avatar
+        source: items[].user.avatar_url
+        size: "36px"
+        shape: circle
+
+      - field: nickname
+        component: Text
+        source: items[].user.nickname
+        style: "fontSize.base, fontWeight.medium"
+
+      - field: value
+        component: Text
+        source: items[].value
+        format: "N天（checkin_days）或 N分钟（duration_minutes）"
+        style: "fontSize.lg, fontWeight.bold, color.primary.600"
+
+      - field: is_me_highlight
+        component: RowHighlight
+        source: items[].is_me
+        background: "primary.50"
+        border: "1px solid primary.200"
+
+
+  # ===== 个人主页组件 =====
+
+  - name: UserProfileHeader
+    description: "个人主页头部信息"
+    page: ProfilePage
+    data_source: GET /api/v1/users/me
+    fields:
+      - field: avatar
+        component: Avatar
+        source: avatar_url
+        size: "80px"
+        shape: circle
+        fallback: "首字母，背景 primary.100，文字 primary.600，尺寸 80px"
+
+      - field: nickname
+        component: Text
+        source: nickname
+        style: "fontSize.2xl, fontWeight.bold, color.neutral.900"
+
+      - field: premium_badge
+        component: Badge
+        source: is_premium
+        show_when: "is_premium === true AND is_self_view"
+        label: "⭐ 高级版"
+        background: "semantic.premium_bg"
+        color: "semantic.premium"
+
+      - field: stats_total
+        component: StatItem
+        source: total_checkins
+        label: "总打卡"
+        format: "N天"
+
+      - field: stats_current_streak
+        component: StatItem
+        source: current_streak
+        label: "当前连续"
+        format: "🔥 N天"
+        color: "semantic.streak"
+
+      - field: stats_longest_streak
+        component: StatItem
+        source: longest_streak
+        label: "最高连续"
+        format: "N天"
+
+  - name: BadgeGrid
+    description: "成就徽章网格"
+    page: ProfilePage
+    data_source: GET /api/v1/badges → earned[] + locked[]
+    fields:
+      - field: badge_icon
+        component: BadgeIcon
+        source: badge.icon_url
+        size: "60px"
+        shape: circle
+
+      - field: earned_overlay
+        component: Overlay
+        source: badge.is_earned
+        earned_style: "全彩，无遮罩"
+        locked_style: "灰度滤镜 + 锁图标 🔒"
+
+      - field: progress_bar
+        component: ProgressBar
+        source: badge.progress
+        show_when: "not badge.is_earned"
+        height: "3px"
+        color: "primary.400"
+        background: "neutral.200"
+
+  - name: BodyTrendChart
+    description: "体重趋势折线图（高级版）"
+    page: ProfilePage
+    data_source: GET /api/v1/body-records/trend
+    premium_only: true
+    fields:
+      - field: line_chart
+        component: LineChart
+        x_source: records[].record_date
+        y_source: records[].weight_kg
+        line_color: "primary.500"
+        dot_color: "primary.600"
+        gradient: "primary.100 to transparent"
+
+      - field: latest_weight
+        component: Text
+        source: summary.latest_weight_kg
+        format: "N.N kg"
+        style: "fontSize.2xl, fontWeight.bold"
+
+      - field: weight_change
+        component: TrendBadge
+        source: summary.weight_change_kg
+        positive_format: "▲ +N.N kg"
+        positive_color: "semantic.error"
+        negative_format: "▼ N.N kg"
+        negative_color: "semantic.success"
+        zero_format: "持平"
+        zero_color: "neutral.500"
+
+      - field: premium_gate
+        component: PremiumGate
+        show_when: "is_premium === false"
+        overlay_style: "模糊背景 + 升级提示"
+        cta: "升级高级版查看完整趋势"
+
+
+  # ===== 运动计划组件 =====
+
+  - name: PlanProgressRing
+    description: "本周运动计划圆形进度环"
+    page: PlanPage
+    data_source: GET /api/v1/plans/active
+    fields:
+      - field: progress_ring
+        component: CircularProgress
+        source: "plan.this_week_completed / plan.this_week_target"
+        size: "120px"
+        stroke_width: "8px"
+        done_color: "primary.500"
+        track_color: "neutral.200"
+
+      - field: center_text
+        component: Text
+        primary_text: "plan.this_week_completed / plan.this_week_target 天"
+        secondary_text: "本周进度"
+        primary_style: "fontSize.xl, fontWeight.bold"
+        secondary_style: "fontSize.xs, color.neutral.500"
+
+      - field: weekly_dots
+        component: WeeklyDots
+        source: "plan.weekly_checkin_days"
+        days: 7
+        done_emoji: "✓"
+        todo_char: "○"
+        done_color: "primary.500"
+        todo_color: "neutral.300"
+
+
+  # ===== 全局通用组件 =====
+
+  - name: ToastNotification
+    description: "全局 Toast 通知"
+    variants:
+      success:
+        background: "semantic.success_bg"
+        border: "semantic.success"
+        icon: "✅"
+        text_color: "success.700"
+      error:
+        background: "semantic.error_bg"
+        border: "semantic.error"
+        icon: "⚠️"
+        text_color: "error.700"
+      info:
+        background: "semantic.info_bg"
+        border: "semantic.info"
+        icon: "ℹ️"
+        text_color: "info.700"
+    position: "top, safe area below status bar"
+    duration: 3000
+    animation: "slide-down + fade-in"
+
+  - name: PremiumUpgradeSheet
+    description: "高级版升级底部弹层"
+    data_source: GET /api/v1/users/me/subscription
+    trigger: "用户尝试访问高级版功能时"
+    fields:
+      - field: title
+        component: Text
+        static: "⭐ 升级高级版"
+        style: "fontSize.2xl, fontWeight.bold"
+
+      - field: feature_list
+        component: CheckList
+        static_items:
+          - "体脂率趋势图"
+          - "无限好友挑战"
+          - "AI 运动计划推荐"
+          - "历史数据导出"
+          - "专属徽章皮肤"
+        icon_color: "semantic.success"
+
+      - field: price_cta
+        component: PrimaryButton
+        source: subscription.price_fen
+        format_label: "¥{price_fen/100}/月  立即升级"
+        background: "primary.500"
+        shadow: "shadow.button_primary"
+
+      - field: dismiss
+        component: TextButton
+        static_label: "先用免费版"
+        color: "neutral.400"

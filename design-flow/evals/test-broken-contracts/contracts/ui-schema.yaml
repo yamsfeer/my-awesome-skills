@@ -1,0 +1,70 @@
+# UI 层数据契约 — 测试用（含已知问题）
+
+format_rules:
+  date:
+    - condition: "距今 < 24 小时"
+      format: "N 小时前"
+    - condition: "今年内"
+      format: "M月D日"
+
+pages:
+
+  ProductListPage:
+    route: "/products"
+    # 正常：对应 GET /api/v1/products 端点
+    data_source: "GET /api/v1/products"
+    states:
+      loading:
+        ui: 骨架屏卡片
+      success:
+        ui: 商品列表
+      empty:
+        ui: 暂无商品，点击发布按钮上传商品
+      error:
+        ui: 错误提示 + 重试
+    components:
+      - name: ProductCard
+        fields:
+          - field: title
+            source: items[].title
+          - field: price
+            source: items[].price
+
+  UserProfilePage:
+    route: "/profile"
+    # 问题3 (U01): 端点 /api/v1/users/profile 在 api.yaml 中不存在
+    # api.yaml 中只有 /users/me，而非 /users/profile
+    data_source: "GET /api/v1/users/profile"
+    states:
+      loading:
+        ui: 骨架屏
+      success:
+        ui: 用户信息页
+      # 注意：缺少 error 状态（U02 警告）
+    components:
+      - name: UserHeader
+        fields:
+          - field: name
+            source: name
+          - field: avatar
+            source: avatar_url
+
+  ProductDetailPage:
+    route: "/products/:id"
+    data_source: "GET /api/v1/products/:id"
+    states:
+      loading:
+        ui: 顶部骨架屏
+      success:
+        ui: 商品详情
+      not_found:
+        ui: 商品不存在
+      error:
+        ui: 通用错误提示
+    components:
+      - name: ProductInfo
+        fields:
+          - field: title
+            source: title
+          - field: price
+            source: price

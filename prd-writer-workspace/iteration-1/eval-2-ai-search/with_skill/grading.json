@@ -1,0 +1,39 @@
+{
+  "eval_id": 2,
+  "run": "with_skill",
+  "expectations": [
+    {
+      "text": "has-product-vision-section: 文档包含功能背景/目标章节，说明为什么要做 AI 搜索",
+      "passed": true,
+      "evidence": "第1章「产品愿景」包含产品定位（从关键词升级到自然语言）、核心价值主张5条、差异化对比表格、5个成功指标"
+    },
+    {
+      "text": "has-target-user-section: 文档描述了使用知识库的企业员工场景",
+      "passed": true,
+      "evidence": "第2章「目标用户」区分了普通员工（主要用户）和知识管理员（次要用户），包含3个具体使用场景（跨部门查询、历史记录、规章咨询）"
+    },
+    {
+      "text": "has-user-story-map: 功能需求按用户操作流程组织（输入→理解→搜索→展示→反馈）",
+      "passed": true,
+      "evidence": "第3章功能需求按「发起搜索 → 获取答案 → 深入阅读 → 反馈与改进」4个用户活动阶段组织，每个任务都有「用户目标」"
+    },
+    {
+      "text": "has-priority-labels: 功能标注了优先级",
+      "passed": true,
+      "evidence": "每个用户任务均有「优先级：P0/P1/P2」，功能优先级总览表列出P0 5项、P1 5项、P2 2项"
+    },
+    {
+      "text": "covers-core-features: 涵盖了自然语言理解和答案展示等核心 AI 搜索功能",
+      "passed": true,
+      "evidence": "任务1.1「输入自然语言问题」、任务2.3「理解时间与部门等语义条件」覆盖NLU；任务2.1「查看AI综合答案」覆盖答案展示"
+    },
+    {
+      "text": "has-non-functional-requirements: 包含响应时间或准确率等性能要求",
+      "passed": true,
+      "evidence": "第4章「非功能需求」包含性能（AI搜索P95首字响应<3秒、完整输出<8秒）、安全要求和兼容性"
+    }
+  ],
+  "pass_rate": 1.0,
+  "total_passed": 6,
+  "total_assertions": 6
+}

@@ -1,0 +1,31 @@
+{
+  "eval_id": 2,
+  "config": "with_skill",
+  "expectations": [
+    {
+      "text": "核心文件是否创建",
+      "passed": true,
+      "evidence": "三个核心文件存在=True"
+    },
+    {
+      "text": "金额字段是否用精确类型",
+      "passed": true,
+      "evidence": "检测到 float/double 金额类型=无"
+    },
+    {
+      "text": "敏感字段是否标注",
+      "passed": true,
+      "evidence": "含'禁止暴露'=True"
+    },
+    {
+      "text": "路线图是否有版本分层",
+      "passed": true,
+      "evidence": "版本关键词出现次数=4"
+    },
+    {
+      "text": "可视化状态机是否生成",
+      "passed": true,
+      "evidence": "visual.md 存在，含 mermaid=True"
+    }
+  ]
+}

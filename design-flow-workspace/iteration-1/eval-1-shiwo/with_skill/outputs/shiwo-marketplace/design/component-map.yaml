@@ -1,0 +1,472 @@
+# 组件-数据映射表 - 拾物（shiwo-marketplace）
+# 说明：将 UI 组件与数据字段及 Design Token 绑定
+# 平台：微信小程序（使用 rpx 单位）
+
+version: "1.0"
+design_tokens: "design/tokens.json"
+
+
+components:
+
+  # ========== 原子组件 ==========
+
+  - name: PriceTag
+    description: "价格展示标签，全局统一样式"
+    data_source: "product.price（分 → 元）"
+    fields:
+      - field: price
+        format: "分÷100，整数不显示小数，否则保留两位。前缀¥"
+        source: "Product.price"
+        component: Text
+        style:
+          color: "color.brand.cta"
+          fontSize: "typography.fontSize.xl"
+          fontWeight: "typography.fontWeight.bold"
+    variants:
+      - name: large
+        usage: "商品详情页主价格"
+        fontSize: "typography.fontSize.2xl"
+      - name: small
+        usage: "商品卡片列表"
+        fontSize: "typography.fontSize.lg"
+      - name: original
+        usage: "原价（删除线）"
+        color: "color.neutral.400"
+        textDecoration: "line-through"
+        fontSize: "typography.fontSize.sm"
+
+  - name: ConditionBadge
+    description: "商品成色角标"
+    data_source: "product.condition"
+    fields:
+      - field: label
+        source: "Product.condition"
+        mapping:
+          new:      { label: "全新",   bgColor: "#dcfce7", textColor: "#16a34a" }
+          like_new: { label: "近新",   bgColor: "#dcfce7", textColor: "#16a34a" }
+          good:     { label: "良好",   bgColor: "#eff6ff", textColor: "#2563eb" }
+          fair:     { label: "一般",   bgColor: "#fffbeb", textColor: "#d97706" }
+          poor:     { label: "较差",   bgColor: "#f3f4f6", textColor: "#6b7280" }
+    style:
+      borderRadius: "radius.sm"
+      padding: "spacing.1 spacing.2"
+      fontSize: "typography.fontSize.xs"
+      fontWeight: "typography.fontWeight.medium"
+
+  - name: ProductStatusOverlay
+    description: "商品状态蒙层（已售出/已预约）"
+    data_source: "product.status"
+    condition: "status !== 'on_sale'"
+    fields:
+      - field: overlay
+        mapping:
+          reserved: { label: "已预约", bgOpacity: 0.5, bgColor: "#f59e0b" }
+          sold:     { label: "已售出", bgOpacity: 0.6, bgColor: "#6b7280" }
+          removed:  { label: "已下架", bgOpacity: 0.6, bgColor: "#374151" }
+    style:
+      position: "absolute"
+      inset: 0
+      display: "flex"
+      alignItems: "center"
+      justifyContent: "center"
+      fontSize: "typography.fontSize.base"
+      fontWeight: "typography.fontWeight.bold"
+      color: "color.neutral.0"
+
+  - name: TrustScoreStar
+    description: "诚信评分星形展示"
+    data_source: "user.trust_score"
+    fields:
+      - field: score
+        format: "保留 1 位小数，如 4.9"
+        source: "User.trust_score"
+        component: Text
+      - field: star_icon
+        format: "⭐ 图标（使用 SVG，非 emoji）"
+        color_logic:
+          excellent: { condition: ">= 4.5", color: "#f59e0b" }
+          good:      { condition: ">= 3.5", color: "#fb923c" }
+          poor:      { condition: "<  3.5", color: "#d1d5db" }
+    style:
+      display: "flex"
+      alignItems: "center"
+      gap: "spacing.1"
+      fontSize: "typography.fontSize.sm"
+
+  - name: UserAvatar
+    description: "用户头像圆形组件"
+    data_source: "user.avatar_url"
+    fields:
+      - field: avatar_url
+        source: "User.avatar_url"
+        component: Image
+        fallback: "首字母生成默认头像（背景色取昵称哈希值）"
+    variants:
+      - name: xs
+        size: "40rpx"
+        usage: "商品卡片卖家头像"
+      - name: sm
+        size: "72rpx"
+        usage: "会话列表头像"
+      - name: md
+        size: "96rpx"
+        usage: "商品详情页卖家卡片"
+      - name: lg
+        size: "144rpx"
+        usage: "个人主页头像"
+    style:
+      borderRadius: "radius.full"
+      overflow: "hidden"
+
+
+  # ========== 分子组件 ==========
+
+  - name: ProductCard
+    description: "商品卡片（首页双列瀑布流）"
+    data_source: "GET /api/v1/products → items[]"
+    fields:
+      - field: cover_image
+        source: "items[].images[0]"
+        component: Image
+        style:
+          width: "100%"
+          aspectRatio: "3/4"
+          borderRadius: "radius.lg radius.lg 0 0"
+          objectFit: "cover"
+        fallback: "中性灰占位色 #f3f4f6"
+
+      - field: condition_badge
+        source: "items[].condition"
+        component: ConditionBadge
+        style:
+          position: "absolute"
+          top: "spacing.2"
+          left: "spacing.2"
+
+      - field: status_overlay
+        source: "items[].status"
+        component: ProductStatusOverlay
+        condition: "status !== 'on_sale'"
+
+      - field: title
+        source: "items[].title"
+        component: Text
+        style:
+          fontSize: "typography.fontSize.sm"
+          fontWeight: "typography.fontWeight.medium"
+          color: "color.neutral.800"
+          lineClamp: 2
+          lineHeight: "typography.lineHeight.snug"
+
+      - field: price
+        source: "items[].price"
+        component: PriceTag
+        variant: "small"
+
+      - field: seller_avatar
+        source: "items[].seller.avatar_url"
+        component: UserAvatar
+        variant: "xs"
+
+      - field: seller_name
+        source: "items[].seller.nickname"
+        component: Text
+        style:
+          fontSize: "typography.fontSize.xs"
+          color: "color.neutral.500"
+          lineClamp: 1
+          maxWidth: "80rpx"
+
+      - field: favorite_btn
+        source: "items[].is_favorited + items[].favorite_count"
+        component: IconButton
+        icon: "heart"
+        style:
+          active_color: "color.secondary.500"
+          inactive_color: "color.neutral.400"
+          fontSize: "typography.fontSize.xs"
+
+    style:
+      card:
+        background: "color.neutral.0"
+        borderRadius: "radius.lg"
+        shadow: "shadow.sm"
+        overflow: "hidden"
+      body:
+        padding: "spacing.2 spacing.3 spacing.3"
+        gap: "spacing.1"
+
+
+  - name: SellerCard
+    description: "商品详情页卖家信息卡片"
+    data_source: "GET /api/v1/products/:id → seller"
+    fields:
+      - field: avatar
+        source: "seller.avatar_url"
+        component: UserAvatar
+        variant: "md"
+
+      - field: nickname
+        source: "seller.nickname"
+        component: Text
+        style:
+          fontSize: "typography.fontSize.base"
+          fontWeight: "typography.fontWeight.semibold"
+          color: "color.neutral.800"
+
+      - field: trust_score
+        source: "seller.trust_score"
+        component: TrustScoreStar
+
+      - field: trade_count
+        source: "seller.trade_count"
+        format: "已成交 N 件"
+        component: Text
+        style:
+          fontSize: "typography.fontSize.sm"
+          color: "color.neutral.500"
+
+      - field: verified_badge
+        source: "seller.is_verified"
+        condition: "is_verified === true"
+        component: Badge
+        style:
+          label: "已认证"
+          bgColor: "color.info_bg"
+          textColor: "color.info"
+          icon: "shield-check"
+
+    style:
+      container:
+        background: "color.neutral.0"
+        borderRadius: "radius.lg"
+        padding: "spacing.4"
+        display: "flex"
+        alignItems: "center"
+        gap: "spacing.3"
+        shadow: "shadow.xs"
+
+
+  - name: ProductActionBar
+    description: "商品详情页底部操作栏"
+    data_source: "product.status + product.seller.id + current_user.id"
+    variants:
+      - name: buyer_active
+        condition: "status === 'on_sale' && seller.id !== current_user.id"
+        fields:
+          - field: favorite_btn
+            component: IconTextButton
+            icon: "heart"
+            label: "收藏"
+            style:
+              width: "30%"
+              color_active: "color.secondary.500"
+          - field: contact_btn
+            component: Button
+            label: "联系卖家"
+            style:
+              width: "68%"
+              background: "color.brand.cta"
+              color: "color.neutral.0"
+              borderRadius: "radius.full"
+              height: "88rpx"
+
+      - name: sold
+        condition: "status !== 'on_sale' && seller.id !== current_user.id"
+        fields:
+          - field: favorite_btn
+            component: IconTextButton
+          - field: sold_btn
+            component: Button
+            label: "已售出"
+            disabled: true
+            style:
+              background: "color.neutral.200"
+              color: "color.neutral.400"
+
+      - name: seller_own
+        condition: "seller.id === current_user.id"
+        fields:
+          - field: edit_btn
+            component: Button
+            label: "编辑信息"
+            style:
+              variant: "secondary"
+              width: "48%"
+          - field: remove_btn
+            component: Button
+            label: "下架商品"
+            style:
+              variant: "danger-outline"
+              width: "48%"
+
+    style:
+      container:
+        position: "fixed"
+        bottom: 0
+        width: "100%"
+        background: "color.neutral.0"
+        borderTop: "1rpx solid color.neutral.200"
+        padding: "spacing.3 spacing.4"
+        paddingBottom: "env(safe-area-inset-bottom)"
+        display: "flex"
+        gap: "spacing.3"
+        alignItems: "center"
+
+
+  - name: MessageBubble
+    description: "聊天气泡组件"
+    data_source: "GET /api/v1/conversations/:id/messages → items[]"
+    variants:
+      - name: self
+        condition: "sender_id === current_user.id"
+        fields:
+          - field: content
+            source: "items[].content"
+            component: Text
+        style:
+          alignSelf: "flex-end"
+          background: "color.primary.500"
+          color: "color.neutral.0"
+          borderRadius: "radius.lg radius.sm radius.lg radius.lg"
+
+      - name: other
+        condition: "sender_id !== current_user.id"
+        fields:
+          - field: content
+            source: "items[].content"
+            component: Text
+        style:
+          alignSelf: "flex-start"
+          background: "color.neutral.0"
+          color: "color.neutral.800"
+          borderRadius: "radius.sm radius.lg radius.lg radius.lg"
+          shadow: "shadow.xs"
+
+    style:
+      bubble:
+        maxWidth: "70%"
+        padding: "spacing.3 spacing.4"
+        fontSize: "typography.fontSize.base"
+        lineHeight: "typography.lineHeight.relaxed"
+
+  - name: AppointmentCard
+    description: "预约面交卡片消息"
+    data_source: "message.extra_data（msg_type === 'appointment_card'）"
+    fields:
+      - field: meet_time
+        source: "extra_data.meet_time"
+        format: "M月D日 HH:mm"
+        component: Text
+        style:
+          fontSize: "typography.fontSize.base"
+          fontWeight: "typography.fontWeight.semibold"
+
+      - field: meet_location
+        source: "extra_data.meet_location"
+        component: Text
+        style:
+          fontSize: "typography.fontSize.sm"
+          color: "color.neutral.600"
+
+      - field: status
+        source: "extra_data.status"
+        component: Badge
+        mapping:
+          pending:   { label: "待确认", color: "color.warning" }
+          confirmed: { label: "已确认", color: "color.semantic.success" }
+          cancelled: { label: "已取消", color: "color.neutral.400" }
+
+    style:
+      container:
+        background: "color.neutral.0"
+        borderRadius: "radius.lg"
+        padding: "spacing.4"
+        borderLeft: "4rpx solid color.primary.500"
+        shadow: "shadow.sm"
+        maxWidth: "80%"
+
+
+  # ========== 页面级组件 ==========
+
+  - name: HomeTabBar
+    description: "首页底部 Tab 导航"
+    fields:
+      tabs:
+        - { key: home,    label: "首页",   icon: "home",   route: "/pages/home/index" }
+        - { key: search,  label: "搜索",   icon: "search", route: "/pages/search/index" }
+        - { key: publish, label: "发布",   icon: "plus-circle", route: "/pages/publish/index" }
+        - { key: message, label: "消息",   icon: "chat",   route: "/pages/message/list" }
+        - { key: profile, label: "我的",   icon: "user",   route: "/pages/profile/index" }
+    style:
+      height: "100rpx"
+      background: "color.neutral.0"
+      borderTop: "1rpx solid color.neutral.200"
+      active_color: "color.primary.600"
+      inactive_color: "color.neutral.400"
+      icon_size: "48rpx"
+      label_fontSize: "typography.fontSize.xs"
+    special:
+      publish_tab:
+        icon: "plus-circle"
+        color: "color.brand.cta"
+        size: "larger"
+        note: "发布按钮视觉突出，橙色 CTA 强调"
+
+  - name: SearchBar
+    description: "首页搜索栏"
+    fields:
+      - field: placeholder
+        format: "在[校区名]找好物..."
+        source: "current_user.campus.name"
+        component: Input
+    style:
+      background: "color.neutral.100"
+      borderRadius: "radius.full"
+      height: "72rpx"
+      padding: "0 spacing.4"
+      fontSize: "typography.fontSize.sm"
+      color: "color.neutral.500"
+      iconLeft: "search"
+      iconColor: "color.neutral.400"
+
+  - name: EmptyState
+    description: "通用空状态组件"
+    variants:
+      - name: no_products
+        illustration: "package-illustration"
+        title: "该校区暂无在售商品"
+        subtitle: "成为第一个发布的人！"
+        cta_text: "去发布商品"
+        cta_route: "/pages/publish/index"
+      - name: no_messages
+        illustration: "chat-illustration"
+        title: "还没有消息"
+        subtitle: "去逛逛，找到心仪商品和卖家聊聊"
+        cta_text: "去浏览"
+        cta_route: "/pages/home/index"
+      - name: no_search_result
+        illustration: "search-empty-illustration"
+        title: "没有找到相关商品"
+        subtitle: "换个关键词试试"
+    style:
+      container:
+        display: "flex"
+        flexDirection: "column"
+        alignItems: "center"
+        padding: "spacing.16 spacing.8"
+        gap: "spacing.4"
+      illustration:
+        width: "240rpx"
+        height: "240rpx"
+      title:
+        fontSize: "typography.fontSize.lg"
+        fontWeight: "typography.fontWeight.semibold"
+        color: "color.neutral.700"
+      subtitle:
+        fontSize: "typography.fontSize.sm"
+        color: "color.neutral.400"
+      cta:
+        component: Button
+        variant: "primary"
+        marginTop: "spacing.6"

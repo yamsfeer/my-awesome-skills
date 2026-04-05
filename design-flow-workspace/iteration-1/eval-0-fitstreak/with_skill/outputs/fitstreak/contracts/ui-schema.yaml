@@ -1,0 +1,402 @@
+# FitStreak - UI 层数据契约
+# 说明：定义 UI 组件直接消费的数据格式，包含展示规则和多态状态
+
+# ========== 全局格式化规则 ==========
+
+format_rules:
+
+  date:
+    - condition: "距今 < 1 分钟"
+      format: "刚刚"
+    - condition: "距今 < 60 分钟"
+      format: "N 分钟前"
+    - condition: "距今 < 24 小时"
+      format: "N 小时前"
+    - condition: "今年内"
+      format: "M月D日"
+    - condition: "跨年"
+      format: "YYYY年M月D日"
+
+  checkin_date:
+    format: "YYYY年M月D日（周X）"
+    example: "2024年3月15日（周五）"
+
+  workout_type:
+    running: "🏃 跑步"
+    gym: "🏋️ 健身房"
+    swimming: "🏊 游泳"
+    cycling: "🚴 骑行"
+    yoga: "🧘 瑜伽"
+    hiit: "⚡ HIIT"
+    walking: "🚶 步行"
+    other: "💪 其他"
+
+  duration:
+    - condition: "< 60 分钟"
+      format: "N分钟"
+    - condition: ">= 60 分钟"
+      format: "Xh Ym（如 1h 30m）"
+
+  number_compact:
+    - condition: ">= 10000"
+      format: "1.2w"
+    - condition: ">= 1000"
+      format: "1.2k"
+    - condition: "< 1000"
+      format: "原始数字"
+
+  weight:
+    unit: "kg"
+    display: "保留 1 位小数"
+    example: "65.5kg"
+
+  body_fat:
+    unit: "%"
+    display: "保留 1 位小数"
+    example: "18.5%"
+
+  currency:
+    unit: "分（整数存储）"
+    display: "元（保留两位小数，前缀 ¥）"
+    example: "存储 1800 → 显示 ¥18.00"
+
+  streak_display:
+    - condition: "streak_count === 0"
+      format: "暂无打卡记录"
+    - condition: "streak_count >= 1"
+      format: "连续 N 天 🔥"
+
+  goal_type:
+    fat_loss: "减脂"
+    muscle_gain: "增肌"
+    maintenance: "维持体型"
+    endurance: "提升耐力"
+
+  subscription_type:
+    free: { label: "基础版", color: neutral }
+    premium: { label: "高级版 ⭐", color: gold }
+
+# ========== 页面 / 组件定义 ==========
+
+pages:
+
+  # ---------- 首页（今日打卡） ----------
+  HomePage:
+    route: "/home"
+    data_sources:
+      - "GET /api/v1/users/me"
+      - "GET /api/v1/checkins/calendar?year=&month="
+      - "GET /api/v1/checkins?per_page=5"
+
+    states:
+      loading:
+        ui: 顶部用户区域骨架屏 + 打卡按钮区域占位
+        trigger: 页面挂载时
+
+      success_not_checked:
+        ui: 完整首页 + 突出显示"立即打卡"主按钮
+        trigger: "has_checked_today === false"
+
+      success_checked:
+        ui: 完整首页 + 打卡完成状态（绿色勾选 + 今日记录摘要）
+        trigger: "has_checked_today === true"
+
+      error:
+        ui: 错误提示 + [重试] 按钮
+
+    components:
+      - name: UserStreakHeader
+        data_source: "GET /users/me"
+        fields:
+          - field: avatar_url
+            format: "圆形头像，48×48px"
+            fallback: "用户名首字母彩色头像"
+            source: avatar_url
+
+          - field: name
+            format: "1 行，超出省略号"
+            source: name
+
+          - field: streak_count
+            format: "连续 N 天 🔥（N=0时显示'开始打卡吧'）"
+            source: streak_count
+
+          - field: subscription_badge
+            format: "标签（仅高级版显示⭐）"
+            source: subscription_type
+            condition: "subscription_type === 'premium'"
+
+      - name: CheckinCalendar
+        data_source: "GET /checkins/calendar"
+        description: "月历视图，已打卡日期高亮显示"
+        fields:
+          - field: checked_dates
+            format: "打卡日期橙色圆点标记"
+            source: checked_dates
+
+          - field: today
+            format: "今日日期橙色边框"
+
+      - name: QuickCheckinButton
+        data_source: none
+        states:
+          not_checked:
+            ui: "橙色大按钮'今日打卡' + 闪光动效"
+          checked:
+            ui: "绿色'已打卡 ✓' + 不可点击"
+
+      - name: RecentCheckinList
+        data_source: "GET /checkins?per_page=5"
+        fields:
+          - field: workout_type_label
+            source: items[].workout_type_label
+          - field: duration
+            format: "按 duration 格式化规则"
+            source: items[].duration_min
+          - field: checked_at
+            format: "M月D日"
+            source: items[].checked_at
+
+  # ---------- 打卡详情/提交页 ----------
+  CheckinFormPage:
+    route: "/checkin/new"
+    data_source: "POST /api/v1/checkins"
+
+    states:
+      idle:
+        ui: 打卡表单（运动类型选择、时长输入、备注）
+
+      submitting:
+        ui: 提交按钮 loading 状态，表单禁用
+
+      success:
+        ui: 全屏成功动效（✓ 图标 + 今日第 N 天 + 成就弹窗）
+        trigger: "API 返回 201"
+
+      error_already_checked:
+        ui: Toast 提示"今日已打卡，每天只能打卡一次"
+        trigger: "API 返回 409"
+
+      error:
+        ui: Toast 提示"提交失败，请重试"
+
+    components:
+      - name: WorkoutTypeSelector
+        fields:
+          - field: workout_type
+            format: "图标宫格选择器，选中态橙色高亮"
+            options: [running, gym, swimming, cycling, yoga, hiit, walking, other]
+
+      - name: DurationInput
+        fields:
+          - field: duration_min
+            format: "滑块 + 数字输入，范围 5-480 分钟"
+
+      - name: PhotoUpload
+        fields:
+          - field: photo_url
+            format: "可选，单张图片，点击选择/拍照"
+            fallback: "无图片时显示占位图引导"
+
+  # ---------- 好友排行榜页 ----------
+  LeaderboardPage:
+    route: "/leaderboard"
+    data_sources:
+      - "GET /api/v1/friends/leaderboard"
+      - "GET /api/v1/friends"
+
+    states:
+      loading:
+        ui: 骨架屏（3 个排行项占位）
+
+      success:
+        ui: 排行榜列表（Top 3 高亮卡片 + 其余列表项）
+
+      empty_no_friends:
+        ui: 空状态图 + "还没有好友，快去邀请吧" + [邀请好友] 按钮
+        trigger: "friends.length === 0"
+
+      error:
+        ui: 错误提示 + [重试] 按钮
+
+    components:
+      - name: LeaderboardPodium
+        description: "前三名领奖台展示（1st居中最高）"
+        fields:
+          - field: rank
+            format: "🥇🥈🥉 奖牌图标"
+          - field: user.avatar_url
+            format: "圆形头像，60×60px，金/银/铜色边框"
+          - field: user.name
+            format: "1 行，最多 6 字，超出省略"
+          - field: streak_count
+            format: "连续 N 天"
+          - field: is_self
+            format: "自己的条目加「你」标签"
+            condition: "is_self === true"
+
+      - name: LeaderboardItem
+        description: "第 4 名及以后的列表项"
+        fields:
+          - field: rank
+            format: "数字排名"
+          - field: user.avatar_url
+            format: "圆形头像，40×40px"
+          - field: user.name
+            format: "1 行，超出省略"
+          - field: streak_count
+            format: "连续 N 天 🔥"
+
+      - name: SelfRankBanner
+        description: "若自己不在可见范围内，底部固定显示自己的排名"
+        fields:
+          - field: self_rank
+            format: "你的排名：第 N 名"
+            condition: "self_rank 不在当前可见列表中"
+
+  # ---------- 挑战页 ----------
+  ChallengePage:
+    route: "/challenges"
+    data_source: "GET /api/v1/challenges"
+
+    states:
+      loading:
+        ui: 骨架屏
+      success:
+        ui: 挑战列表（进行中/已完成 分 Tab）
+      empty:
+        ui: 空状态 + "发起第一个挑战" 按钮
+      error:
+        ui: 错误提示 + [重试]
+
+    components:
+      - name: ChallengeCard
+        fields:
+          - field: title
+            format: "最多 1 行，超出省略"
+            source: title
+          - field: status
+            format: "状态标签"
+            source: status
+            mapping:
+              pending: { label: "待开始", color: warning }
+              active: { label: "进行中", color: success }
+              completed: { label: "已结束", color: neutral }
+              cancelled: { label: "已取消", color: error }
+          - field: duration_days
+            format: "N天挑战"
+          - field: participant_count
+            format: "N人参与"
+          - field: my_current_streak
+            format: "我：连续 N 天"
+
+  # ---------- 成就页 ----------
+  AchievementPage:
+    route: "/achievements"
+    data_source: "GET /api/v1/achievements"
+
+    states:
+      loading:
+        ui: 骨架屏网格
+      success:
+        ui: 成就徽章网格（已获得彩色 + 未获得灰色虚框）
+      empty:
+        ui: "快去打卡获取第一个成就！" + 引导按钮
+      error:
+        ui: 错误提示
+
+    components:
+      - name: AchievementBadge
+        fields:
+          - field: badge_icon_url
+            format: "64×64px 图标"
+          - field: badge_label
+            format: "1 行，居中"
+          - field: earned_at
+            format: "获得于 M月D日"
+            condition: "已获得"
+          - field: locked_state
+            format: "灰色半透明 + 🔒图标"
+            condition: "未获得"
+
+  # ---------- 个人中心页 ----------
+  ProfilePage:
+    route: "/profile"
+    data_sources:
+      - "GET /api/v1/users/me"
+      - "GET /api/v1/body/records?days=90"
+
+    states:
+      loading:
+        ui: 骨架屏
+      success:
+        ui: 完整个人中心
+      error:
+        ui: 错误提示
+
+    components:
+      - name: ProfileHeader
+        fields:
+          - field: avatar_url
+            format: "圆形头像，80×80px"
+            fallback: "首字母彩色头像"
+          - field: name
+            format: "大字号，加粗"
+          - field: phone_masked
+            format: "小字号，灰色"
+          - field: subscription_type
+            format: "会员标签（高级版显示金色⭐标识）"
+
+      - name: StatsCards
+        description: "核心数据卡片组"
+        fields:
+          - field: streak_count
+            label: "连续打卡"
+            format: "N 天"
+          - field: longest_streak
+            label: "最长记录"
+            format: "N 天"
+          - field: total_checkin_days
+            label: "累计打卡"
+            format: "N 天"
+
+      - name: BodyTrendChart
+        data_source: "GET /body/records?days=90"
+        description: "体重/体脂折线趋势图"
+        fields:
+          - field: weight_kg
+            format: "折线图，Y轴单位 kg"
+            source: records[].weight_kg
+          - field: recorded_date
+            format: "X轴 M/D 格式"
+            source: records[].recorded_date
+          - field: weight_change_kg
+            format: "变化量（红色↑ / 绿色↓）"
+            source: summary.weight_change_kg
+        states:
+          empty:
+            ui: "暂无数据，[录入第一条] 按钮"
+          insufficient_data:
+            ui: "数据不足，至少需要 2 条记录才能展示趋势"
+            trigger: "records.length < 2"
+
+
+# ========== 全局 UI 状态规范 ==========
+
+global_states:
+  network_error:
+    ui: 顶部 Toast，"网络连接失败，请检查网络"
+    duration: 3000ms
+
+  session_expired:
+    ui: 全屏遮罩 + 弹窗"登录已过期，请重新登录"
+    action: 跳转登录页，登录后回跳
+
+  premium_required:
+    ui: 底部弹窗"此功能为高级版专属" + [立即升级 ¥18/月] + [暂不]
+    trigger: "API 返回 403 且 error === 'premium_required'"
+
+  checkin_success:
+    ui: 全屏动效（烟花 + 连续天数 + 成就弹窗，如有新成就）
+    duration: 2000ms
+    action: "弹窗消失后回到首页"

@@ -1,0 +1,142 @@
+{
+  "skill_name": "design-flow",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "帮我做一个完整的产品设计规划，以下是所有信息，请自动完成全部6个阶段，不需要等我确认，遇到设计决策时自己做出合理判断。\n\n产品信息：\n- 产品名称：FitStreak（健身打卡）\n- 核心问题：健身爱好者难以坚持运动计划，缺乏社交激励和进度可视化\n- 目标用户：18-35岁上班族，有健身意愿但自律性不足，每天有30-60分钟运动时间\n- 核心功能：1.每日打卡记录 2.运动计划制定 3.好友挑战/排行榜 4.成就系统/徽章 5.体重/体脂趋势图\n- 平台：iOS + Android（React Native）\n- 商业模式：免费基础版 + 订阅制高级版（¥18/月）\n\n请按顺序完成所有6个阶段，将文件输出到当前目录的 fitstreak/ 文件夹。",
+      "expected_output": "完整的6阶段产物：product-overview.md, product-roadmap.md, contracts/domain.yaml, contracts/api.yaml, contracts/ui-schema.yaml, ue/state-machine.yaml, ue/state-machine-visual.md（含 Mermaid 图）, ue/state-machine-interactive.html（可交互查看器）, wireframes/*.md, design/tokens.json, design/component-map.yaml",
+      "files": [],
+      "assertions": [
+        {
+          "id": "files_created",
+          "name": "核心文件是否创建",
+          "description": "检查 fitstreak/ 目录下至少存在 product-overview.md, contracts/domain.yaml, design/tokens.json"
+        },
+        {
+          "id": "domain_sensitive_markers",
+          "name": "敏感字段是否标注",
+          "description": "domain.yaml 中应有 ⚠️ 禁止暴露 的注释标记"
+        },
+        {
+          "id": "tokens_frozen",
+          "name": "Design Token 是否冻结",
+          "description": "tokens.json 中应有 _frozen: true 标记"
+        },
+        {
+          "id": "wireframes_created",
+          "name": "线框图是否创建",
+          "description": "wireframes/ 目录下应至少有 1 个 .md 文件，且包含 ASCII 线框图和约束标记（🔴/🔵/🟢）"
+        },
+        {
+          "id": "state_machine_created",
+          "name": "状态机是否创建",
+          "description": "ue/state-machine.yaml 应存在，且包含 states 字段"
+        },
+        {
+          "id": "visual_state_machine",
+          "name": "可视化状态机是否生成",
+          "description": "ue/state-machine-visual.md 应存在，且包含 mermaid 代码块（含 stateDiagram-v2）"
+        },
+        {
+          "id": "interactive_html",
+          "name": "可交互 HTML 查看器是否生成",
+          "description": "ue/state-machine-interactive.html 应存在，且包含：mermaid CDN script 标签、const STATES = { 的 JS 对象定义"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "我想设计一个二手闲置物品交易小程序，请帮我做完整设计规划，自动完成所有阶段无需等我确认，遇到技术决策自行判断。\n\n已知信息：\n- 产品名：闲鱼仿品「拾物」\n- 痛点：大学校园内同学间的闲置物品处置麻烦，邮寄费用高，希望面交\n- 目标用户：在校大学生，18-24岁，有大量闲置教材/电子产品/生活用品\n- 核心功能：1.发布商品（拍照+描述+定价）2.分类浏览/搜索 3.私信洽谈+预约面交 4.校区/地点筛选 5.诚信评分系统\n- 平台：微信小程序\n- 商业模式：免费，后期收取成交额2%的服务费\n\n输出目录：shiwo-marketplace/",
+      "expected_output": "完整产物包括三层数据契约、状态机（含可视化 Mermaid 图和可交互 HTML）、线框图和 Design Token",
+      "files": [],
+      "assertions": [
+        {
+          "id": "files_created",
+          "name": "核心文件是否创建",
+          "description": "检查 shiwo-marketplace/ 目录下存在 product-overview.md 和 contracts/ 目录"
+        },
+        {
+          "id": "api_endpoints",
+          "name": "API 契约是否包含端点",
+          "description": "api.yaml 应包含 endpoints 字段，且有至少 5 个端点定义"
+        },
+        {
+          "id": "domain_sensitive_markers",
+          "name": "敏感字段是否标注",
+          "description": "domain.yaml 中应有 ⚠️ 禁止暴露 的注释"
+        },
+        {
+          "id": "tokens_frozen",
+          "name": "Design Token 是否冻结",
+          "description": "tokens.json 包含 _frozen 字段"
+        },
+        {
+          "id": "interactive_html",
+          "name": "可交互 HTML 查看器是否生成",
+          "description": "shiwo-marketplace/ue/state-machine-interactive.html 应存在，且包含 const STATES = { 的 JS 数据对象"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "帮我完整规划一个面向自由职业者的发票和收入管理工具，全部阶段自动完成。\n\n背景：\n- 产品名：FreelanceBook\n- 痛点：自由职业者收入来源零散（多个客户），手动记账容易遗漏，年底税务申报很头疼\n- 用户：独立开发者、设计师、咨询顾问，25-45岁，月收入2-5万\n- 核心功能：1.客户管理 2.项目/合同记录 3.收款记录（含开票状态）4.收入统计图表 5.税务预估计算器\n- 平台：Web（桌面优先）\n- 商业模式：¥39/月订阅制，提供30天免费试用\n\n输出目录：freelancebook/\n技术决策参考：金额统一用分（整数）存储；客户可有多个联系人；发票状态：draft/sent/paid/overdue",
+      "expected_output": "完整6阶段产物，特别是 domain.yaml 中金额字段应为整数类型，tokens.json 适合专业工具的配色，并生成可交互 HTML 状态机查看器",
+      "files": [],
+      "assertions": [
+        {
+          "id": "files_created",
+          "name": "核心文件是否创建",
+          "description": "freelancebook/ 目录下存在 product-overview.md, contracts/domain.yaml, design/tokens.json"
+        },
+        {
+          "id": "amount_integer_type",
+          "name": "金额字段是否用精确类型",
+          "description": "domain.yaml 中金额相关字段（amount/price/fee 等）应为 integer、decimal 或 numeric 类型，而非 float"
+        },
+        {
+          "id": "domain_sensitive_markers",
+          "name": "敏感字段是否标注",
+          "description": "domain.yaml 包含 ⚠️ 禁止暴露 标记"
+        },
+        {
+          "id": "roadmap_versions",
+          "name": "路线图是否有版本分层",
+          "description": "product-roadmap.md 应包含至少两个版本阶段（如 v1.0 和 v1.5/v2.0）"
+        },
+        {
+          "id": "visual_state_machine",
+          "name": "可视化状态机是否生成",
+          "description": "freelancebook/ue/state-machine-visual.md 应存在，且包含 mermaid 代码块"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "这个项目目录 evals/test-broken-contracts/ 已有三层数据契约文件，但可能存在一些问题。\n请帮我运行 /df-validate（即执行 python3 references/validate.py evals/test-broken-contracts/）对这个项目进行数据契约校验。\n汇报检测到的所有问题（错误和警告），并给出每个问题的修复建议。",
+      "expected_output": "validator 应检测到：(1) API 响应中暴露了 password_hash 敏感字段（A03 错误）；(2) api.yaml 引用了不存在的响应类型 NonExistentType（A01 错误）；(3) ui-schema.yaml 中某页面 data_source 的端点在 api.yaml 不存在（U01 警告）",
+      "files": [],
+      "assertions": [
+        {
+          "id": "validator_runs",
+          "name": "校验脚本是否成功运行",
+          "description": "validate.py 脚本应能正常执行并输出校验报告，不抛出 Python 异常"
+        },
+        {
+          "id": "catches_sensitive_leak",
+          "name": "是否检测到敏感字段泄露",
+          "description": "输出中应包含 A03 错误，指出 password_hash（或 phone）字段在 API 响应中直接暴露"
+        },
+        {
+          "id": "catches_missing_response_type",
+          "name": "是否检测到响应类型引用错误",
+          "description": "输出中应包含 A01 错误，指出某端点引用了未定义的响应类型"
+        },
+        {
+          "id": "catches_invalid_endpoint",
+          "name": "是否检测到 UI 层端点引用错误",
+          "description": "输出中应包含 U01 警告，指出 ui-schema 中某页面的 data_source 在 api.yaml 中找不到对应端点"
+        }
+      ]
+    }
+  ]
+}

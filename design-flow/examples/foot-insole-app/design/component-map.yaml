@@ -1,0 +1,285 @@
+# 足迹 APP - 组件-数据映射表
+# 将 UI Schema 中的组件与 Design Token 绑定
+
+version: "1.0"
+
+# ────────────────────────────────────
+# 基础原子组件
+# ────────────────────────────────────
+atoms:
+
+  Button:
+    variants:
+      primary:
+        bg: color.cta.500
+        text: color.neutral.0
+        radius: radius.button
+        height: 48px
+        font: textStyle.heading_sm
+        shadow: shadow.md
+        pressed: { bg: color.cta.600, scale: 0.97 }
+      secondary:
+        bg: color.primary.500
+        text: color.neutral.0
+        radius: radius.button
+        height: 48px
+      outline:
+        bg: transparent
+        border: "1.5px solid color.primary.500"
+        text: color.primary.500
+        radius: radius.button
+        height: 48px
+      ghost:
+        bg: transparent
+        text: color.primary.500
+        height: 44px
+      disabled:
+        bg: color.neutral.200
+        text: color.neutral.400
+        shadow: none
+
+  Badge:
+    arch_type:
+      flat:   { bg: "#FFF7ED", text: "#EA580C", label: "扁平足" }
+      normal: { bg: color.semantic.success_bg, text: color.primary.700, label: "正常" }
+      high:   { bg: "#EFF6FF", text: "#2563EB", label: "高弓足" }
+    risk_level:
+      0: { bg: color.semantic.success_bg, text: color.primary.700, label: "低风险" }
+      1: { bg: color.semantic.warning_bg, text: "#B45309",          label: "中风险" }
+      2: { bg: color.semantic.error_bg,   text: "#DC2626",          label: "高风险" }
+    order_status:
+      0: { bg: color.semantic.warning_bg, text: "#B45309" }
+      1: { bg: "#EFF6FF",                 text: "#2563EB" }
+      2: { bg: "#F0FDF4",                 text: "#15803D" }
+      3: { bg: color.neutral.100,         text: color.neutral.500 }
+    radius: radius.badge
+    padding: "2px 8px"
+    font: textStyle.caption
+
+  Tag:
+    bg: color.neutral.100
+    text: color.neutral.600
+    radius: radius.full
+    padding: "2px 10px"
+    font: textStyle.body_sm
+
+  Avatar:
+    sizes: { sm: 32px, md: 44px, lg: 64px }
+    radius: radius.avatar
+    fallback_bg: color.primary.100
+    fallback_text: color.primary.600
+
+  PriceDisplay:
+    current:
+      font: textStyle.price_lg
+    original:
+      font: textStyle.price_sm
+    layout: "horizontal, gap: spacing.2"
+
+# ────────────────────────────────────
+# 商品相关组件
+# ────────────────────────────────────
+product_components:
+
+  ProductCard:
+    data_source: api.ProductCard
+    container:
+      bg: color.background.card
+      radius: radius.card
+      shadow: shadow.card
+    layout: vertical
+    fields:
+      cover_image:
+        component: Image
+        ratio: "4:3"
+        radius: "radius.lg radius.lg 0 0"
+        bg: color.neutral.100
+      name:
+        component: Text
+        style: textStyle.body_md
+        max_lines: 2
+        padding: "spacing.3 spacing.3 spacing.1"
+      arch_types:
+        component: Badge(arch_type)
+        padding: "0 spacing.3"
+      price:
+        component: PriceDisplay
+        padding: "spacing.2 spacing.3 spacing.3"
+    pressed:
+      scale: 0.98
+      shadow: shadow.sm
+
+  ProductDetailHeader:
+    data_source: api.ProductDetail
+    fields:
+      images:
+        component: ImageCarousel
+        ratio: "1:1"
+        indicator: dots
+      price:
+        component: PriceDisplay
+        padding: "spacing.4 spacing.4 spacing.2"
+      name:
+        component: Text
+        style: textStyle.heading_md
+        padding: "0 spacing.4"
+      arch_types:
+        component: "BadgeRow(arch_type)"
+        padding: "spacing.2 spacing.4"
+      tags:
+        component: TagRow
+        padding: "spacing.2 spacing.4"
+
+  CartItemRow:
+    data_source: api.CartItem
+    container:
+      bg: color.background.card
+      padding: spacing.4
+    fields:
+      selected:
+        component: Checkbox
+        color: color.primary.500
+      product.cover_image:
+        component: Image
+        size: "72px × 72px"
+        radius: radius.md
+      product.name:
+        component: Text
+        style: textStyle.body_md
+        max_lines: 2
+      product.price:
+        component: Text
+        style: textStyle.price_lg
+      quantity:
+        component: Stepper
+        min: 1
+        btn_size: 28px
+        color: color.primary.500
+
+# ────────────────────────────────────
+# 分析报告组件
+# ────────────────────────────────────
+report_components:
+
+  ArchTypeCard:
+    data_source: api.ReportDetail
+    container:
+      bg: "linear-gradient(135deg, color.primary.50, color.neutral.0)"
+      radius: radius.xl
+      padding: spacing.6
+      shadow: shadow.lg
+    fields:
+      arch_type:
+        component: ArchIllustration
+        sizes: { flat: img/arch_flat.svg, normal: img/arch_normal.svg, high: img/arch_high.svg }
+        width: 200px
+      arch_type_text:
+        component: Text
+        style: textStyle.heading_lg
+        color: color.primary.700
+      risk_level:
+        component: RiskGauge
+        colors: [color.risk.low, color.risk.medium, color.risk.high]
+
+  RiskItemCard:
+    data_source: api.ReportDetail.risk_items[]
+    container:
+      bg: color.background.card
+      radius: radius.lg
+      padding: spacing.4
+      border_left: "3px solid {risk_level_color}"
+    fields:
+      name:
+        component: Text
+        style: textStyle.heading_sm
+      description:
+        component: Text
+        style: textStyle.body_sm
+        color: color.neutral.500
+        collapsible: true
+        max_lines: 2
+      level:
+        component: Badge(risk_level)
+        position: top_right
+
+# ────────────────────────────────────
+# 导航组件
+# ────────────────────────────────────
+navigation:
+
+  BottomTabBar:
+    height: 56px
+    bg: color.background.card
+    border_top: "1px solid color.neutral.200"
+    active_color: color.primary.500
+    inactive_color: color.neutral.400
+    tabs:
+      - { key: home,    icon: Home,         label: 首页 }
+      - { key: category, icon: Grid,        label: 分类 }
+      - { key: detect,  icon: Footprints,   label: 检测,  highlight: true }
+      - { key: profile, icon: User,         label: 我的 }
+    highlight:
+      bg: color.primary.500
+      color: white
+      radius: radius.full
+      size: "52px × 32px"
+
+  TopNavBar:
+    height: 44px
+    bg: color.background.card
+    title_style: textStyle.heading_sm
+    icon_size: iconSize.md
+    shadow: shadow.sm
+
+# ────────────────────────────────────
+# 视频拍摄组件
+# ────────────────────────────────────
+video_components:
+
+  ShootTypeSelector:
+    data_source: 静态数据（3种拍摄类型）
+    container:
+      selected: { border: "2px solid color.primary.500", bg: color.primary.50 }
+      default:  { border: "1px solid color.neutral.200", bg: color.background.card }
+      radius: radius.xl
+      padding: spacing.4
+    animation: spring 250ms
+
+  RecordButton:
+    idle:   { size: 72px, bg: color.cta.500, radius: radius.full }
+    recording: { size: 72px, bg: color.semantic.error, icon: Square }
+    pulse_animation: "scale 1→1.1→1, 1.5s infinite（录制中）"
+
+  UploadProgress:
+    bar:
+      filled_color: color.primary.500
+      track_color: color.neutral.200
+      height: 8px
+      radius: radius.full
+    text_style: textStyle.body_md
+
+# ────────────────────────────────────
+# 反馈组件
+# ────────────────────────────────────
+feedback:
+
+  Toast:
+    success: { bg: color.semantic.success, icon: CheckCircle }
+    error:   { bg: color.semantic.error,   icon: XCircle }
+    info:    { bg: color.neutral.800,      icon: Info }
+    position: bottom
+    offset_from_bottom: "80px（避开底部Tab）"
+    duration: 1500ms
+    radius: radius.full
+    padding: "10px 20px"
+
+  SkeletonLoader:
+    bg: color.neutral.200
+    highlight: color.neutral.100
+    animation: shimmer 1.5s ease-in-out infinite
+
+  EmptyState:
+    illustration_size: 160px
+    title_style: textStyle.heading_sm
+    title_color: color.neutral.600
+    button_variant: Button.outline

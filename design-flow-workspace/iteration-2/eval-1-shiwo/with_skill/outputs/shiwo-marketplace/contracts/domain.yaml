@@ -1,0 +1,356 @@
+# 领域层数据契约 - 拾物（Shiwo）校园二手交易小程序
+# 说明：包含所有字段，含敏感字段。后端内部使用，禁止直接暴露给前端。
+# 设计决策：金额单位为"分（整数）"，用户一个账号绑定一所学校
+
+entities:
+
+  User:
+    description: 用户账户（微信小程序用户）
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key, indexed
+      openid:
+        type: string
+        constraints: unique, indexed, required
+        note: "⚠️ 禁止暴露 - 微信 openid，后端鉴权用"
+      unionid:
+        type: string
+        constraints: unique, nullable
+        note: "⚠️ 禁止暴露 - 微信 unionid"
+      nickname:
+        type: string
+        constraints: required, max_length:30
+      avatar_url:
+        type: string
+        constraints: nullable
+      school_id:
+        type: uuid
+        constraints: foreign_key(School.id), indexed, nullable
+      campus_id:
+        type: uuid
+        constraints: foreign_key(Campus.id), indexed, nullable
+      phone:
+        type: string
+        constraints: nullable
+        note: "⚠️ 禁止暴露 - 手机号，仅本人可见"
+      student_verified:
+        type: boolean
+        default: false
+      credit_score:
+        type: integer
+        default: 100
+        note: "信用分，范围 0-200，默认 100"
+      is_banned:
+        type: boolean
+        default: false
+        note: "⚠️ 禁止暴露 - 封号标记"
+      ban_reason:
+        type: string
+        nullable: true
+        note: "⚠️ 禁止暴露 - 封号原因"
+      role:
+        type: enum
+        values: [user, admin]
+        default: user
+        note: "⚠️ 禁止暴露 - 权限控制"
+      created_at:
+        type: timestamp
+        constraints: auto_set
+      updated_at:
+        type: timestamp
+        constraints: auto_update
+      deleted_at:
+        type: timestamp
+        constraints: nullable
+        note: "⚠️ 禁止暴露 - 软删除标记"
+
+  School:
+    description: 学校信息
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      name:
+        type: string
+        constraints: required, unique, max_length:100
+      short_name:
+        type: string
+        constraints: max_length:20
+      city:
+        type: string
+        constraints: required
+      created_at:
+        type: timestamp
+        constraints: auto_set
+
+  Campus:
+    description: 校区信息（一所学校可有多个校区）
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      school_id:
+        type: uuid
+        constraints: foreign_key(School.id), indexed
+      name:
+        type: string
+        constraints: required, max_length:50
+      address:
+        type: string
+        constraints: nullable
+      created_at:
+        type: timestamp
+        constraints: auto_set
+
+  Item:
+    description: 商品（闲置物品）
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key, indexed
+      seller_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed
+      title:
+        type: string
+        constraints: required, max_length:60
+      description:
+        type: text
+        constraints: nullable, max_length:1000
+      price:
+        type: integer
+        constraints: required, min:0
+        note: "单位：分（整数），如 1990 表示 ¥19.90"
+      original_price:
+        type: integer
+        constraints: nullable, min:0
+        note: "原价，单位：分，用于展示折扣"
+      category_id:
+        type: uuid
+        constraints: foreign_key(Category.id), indexed
+      campus_id:
+        type: uuid
+        constraints: foreign_key(Campus.id), indexed
+      images:
+        type: jsonb
+        note: "图片 URL 数组，最多 6 张"
+      status:
+        type: enum
+        values: [active, sold, withdrawn]
+        default: active
+        note: "active=在售, sold=已售出, withdrawn=已下架"
+      view_count:
+        type: integer
+        default: 0
+      favor_count:
+        type: integer
+        default: 0
+      audit_status:
+        type: enum
+        values: [pending, approved, rejected]
+        default: approved
+        note: "⚠️ 禁止暴露 - 内容审核状态"
+      audit_reason:
+        type: string
+        nullable: true
+        note: "⚠️ 禁止暴露 - 拒绝原因"
+      created_at:
+        type: timestamp
+        constraints: auto_set, indexed
+      updated_at:
+        type: timestamp
+        constraints: auto_update
+      sold_at:
+        type: timestamp
+        constraints: nullable
+
+  Category:
+    description: 商品分类
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      name:
+        type: string
+        constraints: required, max_length:30
+      icon:
+        type: string
+        constraints: nullable
+      sort_order:
+        type: integer
+        default: 0
+      parent_id:
+        type: uuid
+        constraints: nullable, foreign_key(Category.id)
+        note: "支持二级分类，null 表示一级分类"
+      created_at:
+        type: timestamp
+        constraints: auto_set
+
+  Conversation:
+    description: 买卖双方的私信会话
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key, indexed
+      item_id:
+        type: uuid
+        constraints: foreign_key(Item.id), indexed
+      buyer_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed
+      seller_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed
+      last_message:
+        type: string
+        constraints: nullable, max_length:200
+        note: "最后一条消息摘要，用于列表展示"
+      last_message_at:
+        type: timestamp
+        constraints: nullable, indexed
+      buyer_unread_count:
+        type: integer
+        default: 0
+      seller_unread_count:
+        type: integer
+        default: 0
+      status:
+        type: enum
+        values: [active, closed]
+        default: active
+      created_at:
+        type: timestamp
+        constraints: auto_set
+
+  Message:
+    description: 私信消息
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      conversation_id:
+        type: uuid
+        constraints: foreign_key(Conversation.id), indexed
+      sender_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed
+      content:
+        type: text
+        constraints: required, max_length:500
+      type:
+        type: enum
+        values: [text, appointment]
+        default: text
+        note: "text=普通文字, appointment=预约面交卡片"
+      appointment_data:
+        type: jsonb
+        nullable: true
+        note: "预约面交信息：{time, location, status}"
+      is_read:
+        type: boolean
+        default: false
+      created_at:
+        type: timestamp
+        constraints: auto_set, indexed
+
+  Review:
+    description: 交易评价（诚信评分）
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      item_id:
+        type: uuid
+        constraints: foreign_key(Item.id), indexed
+      reviewer_id:
+        type: uuid
+        constraints: foreign_key(User.id)
+      reviewee_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed
+      rating:
+        type: integer
+        constraints: required, min:1, max:5
+        note: "1-5 星整数评分"
+      comment:
+        type: string
+        constraints: nullable, max_length:200
+      role:
+        type: enum
+        values: [buyer, seller]
+        note: "评价者在此交易中的角色"
+      created_at:
+        type: timestamp
+        constraints: auto_set
+
+  Favorite:
+    description: 商品收藏
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      user_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed
+      item_id:
+        type: uuid
+        constraints: foreign_key(Item.id), indexed
+      created_at:
+        type: timestamp
+        constraints: auto_set
+
+
+relationships:
+  - "User ──N:1──> School (via school_id)"
+  - "User ──N:1──> Campus (via campus_id)"
+  - "School ──1:N──> Campus (via school_id)"
+  - "User ──1:N──> Item (via seller_id)"
+  - "Item ──N:1──> Category (via category_id)"
+  - "Item ──N:1──> Campus (via campus_id)"
+  - "Item ──1:N──> Conversation (via item_id)"
+  - "Conversation ──1:N──> Message (via conversation_id)"
+  - "Item ──1:N──> Review (via item_id)"
+  - "User ──N:M──> Item via Favorite"
+
+indexes:
+  - table: Item
+    fields: [campus_id, status, created_at]
+    type: composite
+    purpose: "校区商品列表查询（最核心查询）"
+  - table: Item
+    fields: [category_id, status, created_at]
+    type: composite
+    purpose: "分类商品列表查询"
+  - table: Item
+    fields: [seller_id, status]
+    type: composite
+    purpose: "卖家个人发布列表"
+  - table: Message
+    fields: [conversation_id, created_at]
+    type: composite
+    purpose: "会话消息翻页查询"
+  - table: Conversation
+    fields: [buyer_id, last_message_at]
+    type: composite
+    purpose: "买家消息列表"
+  - table: Conversation
+    fields: [seller_id, last_message_at]
+    type: composite
+    purpose: "卖家消息列表"
+  - table: Review
+    fields: [reviewee_id, created_at]
+    type: composite
+    purpose: "用户收到的评价列表"
+
+sensitive_fields_summary:
+  - "User.openid - 微信 openid，禁止暴露"
+  - "User.unionid - 微信 unionid，禁止暴露"
+  - "User.phone - 手机号，仅本人可见"
+  - "User.is_banned - 封号标记"
+  - "User.ban_reason - 封号原因"
+  - "User.role - 权限字段"
+  - "User.deleted_at - 软删除标记"
+  - "Item.audit_status - 内容审核状态"
+  - "Item.audit_reason - 审核拒绝原因"

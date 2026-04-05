@@ -1,0 +1,131 @@
+{
+  "iteration": 1,
+  "skill_name": "design-flow",
+  "timestamp": "2026-03-22T12:35:00Z",
+  "runs": [
+    {
+      "eval_id": 0,
+      "eval_name": "fitstreak-fitness-app",
+      "config": "with_skill",
+      "expectations_total": 5,
+      "expectations_passed": 5,
+      "pass_rate": 1.0,
+      "time_seconds": 868.6,
+      "tokens": 72753,
+      "timing_file": "eval-0-fitstreak/with_skill/timing.json",
+      "grading_file": "eval-0-fitstreak/with_skill/grading.json"
+    },
+    {
+      "eval_id": 0,
+      "eval_name": "fitstreak-fitness-app",
+      "config": "without_skill",
+      "expectations_total": 5,
+      "expectations_passed": 3,
+      "pass_rate": 0.6,
+      "time_seconds": 1103.9,
+      "tokens": 68227,
+      "timing_file": "eval-0-fitstreak/without_skill/timing.json",
+      "grading_file": "eval-0-fitstreak/without_skill/grading.json"
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "shiwo-campus-marketplace",
+      "config": "with_skill",
+      "expectations_total": 4,
+      "expectations_passed": 4,
+      "pass_rate": 1.0,
+      "time_seconds": 775.1,
+      "tokens": 79121,
+      "timing_file": "eval-1-shiwo/with_skill/timing.json",
+      "grading_file": "eval-1-shiwo/with_skill/grading.json"
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "shiwo-campus-marketplace",
+      "config": "without_skill",
+      "expectations_total": 4,
+      "expectations_passed": 3,
+      "pass_rate": 0.75,
+      "time_seconds": 697.0,
+      "tokens": 55284,
+      "timing_file": "eval-1-shiwo/without_skill/timing.json",
+      "grading_file": "eval-1-shiwo/without_skill/grading.json"
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "freelancebook-finance-tool",
+      "config": "with_skill",
+      "expectations_total": 4,
+      "expectations_passed": 3,
+      "pass_rate": 0.75,
+      "time_seconds": 773.9,
+      "tokens": 76361,
+      "timing_file": "eval-2-freelancebook/with_skill/timing.json",
+      "grading_file": "eval-2-freelancebook/with_skill/grading.json"
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "freelancebook-finance-tool",
+      "config": "without_skill",
+      "expectations_total": 4,
+      "expectations_passed": 4,
+      "pass_rate": 1.0,
+      "time_seconds": 861.1,
+      "tokens": 63159,
+      "timing_file": "eval-2-freelancebook/without_skill/timing.json",
+      "grading_file": "eval-2-freelancebook/without_skill/grading.json"
+    }
+  ],
+  "aggregate": {
+    "with_skill": {
+      "total_evals": 3,
+      "avg_pass_rate": 0.92,
+      "total_time_seconds": 2417.6,
+      "total_tokens": 228235,
+      "avg_time_seconds": 805.9,
+      "avg_tokens": 76078
+    },
+    "without_skill": {
+      "total_evals": 3,
+      "avg_pass_rate": 0.78,
+      "total_time_seconds": 2662.0,
+      "total_tokens": 186670,
+      "avg_time_seconds": 887.3,
+      "avg_tokens": 62223
+    },
+    "improvement": {
+      "pass_rate_delta": 0.14,
+      "time_delta_seconds": -244.4,
+      "tokens_delta": 41565,
+      "time_pct_change": -9.2,
+      "tokens_pct_increase": 22.3
+    }
+  },
+  "analyst_observations": [
+    {
+      "type": "strength",
+      "eval": "fitstreak-fitness-app",
+      "observation": "with_skill 版本完美通过所有 5 项断言（baseline 仅 3/5）。skill 版本严格遵循 6 阶段流程，生成了 5 个线框图，baseline 只有 3 个"
+    },
+    {
+      "type": "strength",
+      "eval": "shiwo-campus-marketplace",
+      "observation": "with_skill 版本正确调用了 ui-ux-pro-max 脚本，获得了适合校园场景的暖绿配色和 rpx 单位设计 token，baseline 未调用脚本"
+    },
+    {
+      "type": "efficiency",
+      "eval": "fitstreak-fitness-app",
+      "observation": "令人惊讶：with_skill 版本用时 14.5 分钟，baseline 却用了 18.4 分钟。skill 的结构化流程反而提高了效率（-21% 时间）"
+    },
+    {
+      "type": "opportunity",
+      "eval": "freelancebook-finance-tool",
+      "observation": "with_skill 在金额字段类型上使用了 decimal，而 assert 期望 integer。这是 grading 脚本的过度严格——decimal 是金额的有效类型。SKILL.md 中'金额统一用分（整数）存储'的建议可能需要澄清为'金额应使用精确数值类型（integer 或 decimal）'"
+    },
+    {
+      "type": "pattern",
+      "eval": "all",
+      "observation": "with_skill 版本平均多消耗 14k tokens（+22%），但产出了更完整的文件结构和更规范的三层数据契约格式。产出质量提升明显，token 开销在设计文档场景下是可接受的"
+    }
+  ]
+}

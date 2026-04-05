@@ -1,0 +1,39 @@
+{
+  "eval_id": 2,
+  "run": "without_skill",
+  "expectations": [
+    {
+      "text": "has-product-vision-section: 文档包含功能背景/目标章节，说明为什么要做 AI 搜索",
+      "passed": true,
+      "evidence": "第1章「背景与目标」详细描述了当前关键词搜索的4大痛点，定义了4项成功指标"
+    },
+    {
+      "text": "has-target-user-section: 文档描述了使用知识库的企业员工场景",
+      "passed": true,
+      "evidence": "第2章「用户与场景」描述了4类目标用户（普通员工、部门管理者、HR/法务/财务、知识库管理员）和4个具体用户场景"
+    },
+    {
+      "text": "has-user-story-map: 功能需求按用户操作流程组织（输入→理解→搜索→展示→反馈）",
+      "passed": false,
+      "evidence": "第3章功能需求按技术子模块组织（输入框升级、意图解析、语义检索/RAG、答案展示、多轮对话、反馈机制、降级策略、管理后台），是技术模块视角而非用户旅程视角，没有「用户目标」字段"
+    },
+    {
+      "text": "has-priority-labels: 功能标注了优先级",
+      "passed": false,
+      "evidence": "功能需求章节（3.2-3.8）均无P0/P1/P2等优先级标注"
+    },
+    {
+      "text": "covers-core-features: 涵盖了自然语言理解和答案展示等核心 AI 搜索功能",
+      "passed": true,
+      "evidence": "3.2节「自然语言输入与意图解析」覆盖NLU，3.4节「答案展示与来源引用」覆盖答案展示"
+    },
+    {
+      "text": "has-non-functional-requirements: 包含响应时间或准确率等性能要求",
+      "passed": true,
+      "evidence": "第4章「非功能需求」包含P50≤3秒、P95≤8秒等详细性能指标，以及安全、可靠性、可扩展性要求"
+    }
+  ],
+  "pass_rate": 0.667,
+  "total_passed": 4,
+  "total_assertions": 6
+}

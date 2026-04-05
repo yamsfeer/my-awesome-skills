@@ -1,0 +1,1081 @@
+openapi: 3.1.0
+info:
+  title: FitStreak API
+  version: 1.0.0
+  description: FitStreak 健身打卡应用后端接口定义
+  contact:
+    name: FitStreak Team
+
+servers:
+  - url: https://api.fitstreak.app/v1
+    description: 生产环境
+  - url: https://api-staging.fitstreak.app/v1
+    description: 测试环境
+
+# ─────────────────────────────────────────
+# 安全方案
+# ─────────────────────────────────────────
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT Access Token，有效期 2 小时
+
+  # ─────────────────────────────────────────
+  # 公共响应结构
+  # ─────────────────────────────────────────
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: 业务状态码，0 表示成功
+          example: 0
+        message:
+          type: string
+          example: "success"
+        data:
+          type: object
+          nullable: true
+        request_id:
+          type: string
+          description: 请求唯一追踪 ID
+          example: "req_abc123"
+
+    PaginationMeta:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+        has_more:
+          type: boolean
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: 错误码
+        message:
+          type: string
+          description: 错误描述
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+    # 用户基础信息
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nickname:
+          type: string
+        avatar_url:
+          type: string
+          nullable: true
+        fitness_goal:
+          type: string
+          enum: [lose_weight, gain_muscle, keep_fit, improve_endurance, other]
+        fitness_level:
+          type: string
+          enum: [beginner, intermediate, advanced]
+        current_streak:
+          type: integer
+        longest_streak:
+          type: integer
+        total_checkins:
+          type: integer
+        is_premium:
+          type: boolean
+        premium_expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    # 打卡记录
+    CheckinRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        exercise_type:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            category:
+              type: string
+            icon_key:
+              type: string
+        duration_minutes:
+          type: integer
+        calories_burned:
+          type: integer
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        photo_url:
+          type: string
+          nullable: true
+        checkin_date:
+          type: string
+          format: date
+        streak_day:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    # 成就徽章
+    AchievementItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        key:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        icon_url:
+          type: string
+        badge_color:
+          type: string
+        category:
+          type: string
+        is_premium:
+          type: boolean
+        is_unlocked:
+          type: boolean
+        unlocked_at:
+          type: string
+          format: date-time
+          nullable: true
+
+# ─────────────────────────────────────────
+# API 接口定义
+# ─────────────────────────────────────────
+paths:
+
+  # ══════════════════════════════════════
+  # AUTH 认证模块
+  # ══════════════════════════════════════
+
+  /auth/send-otp:
+    post:
+      tags: [Auth]
+      summary: 发送手机验证码
+      description: 向指定手机号发送 6 位 OTP 验证码，有效期 5 分钟
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone:
+                  type: string
+                  example: "+8613800138000"
+      responses:
+        "200":
+          description: 发送成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          expires_in:
+                            type: integer
+                            description: 验证码有效期（秒）
+                            example: 300
+        "429":
+          description: 发送频率超限（60秒内只能发一次）
+
+  /auth/verify-otp:
+    post:
+      tags: [Auth]
+      summary: 验证 OTP 并登录/注册
+      description: 验证成功后返回 JWT token，如果是新用户则自动注册
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, code]
+              properties:
+                phone:
+                  type: string
+                  example: "+8613800138000"
+                code:
+                  type: string
+                  example: "123456"
+      responses:
+        "200":
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          access_token:
+                            type: string
+                          refresh_token:
+                            type: string
+                          expires_in:
+                            type: integer
+                            example: 7200
+                          is_new_user:
+                            type: boolean
+                          user:
+                            $ref: '#/components/schemas/UserProfile'
+        "400":
+          description: 验证码错误或已过期
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: 刷新 Access Token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        "200":
+          description: 刷新成功，返回新 token
+
+  /auth/apple:
+    post:
+      tags: [Auth]
+      summary: Apple Sign In
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identity_token]
+              properties:
+                identity_token:
+                  type: string
+                  description: Apple 返回的 identity token
+      responses:
+        "200":
+          description: 登录成功
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: 退出登录
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: 退出成功
+
+  # ══════════════════════════════════════
+  # USER 用户模块
+  # ══════════════════════════════════════
+
+  /users/me:
+    get:
+      tags: [User]
+      summary: 获取当前用户信息
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: 用户信息
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserProfile'
+
+    patch:
+      tags: [User]
+      summary: 更新当前用户信息
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nickname:
+                  type: string
+                  maxLength: 50
+                fitness_goal:
+                  type: string
+                  enum: [lose_weight, gain_muscle, keep_fit, improve_endurance, other]
+                fitness_level:
+                  type: string
+                  enum: [beginner, intermediate, advanced]
+                height_cm:
+                  type: number
+                birth_date:
+                  type: string
+                  format: date
+                notification_enabled:
+                  type: boolean
+                reminder_time:
+                  type: string
+                  example: "07:30"
+      responses:
+        "200":
+          description: 更新成功
+
+  /users/me/avatar:
+    post:
+      tags: [User]
+      summary: 上传头像
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: 上传成功，返回头像 URL
+
+  /users/{userId}:
+    get:
+      tags: [User]
+      summary: 获取指定用户公开信息
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: 用户公开信息（脱敏）
+
+  # ══════════════════════════════════════
+  # CHECKIN 打卡模块
+  # ══════════════════════════════════════
+
+  /checkins:
+    post:
+      tags: [Checkin]
+      summary: 创建打卡记录
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [exercise_type_id, duration_minutes, checkin_date]
+              properties:
+                exercise_type_id:
+                  type: string
+                  format: uuid
+                duration_minutes:
+                  type: integer
+                  minimum: 1
+                  maximum: 480
+                checkin_date:
+                  type: string
+                  format: date
+                  description: 打卡日期，默认为今天
+                calories_burned:
+                  type: integer
+                  nullable: true
+                note:
+                  type: string
+                  maxLength: 200
+                location_name:
+                  type: string
+                  maxLength: 100
+                plan_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+      responses:
+        "201":
+          description: 打卡成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          checkin:
+                            $ref: '#/components/schemas/CheckinRecord'
+                          new_streak:
+                            type: integer
+                          newly_unlocked_achievements:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/AchievementItem'
+        "409":
+          description: 今日已打卡
+
+    get:
+      tags: [Checkin]
+      summary: 获取打卡列表（支持分页和日期过滤）
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: year
+          in: query
+          schema:
+            type: integer
+          description: 年份（用于日历热力图）
+        - name: month
+          in: query
+          schema:
+            type: integer
+          description: 月份
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        "200":
+          description: 打卡列表
+
+  /checkins/{checkinId}:
+    get:
+      tags: [Checkin]
+      summary: 获取打卡详情
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: checkinId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: 打卡详情
+
+    delete:
+      tags: [Checkin]
+      summary: 删除打卡记录
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: checkinId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: 删除成功
+
+  /checkins/calendar:
+    get:
+      tags: [Checkin]
+      summary: 获取打卡日历数据（热力图所需）
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+            example: 2026
+        - name: month
+          in: query
+          schema:
+            type: integer
+            description: 不传则返回全年
+      responses:
+        "200":
+          description: 日历数据
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          checkin_dates:
+                            type: array
+                            items:
+                              type: string
+                              format: date
+                            description: 已打卡日期列表
+                          current_streak:
+                            type: integer
+                          longest_streak:
+                            type: integer
+
+  # ══════════════════════════════════════
+  # BODY METRICS 体征模块（Premium）
+  # ══════════════════════════════════════
+
+  /body-metrics:
+    post:
+      tags: [BodyMetric]
+      summary: 记录体征数据（Premium）
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [record_date]
+              properties:
+                record_date:
+                  type: string
+                  format: date
+                weight_kg:
+                  type: number
+                body_fat_percent:
+                  type: number
+                  minimum: 0
+                  maximum: 100
+                muscle_mass_kg:
+                  type: number
+                note:
+                  type: string
+      responses:
+        "201":
+          description: 记录成功
+        "403":
+          description: 非 Premium 用户无法使用
+
+    get:
+      tags: [BodyMetric]
+      summary: 获取体征趋势数据（Premium）
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: metric_type
+          in: query
+          schema:
+            type: string
+            enum: [weight, body_fat, muscle_mass, bmi]
+      responses:
+        "200":
+          description: 体征趋势数据
+
+  # ══════════════════════════════════════
+  # EXERCISE TYPES 运动类型
+  # ══════════════════════════════════════
+
+  /exercise-types:
+    get:
+      tags: [ExerciseType]
+      summary: 获取运动类型列表
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [cardio, strength, flexibility, sports, other]
+      responses:
+        "200":
+          description: 运动类型列表
+
+  # ══════════════════════════════════════
+  # ACHIEVEMENTS 成就模块
+  # ══════════════════════════════════════
+
+  /achievements:
+    get:
+      tags: [Achievement]
+      summary: 获取所有成就列表（含解锁状态）
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: 成就列表（包含用户是否已解锁）
+
+  /achievements/my:
+    get:
+      tags: [Achievement]
+      summary: 获取我已解锁的成就
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: 已解锁成就列表
+
+  # ══════════════════════════════════════
+  # SOCIAL 社交模块
+  # ══════════════════════════════════════
+
+  /friends:
+    get:
+      tags: [Social]
+      summary: 获取好友列表
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [accepted, pending]
+            default: accepted
+      responses:
+        "200":
+          description: 好友列表（包含好友的最近打卡状态）
+
+  /friends/requests:
+    post:
+      tags: [Social]
+      summary: 发送好友申请
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [addressee_id]
+              properties:
+                addressee_id:
+                  type: string
+                  format: uuid
+      responses:
+        "201":
+          description: 申请已发送
+
+  /friends/requests/{requestId}/accept:
+    post:
+      tags: [Social]
+      summary: 接受好友申请
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: 已接受
+
+  /friends/{friendId}:
+    delete:
+      tags: [Social]
+      summary: 删除好友
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: friendId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: 已删除
+
+  /leaderboard:
+    get:
+      tags: [Social]
+      summary: 获取好友排行榜
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [week, month, all_time]
+            default: week
+        - name: metric
+          in: query
+          schema:
+            type: string
+            enum: [checkin_count, streak, total_duration]
+            default: checkin_count
+      responses:
+        "200":
+          description: 排行榜数据（包含当前用户排名）
+
+  /feed:
+    get:
+      tags: [Social]
+      summary: 获取好友动态流
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: 好友最近打卡动态
+
+  # ══════════════════════════════════════
+  # CHALLENGES 挑战赛（Premium）
+  # ══════════════════════════════════════
+
+  /challenges:
+    post:
+      tags: [Challenge]
+      summary: 创建挑战赛（Premium）
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, challenge_type, duration_days, start_date, invitee_ids]
+              properties:
+                title:
+                  type: string
+                  maxLength: 100
+                challenge_type:
+                  type: string
+                  enum: [checkin_streak, total_checkins, total_duration]
+                duration_days:
+                  type: integer
+                  enum: [7, 14, 30]
+                start_date:
+                  type: string
+                  format: date
+                invitee_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  maxItems: 9
+      responses:
+        "201":
+          description: 挑战创建成功
+        "403":
+          description: 非 Premium 用户
+
+    get:
+      tags: [Challenge]
+      summary: 获取我参与的挑战列表
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, completed, pending]
+      responses:
+        "200":
+          description: 挑战列表
+
+  /challenges/{challengeId}:
+    get:
+      tags: [Challenge]
+      summary: 获取挑战详情（含所有参与者进度）
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: challengeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: 挑战详情
+
+  /challenges/{challengeId}/join:
+    post:
+      tags: [Challenge]
+      summary: 接受挑战邀请
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: challengeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: 已加入挑战
+
+  # ══════════════════════════════════════
+  # WORKOUT PLANS 运动计划
+  # ══════════════════════════════════════
+
+  /workout-plans:
+    get:
+      tags: [WorkoutPlan]
+      summary: 获取计划模板列表
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: target_goal
+          in: query
+          schema:
+            type: string
+        - name: difficulty
+          in: query
+          schema:
+            type: string
+            enum: [easy, medium, hard]
+        - name: is_premium
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: 计划模板列表
+
+  /workout-plans/{planId}/subscribe:
+    post:
+      tags: [WorkoutPlan]
+      summary: 订阅运动计划
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: planId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: 订阅成功
+
+  # ══════════════════════════════════════
+  # STATISTICS 统计模块
+  # ══════════════════════════════════════
+
+  /stats/summary:
+    get:
+      tags: [Statistics]
+      summary: 获取用户统计摘要
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [week, month, year]
+            default: week
+      responses:
+        "200":
+          description: 统计摘要数据
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          total_checkins:
+                            type: integer
+                          total_duration_minutes:
+                            type: integer
+                          total_calories:
+                            type: integer
+                          exercise_distribution:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                exercise_type:
+                                  type: string
+                                count:
+                                  type: integer
+                                percent:
+                                  type: number
+
+  # ══════════════════════════════════════
+  # SUBSCRIPTION 订阅付费
+  # ══════════════════════════════════════
+
+  /subscriptions/plans:
+    get:
+      tags: [Subscription]
+      summary: 获取订阅套餐列表
+      responses:
+        "200":
+          description: 套餐信息
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            plan_type:
+                              type: string
+                              enum: [monthly, yearly, family_yearly]
+                            price_cents:
+                              type: integer
+                            currency:
+                              type: string
+                            display_price:
+                              type: string
+                              example: "¥18/月"
+                            features:
+                              type: array
+                              items:
+                                type: string
+
+  /subscriptions/verify:
+    post:
+      tags: [Subscription]
+      summary: 验证并激活订阅（苹果/谷歌 IAP 回调）
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payment_channel, transaction_id]
+              properties:
+                payment_channel:
+                  type: string
+                  enum: [apple_iap, google_play, wechat_pay, alipay]
+                transaction_id:
+                  type: string
+                receipt_data:
+                  type: string
+                  description: Apple IAP receipt data（base64）
+      responses:
+        "200":
+          description: 订阅激活成功
+
+  /subscriptions/status:
+    get:
+      tags: [Subscription]
+      summary: 获取当前订阅状态
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: 订阅状态详情
+
+# ─────────────────────────────────────────
+# 错误码定义
+# ─────────────────────────────────────────
+x-error-codes:
+  0: "成功"
+  1001: "参数校验失败"
+  1002: "资源不存在"
+  1003: "无权限操作"
+  2001: "验证码错误或已过期"
+  2002: "Token 已过期"
+  2003: "Token 无效"
+  3001: "今日已打卡，不可重复打卡"
+  3002: "打卡日期不合法（超出允许范围）"
+  4001: "需要 Premium 订阅"
+  4002: "订阅验证失败"
+  5001: "好友关系已存在"
+  5002: "好友数量已达上限（500人）"
+  6001: "挑战人数已满"
+  6002: "挑战已结束，无法加入"

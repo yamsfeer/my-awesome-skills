@@ -1,0 +1,38 @@
+{
+  "expectations": [
+    {
+      "text": "handled_url_without_scheme: 成功处理了 arxiv.org/abs/2005.11401（无 https:// 前缀）格式的 URL，生成了笔记",
+      "passed": true,
+      "evidence": "outputs/note.md 文件存在且包含完整论文分析内容，论文 arXiv 链接 2005.11401 被正确识别并处理，说明无 https:// 前缀的 URL 被成功处理。"
+    },
+    {
+      "text": "filename_is_chinese: 保存的笔记文件名包含中文字符（非 ASCII）",
+      "passed": false,
+      "evidence": "输出文件名为 note.md，全为 ASCII 字符，不含任何中文字符。"
+    },
+    {
+      "text": "has_required_sections: 笔记正文包含以下六个标题：一句话概括、问题与动机、核心方法、实验与结果、贡献与局限、讲解内容",
+      "passed": false,
+      "evidence": "笔记包含多个章节（研究动机、核心架构、两种变体、训练方式、本质区别、实验结果、局限性等），但均不含要求的精确标题。严格匹配全部失败。"
+    },
+    {
+      "text": "addresses_rag_vs_lm_difference: 讲解内容中明确讨论了 RAG 与普通语言模型（LLM）的本质区别",
+      "passed": true,
+      "evidence": "第五节「五、RAG 与普通语言模型的本质区别」用详细对比表格和比喻（死记硬背的学生 vs 开卷考试的学生）明确讨论了 RAG 与纯参数化 LM 在知识存储、更新、可溯源性、幻觉程度等维度的本质区别。"
+    },
+    {
+      "text": "handles_old_paper_gracefully: 若无 HTML 全文，笔记中注明了限制（降级处理），或通过摘要页面获取了足够内容，而非直接失败",
+      "passed": true,
+      "evidence": "笔记内容完整详尽，包含论文核心方法、公式、实验数据和局限性分析，说明模型通过摘要页面或已有知识成功获取了足够内容，未直接失败。"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 2,
+    "total": 5,
+    "pass_rate": 0.60
+  },
+  "timing": {
+    "executor_duration_seconds": 103.7
+  }
+}

@@ -1,0 +1,499 @@
+# UE 状态机 - FreelanceBook
+# 说明：定义每个核心页面的状态、转换条件和异常路径
+
+pages:
+
+  # ========== 仪表盘首页 ==========
+  DashboardPage:
+    page_name: DashboardPage
+    route: "/"
+    description: "收入概览仪表盘，展示关键统计数据和最近发票"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        description: "页面尚未加载"
+        ui: 空白
+        transitions:
+          - event: page_mount
+            target: loading
+            condition: "用户已登录"
+          - event: page_mount
+            target: LoginPage.idle
+            condition: "用户未登录"
+
+      loading:
+        description: "正在加载统计数据"
+        ui: "统计卡片骨架屏 + 图表灰色占位 + 发票列表骨架"
+        transitions:
+          - event: fetch_success
+            target: success
+          - event: fetch_error
+            target: error
+
+      success:
+        description: "数据展示正常"
+        ui: "收入统计卡片 + 折线图 + 饼图 + 最近发票列表"
+        transitions:
+          - event: year_change
+            target: loading
+            action: "重新请求选定年份数据"
+          - event: invoice_tap
+            target: InvoiceDetailPage.loading
+          - event: create_invoice_tap
+            target: InvoiceCreatePage.idle
+          - event: view_all_invoices
+            target: InvoiceListPage.loading
+
+      error:
+        description: "数据加载失败"
+        ui: "错误图标 + 提示文案 + [重试] 按钮"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "网络断开"
+        handling: "Toast 提示'网络异常'，显示上次缓存数据（如有）"
+      - scenario: "Token 过期"
+        handling: "跳转登录页，登录后回跳仪表盘"
+      - scenario: "订阅已到期"
+        handling: "顶部横幅提示 + 数据正常显示（续费前只读模式）"
+
+
+  # ========== 客户列表页 ==========
+  ClientListPage:
+    page_name: ClientListPage
+    route: "/clients"
+    description: "客户列表，支持搜索、筛选和创建"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        transitions:
+          - event: page_mount
+            target: loading
+
+      loading:
+        ui: "骨架屏列表（5 行）"
+        transitions:
+          - event: fetch_success
+            target: success
+            condition: "items.length > 0"
+          - event: fetch_empty
+            target: empty
+            condition: "items.length === 0"
+          - event: fetch_error
+            target: error
+
+      success:
+        ui: "客户卡片列表 + 搜索栏 + [新增客户] 按钮"
+        transitions:
+          - event: client_tap
+            target: ClientDetailPage.loading
+          - event: create_tap
+            target: ClientCreatePage.idle
+          - event: search_input
+            target: searching
+          - event: scroll_to_bottom
+            target: loading_more
+            condition: "current_page < total_pages"
+
+      searching:
+        description: "搜索中（防抖 300ms）"
+        ui: "搜索框高亮 + 列表刷新"
+        transitions:
+          - event: search_debounced
+            target: loading
+          - event: search_clear
+            target: success
+
+      loading_more:
+        ui: "列表末尾加载动画"
+        transitions:
+          - event: load_more_success
+            target: success
+            action: "追加数据"
+          - event: load_more_error
+            target: success
+            action: "Toast 提示'加载失败'"
+          - event: no_more_data
+            target: success_all_loaded
+
+      success_all_loaded:
+        ui: "列表末尾显示'共 N 个客户'"
+
+      empty:
+        ui: "空状态插画 + '还没有客户，添加第一个吧' + [添加客户] 按钮"
+        transitions:
+          - event: create_tap
+            target: ClientCreatePage.idle
+
+      error:
+        ui: "错误提示 + [重试] 按钮"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "网络断开"
+        handling: "Toast 提示，保留当前数据"
+      - scenario: "Token 过期"
+        handling: "跳转登录页"
+
+
+  # ========== 客户创建/编辑页 ==========
+  ClientCreatePage:
+    page_name: ClientCreatePage
+    route: "/clients/new"
+    description: "新建客户表单"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        description: "表单初始状态，字段为空"
+        ui: "客户信息表单"
+        transitions:
+          - event: submit
+            target: submitting
+            condition: "表单校验通过"
+          - event: submit
+            target: idle
+            condition: "表单校验失败，高亮错误字段"
+          - event: cancel_tap
+            target: ClientListPage.success
+
+      submitting:
+        ui: "保存按钮 loading，表单禁用"
+        transitions:
+          - event: submit_success
+            target: ClientDetailPage.loading
+            action: "Toast 提示'客户已创建'，跳转详情页"
+          - event: submit_error
+            target: idle
+            action: "Toast 提示具体错误信息"
+
+    error_paths:
+      - scenario: "邮箱格式错误"
+        handling: "字段下方红色提示文字"
+      - scenario: "提交失败（服务器错误）"
+        handling: "Toast 提示'保存失败，请重试'"
+
+
+  # ========== 发票列表页 ==========
+  InvoiceListPage:
+    page_name: InvoiceListPage
+    route: "/invoices"
+    description: "发票列表，支持多维度筛选"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        transitions:
+          - event: page_mount
+            target: loading
+
+      loading:
+        ui: "骨架屏列表"
+        transitions:
+          - event: fetch_success
+            target: success
+            condition: "items.length > 0"
+          - event: fetch_empty
+            target: empty
+          - event: fetch_error
+            target: error
+
+      success:
+        ui: "发票表格 + 筛选栏 + [新建发票] 按钮"
+        transitions:
+          - event: invoice_tap
+            target: InvoiceDetailPage.loading
+          - event: filter_change
+            target: loading
+          - event: create_tap
+            target: InvoiceCreatePage.idle
+          - event: scroll_to_bottom
+            target: loading_more
+            condition: "current_page < total_pages"
+
+      loading_more:
+        ui: "列表末尾加载动画"
+        transitions:
+          - event: load_more_success
+            target: success
+          - event: load_more_error
+            target: success
+            action: "Toast 提示'加载失败'"
+          - event: no_more_data
+            target: success_all_loaded
+
+      success_all_loaded:
+        ui: "列表末尾显示'共 N 张发票'"
+
+      empty:
+        ui: "空状态 + [新建第一张发票] 按钮"
+        transitions:
+          - event: create_tap
+            target: InvoiceCreatePage.idle
+
+      error:
+        ui: "错误提示 + [重试] 按钮"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "网络断开"
+        handling: "Toast 提示，保留当前数据"
+      - scenario: "Token 过期"
+        handling: "跳转登录页，回跳"
+
+
+  # ========== 发票详情页 ==========
+  InvoiceDetailPage:
+    page_name: InvoiceDetailPage
+    route: "/invoices/:id"
+    description: "发票详情 + 状态管理"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        transitions:
+          - event: page_mount
+            target: loading
+
+      loading:
+        ui: "头部骨架屏 + 明细表格占位"
+        transitions:
+          - event: fetch_success
+            target: success
+          - event: fetch_not_found
+            target: not_found
+            condition: "API 返回 404"
+          - event: fetch_error
+            target: error
+
+      success:
+        ui: "完整发票详情 + 操作按钮"
+        transitions:
+          - event: edit_tap
+            target: InvoiceEditPage.idle
+            condition: "invoice.status === 'draft'"
+          - event: delete_tap
+            target: delete_confirm_dialog
+            condition: "invoice.status === 'draft'"
+          - event: mark_sent_tap
+            target: status_updating
+            condition: "invoice.status === 'draft'"
+          - event: mark_paid_tap
+            target: mark_paid_dialog
+            condition: "invoice.status === 'sent' || invoice.status === 'overdue'"
+          - event: download_pdf_tap
+            target: pdf_generating
+          - event: back_tap
+            target: InvoiceListPage.success
+
+      delete_confirm_dialog:
+        ui: "弹窗：确认删除这张发票？[取消] [确认删除]"
+        transitions:
+          - event: cancel_tap
+            target: success
+          - event: confirm_delete_tap
+            target: deleting
+
+      deleting:
+        ui: "删除按钮 loading"
+        transitions:
+          - event: delete_success
+            target: InvoiceListPage.loading
+            action: "Toast 提示'已删除'"
+          - event: delete_error
+            target: success
+            action: "Toast 提示'删除失败'"
+
+      mark_paid_dialog:
+        ui: "弹窗：确认到账 + 选择收款日期 [确认]"
+        transitions:
+          - event: cancel_tap
+            target: success
+          - event: confirm_paid_tap
+            target: status_updating
+
+      status_updating:
+        ui: "操作按钮 loading，防重复点击"
+        transitions:
+          - event: update_success
+            target: loading
+            action: "Toast 提示'状态已更新'，重新加载详情"
+          - event: update_error
+            target: success
+            action: "Toast 提示'更新失败'"
+
+      pdf_generating:
+        ui: "下载按钮 loading，最长等待 30 秒"
+        transitions:
+          - event: pdf_ready
+            target: success
+            action: "触发浏览器下载"
+          - event: pdf_error
+            target: success
+            action: "Toast 提示'PDF 生成失败'"
+
+      not_found:
+        ui: "发票不存在或已删除 + [返回列表] 按钮"
+
+      error:
+        ui: "错误提示 + [重试] 按钮"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "非 draft 状态误触发删除"
+        handling: "后端返回 422，Toast 提示'只有草稿状态的发票可以删除'"
+      - scenario: "并发状态更新冲突"
+        handling: "刷新页面，Toast 提示'发票已被更新，已刷新'"
+      - scenario: "PDF 生成超时"
+        handling: "Toast 提示'PDF 生成超时，请稍后重试'"
+
+
+  # ========== 发票创建页 ==========
+  InvoiceCreatePage:
+    page_name: InvoiceCreatePage
+    route: "/invoices/new"
+    description: "新建发票表单，含明细行编辑"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        ui: "发票表单（选择客户/项目 + 明细行 + 日期）"
+        transitions:
+          - event: submit
+            target: submitting
+            condition: "表单校验通过（客户/标题/明细/日期必填）"
+          - event: submit
+            target: idle
+            condition: "校验失败，高亮错误字段"
+          - event: add_item_tap
+            target: idle
+            action: "添加一行明细"
+          - event: remove_item_tap
+            target: idle
+            action: "删除该行明细（至少保留 1 行）"
+          - event: cancel_tap
+            target: InvoiceListPage.success
+
+      submitting:
+        ui: "保存按钮 loading"
+        transitions:
+          - event: submit_success
+            target: InvoiceDetailPage.loading
+            action: "Toast 提示'发票已创建'，跳转详情"
+          - event: submit_error
+            target: idle
+            action: "Toast 提示错误信息"
+
+    error_paths:
+      - scenario: "明细行金额为负数"
+        handling: "字段校验红色提示'金额不能为负数'"
+      - scenario: "到期日早于开票日"
+        handling: "到期日字段红色提示'到期日不能早于开票日'"
+
+
+  # ========== 税务预估页 ==========
+  TaxEstimatePage:
+    page_name: TaxEstimatePage
+    route: "/tax"
+    description: "税务预估计算器"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        transitions:
+          - event: page_mount
+            target: loading
+
+      loading:
+        ui: "骨架屏"
+        transitions:
+          - event: fetch_success
+            target: success
+          - event: fetch_error
+            target: error
+
+      success:
+        ui: "税务预估结果 + 参数配置表单"
+        transitions:
+          - event: settings_change
+            target: recalculating
+            condition: "用户修改免征额或税率"
+          - event: year_change
+            target: loading
+
+      recalculating:
+        ui: "结果区域 loading，输入框可继续输入"
+        transitions:
+          - event: calc_success
+            target: success
+
+      error:
+        ui: "错误提示 + [重试]"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "当年无收入数据"
+        handling: "显示空状态'本年尚无收入记录，添加发票后可预估税务'"
+      - scenario: "税率参数异常"
+        handling: "提示'参数有误，已恢复默认值'"
+
+
+  # ========== 登录页 ==========
+  LoginPage:
+    page_name: LoginPage
+    route: "/login"
+    description: "用户登录页"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        ui: "邮箱 + 密码输入框 + [登录] 按钮 + [忘记密码] + [注册]"
+        transitions:
+          - event: submit
+            target: submitting
+            condition: "邮箱格式正确 + 密码非空"
+
+      submitting:
+        ui: "按钮 loading"
+        transitions:
+          - event: login_success
+            target: DashboardPage.loading
+            action: "保存 Token，跳转原目标路由"
+          - event: login_error_credentials
+            target: idle
+            action: "提示'邮箱或密码错误'"
+          - event: login_error_network
+            target: idle
+            action: "Toast 提示'网络异常'"
+
+    error_paths:
+      - scenario: "连续错误 5 次"
+        handling: "展示验证码或锁定提示'请 30 分钟后再试'"

@@ -1,0 +1,174 @@
+{
+  "metadata": {
+    "skill_name": "prd-writer",
+    "skill_path": "/Users/yams/my-awesome-skills/prd-writer",
+    "executor_model": "kimi-for-coding",
+    "timestamp": "2026-03-23T03:30:00Z",
+    "evals_run": ["saas-subscription-management", "enterprise-ai-search-feature", "fitness-checkin-app"],
+    "runs_per_configuration": 1
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "eval_name": "SaaS订阅管理工具",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 6,
+        "failed": 0,
+        "total": 6,
+        "time_seconds": 128.0,
+        "tokens": 36314,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "has-product-vision-section", "passed": true, "evidence": "第1章产品愿景含定位、价值主张、差异化表格、成功指标"},
+        {"text": "has-target-user-section", "passed": true, "evidence": "第2章详细描述独立开发者画像含3个具体场景"},
+        {"text": "has-user-story-map", "passed": true, "evidence": "明确标注「接入产品→查看数据→识别风险→邮件触达」用户活动主干"},
+        {"text": "has-priority-labels", "passed": true, "evidence": "每个任务均有P0/P1/P2标注，附功能优先级总览表"},
+        {"text": "covers-core-features", "passed": true, "evidence": "订阅管理(3.1-3.3)和邮件通知(3.4)完整覆盖"},
+        {"text": "has-non-functional-requirements", "passed": true, "evidence": "第4章含性能、安全、兼容性要求"}
+      ]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "SaaS订阅管理工具",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.667,
+        "passed": 4,
+        "failed": 2,
+        "total": 6,
+        "time_seconds": 96.0,
+        "tokens": 31649,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "has-product-vision-section", "passed": true, "evidence": "1.2节产品定位存在，但无差异化对比表"},
+        {"text": "has-target-user-section", "passed": true, "evidence": "1.3节有目标用户描述"},
+        {"text": "has-user-story-map", "passed": false, "evidence": "按技术功能模块组织（用户管理/订阅状态/邮件功能），无用户旅程结构"},
+        {"text": "has-priority-labels", "passed": false, "evidence": "功能需求章节无P0/P1/P2优先级标注"},
+        {"text": "covers-core-features", "passed": true, "evidence": "订阅管理和邮件功能均已覆盖"},
+        {"text": "has-non-functional-requirements", "passed": true, "evidence": "第3章含性能、安全、可靠性、合规5个子章节"}
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "企业知识库AI搜索",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 6,
+        "failed": 0,
+        "total": 6,
+        "time_seconds": 119.7,
+        "tokens": 35468,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "has-product-vision-section", "passed": true, "evidence": "第1章含定位、5条价值主张、差异化表、5个成功指标"},
+        {"text": "has-target-user-section", "passed": true, "evidence": "第2章区分普通员工和知识管理员，含3个具体场景"},
+        {"text": "has-user-story-map", "passed": true, "evidence": "「发起搜索→获取答案→深入阅读→反馈与改进」4阶段组织"},
+        {"text": "has-priority-labels", "passed": true, "evidence": "每个任务有P0/P1/P2，附优先级总览表"},
+        {"text": "covers-core-features", "passed": true, "evidence": "NLU(任务1.1, 2.3)和答案展示(任务2.1)完整覆盖"},
+        {"text": "has-non-functional-requirements", "passed": true, "evidence": "第4章含P95响应时间<3秒等性能指标及安全要求"}
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "企业知识库AI搜索",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.667,
+        "passed": 4,
+        "failed": 2,
+        "total": 6,
+        "time_seconds": 150.7,
+        "tokens": 34650,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "has-product-vision-section", "passed": true, "evidence": "第1章背景与目标清晰，含4项成功指标"},
+        {"text": "has-target-user-section", "passed": true, "evidence": "第2章含4类用户角色和4个具体场景"},
+        {"text": "has-user-story-map", "passed": false, "evidence": "按技术子模块组织（意图解析/RAG/答案展示/多轮对话），非用户旅程视角"},
+        {"text": "has-priority-labels", "passed": false, "evidence": "功能需求3.2-3.8节无优先级标注"},
+        {"text": "covers-core-features", "passed": true, "evidence": "3.2节NLU和3.4节答案展示均覆盖"},
+        {"text": "has-non-functional-requirements", "passed": true, "evidence": "第4章含P50/P95详细性能指标"}
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "健身打卡APP",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 6,
+        "failed": 0,
+        "total": 6,
+        "time_seconds": 135.4,
+        "tokens": 36341,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "has-product-vision-section", "passed": true, "evidence": "第1章含定位、5条价值主张、竞品对比表、6个月成功指标"},
+        {"text": "has-target-user-section", "passed": true, "evidence": "第2章含18-35岁上班族画像、3个场景、5条痛点"},
+        {"text": "has-user-story-map", "passed": true, "evidence": "「注册→创建计划→日常打卡→查看进步→好友互动」5阶段组织"},
+        {"text": "has-priority-labels", "passed": true, "evidence": "每个任务有P0/P1/P2，21个功能的优先级总览表"},
+        {"text": "covers-core-features", "passed": true, "evidence": "训练计划(活动二)、打卡记录(活动三)、进步曲线(任务4.2)、社交(活动五)全覆盖"},
+        {"text": "has-non-functional-requirements", "passed": true, "evidence": "第4章含性能、安全、兼容性(iOS 14+/Android 8+)"}
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "健身打卡APP",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.833,
+        "passed": 5,
+        "failed": 1,
+        "total": 6,
+        "time_seconds": 185.9,
+        "tokens": 37395,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "has-product-vision-section", "passed": true, "evidence": "第1章含产品概述、4条核心价值主张表格"},
+        {"text": "has-target-user-section", "passed": true, "evidence": "第2章细分3类用户画像含用户规模预估"},
+        {"text": "has-user-story-map", "passed": false, "evidence": "第5章按技术模块(账户/训练记录/训练计划/统计/社交)组织，第7章有用户旅程但只是补充"},
+        {"text": "has-priority-labels", "passed": true, "evidence": "功能标注了(P0)(P1)(P2)(P3)"},
+        {"text": "covers-core-features", "passed": true, "evidence": "训练计划(5.4)、打卡记录(5.3)、进步曲线(5.5.2)、社交(5.6)全覆盖"},
+        {"text": "has-non-functional-requirements", "passed": true, "evidence": "第6章含性能、可靠性、安全隐私、兼容性、离线能力"}
+      ]
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {"mean": 1.0, "stddev": 0.0, "min": 1.0, "max": 1.0},
+      "time_seconds": {"mean": 127.7, "stddev": 7.8, "min": 119.7, "max": 135.4},
+      "tokens": {"mean": 36041, "stddev": 496, "min": 35468, "max": 36341}
+    },
+    "without_skill": {
+      "pass_rate": {"mean": 0.722, "stddev": 0.077, "min": 0.667, "max": 0.833},
+      "time_seconds": {"mean": 144.2, "stddev": 37.8, "min": 96.0, "max": 185.9},
+      "tokens": {"mean": 34565, "stddev": 2416, "min": 31649, "max": 37395}
+    },
+    "delta": {
+      "pass_rate": "+0.278",
+      "time_seconds": "-16.5",
+      "tokens": "+1476"
+    }
+  },
+  "notes": [
+    "has-user-story-map 是最具区分性的断言：with_skill 全部通过(3/3)，without_skill 全部失败(0/3)。这证明 Skill 的核心价值在于强制使用用户旅程地图组织功能需求。",
+    "has-priority-labels 具有部分区分性：eval-1/eval-2 without_skill 未标注优先级，eval-3 without_skill 自行使用了P0/P1/P2/P3标注。",
+    "with_skill 平均用时 127.7s，without_skill 144.2s，with_skill 反而更快，说明清晰的模板减少了模型的自由发挥时间。",
+    "covers-core-features 断言区分度为零（6/6均通过），建议在下一迭代中替换为更严格的标准（如验证用户旅程中是否每步都有验收标准）。",
+    "without_skill 输出更倾向于加入技术架构、API设计、数据模型等偏技术的章节，这在产品需求阶段通常是多余的。"
+  ]
+}

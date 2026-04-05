@@ -1,0 +1,91 @@
+# API 层数据契约 — 测试用（含已知问题）
+version: "1.0"
+base_url: "/api/v1"
+auth: "Bearer Token (JWT)"
+
+responses:
+
+  # 问题1 (A03): password_hash 是敏感字段，不应出现在 API 响应中
+  UserDetail:
+    id: string
+    name: string
+    email: string
+    password_hash: string   # ← 错误：禁止暴露的字段直接出现在 API 响应中
+    created_at: string
+
+  UserPublic:
+    id: string
+    name: string
+    created_at: string
+
+  ProductSummary:
+    id: string
+    title: string
+    price: number
+    status: string
+    seller: UserPublic
+
+  ProductListResponse:
+    items: ProductSummary[]
+    pagination: PaginationMeta
+
+  PaginationMeta:
+    total: number
+    page: number
+    per_page: number
+    total_pages: number
+
+  SuccessResponse:
+    code: number
+    message: string
+
+endpoints:
+  auth:
+    - method: POST
+      path: /auth/register
+      auth_required: false
+      request_body:
+        name: string
+        email: string
+        password: string
+      response: UserDetail
+
+    - method: POST
+      path: /auth/login
+      auth_required: false
+      request_body:
+        email: string
+        password: string
+      response: UserDetail
+
+  user:
+    - method: GET
+      path: /users/me
+      auth_required: true
+      # 问题2 (A01): NonExistentType 未在 responses 中定义
+      response: NonExistentType
+
+  product:
+    - method: GET
+      path: /products
+      auth_required: false
+      response: ProductListResponse
+
+    - method: GET
+      path: /products/:id
+      auth_required: false
+      response: ProductSummary
+
+    - method: POST
+      path: /products
+      auth_required: true
+      request_body:
+        title: string
+        price: integer
+      response: ProductSummary
+
+error_codes:
+  400: "请求参数错误"
+  401: "未登录"
+  404: "资源不存在"
+  500: "服务器错误"

@@ -1,0 +1,485 @@
+# 拾物 —— 组件映射表 (Component Map)
+# 版本: v1.0 | 创建日期: 2026-03-22
+# 说明: 定义小程序各页面使用的组件、属性及复用关系
+
+# ============================================================
+# 基础原子组件 (Atoms)
+# ============================================================
+atoms:
+
+  Button:
+    description: 按钮基础组件
+    variants:
+      primary:
+        bg: color.brand.primary
+        text_color: color.neutral.white
+        border_radius: border_radius.full
+        font_weight: typography.font_weight.semibold
+        usage: 主要操作（发布、联系卖家、确认）
+      secondary:
+        bg: color.neutral.white
+        text_color: color.brand.primary
+        border: "1px solid color.brand.primary"
+        border_radius: border_radius.full
+        usage: 次要操作（取消收藏、查看相似）
+      ghost:
+        bg: color.neutral.white
+        text_color: color.neutral.gray_700
+        border: "1px solid color.neutral.gray_300"
+        border_radius: border_radius.full
+        usage: 普通操作（编辑、下架）
+      danger:
+        bg: color.semantic.error
+        text_color: color.neutral.white
+        border_radius: border_radius.full
+        usage: 危险操作（删除商品）
+      text:
+        bg: transparent
+        text_color: color.brand.primary
+        usage: 文字链接按钮（继续发布、跳过认证）
+    sizes:
+      large:
+        height: 48px
+        font_size: typography.font_size.md
+        padding: "0 spacing.6"
+      medium:
+        height: 40px
+        font_size: typography.font_size.base
+        padding: "0 spacing.4"
+      small:
+        height: 28px
+        font_size: typography.font_size.sm
+        padding: "0 spacing.3"
+
+  Tag:
+    description: 标签/徽章组件
+    variants:
+      condition:
+        border_radius: border_radius.sm
+        font_size: typography.font_size.xs
+        values: [new, like_new, good, fair, poor]
+        colors: 参见 ui-schema.yaml goods_display.condition
+      category:
+        border_radius: border_radius.sm
+        bg: color.neutral.gray_100
+        text_color: color.neutral.gray_700
+      credit:
+        border_radius: border_radius.sm
+        font_size: typography.font_size.xs
+        colors: 参见 ui-schema.yaml user_display.credit_score.ranges
+      review_tag:
+        border_radius: border_radius.full
+        font_size: typography.font_size.xs
+        positive_bg: color.semantic.success_light
+        positive_color: color.semantic.success
+        negative_bg: color.semantic.error_light
+        negative_color: color.semantic.error
+
+  Avatar:
+    description: 用户头像组件
+    shape: circle
+    fallback: "/assets/avatar-default.png"
+    sizes:
+      small: 32px
+      medium: 48px
+      large: 80px
+    support_verified_badge: true    # 可叠加认证标志
+
+  StarRating:
+    description: 星级评分组件
+    max_stars: 5
+    active_color: color.semantic.warning
+    inactive_color: color.neutral.gray_300
+    sizes:
+      display:
+        star_size: 12px
+        gap: 2px
+      interactive:
+        star_size: 24px
+        gap: 4px
+
+  Input:
+    description: 输入框组件
+    variants:
+      default:
+        border: "1px solid color.neutral.gray_300"
+        border_radius: border_radius.md
+        focus_border: color.brand.primary
+        bg: color.neutral.white
+        padding: "spacing.3 spacing.4"
+      error:
+        border: "1px solid color.semantic.error"
+      textarea:
+        min_height: 100px
+        resize: none
+
+  Divider:
+    description: 分隔线组件
+    color: color.neutral.gray_100
+    weight: 8px                     # 重分割线（区块间）
+    weight_thin: 1px                # 细分割线（列表项间）
+
+  LoadingSpinner:
+    description: 加载动画组件
+    color: color.brand.primary
+    sizes: [small, medium, large]
+
+  EmptyState:
+    description: 空状态组件
+    slots: [icon, title, description, action_button]
+
+  Toast:
+    description: 轻提示组件
+    variants: [success, error, loading, info]
+    duration_default: 2000ms
+    position: center
+
+  Badge:
+    description: 角标/消息数提示组件
+    max_count: 99
+    over_max_text: "99+"
+    bg: color.brand.primary
+    text_color: color.neutral.white
+
+# ============================================================
+# 分子组件 (Molecules)
+# ============================================================
+molecules:
+
+  GoodsCard:
+    description: 商品卡片（列表展示用）
+    atoms_used: [Tag, Avatar, Badge]
+    variants:
+      grid:
+        layout: vertical
+        image_ratio: "1:1"
+        border_radius: border_radius.md
+        shadow: shadow.sm
+        fields:
+          - cover_image
+          - condition_tag
+          - title (2行截断)
+          - price (color.brand.primary, font_size.lg)
+          - original_price (划线, gray_500)
+          - campus_name (icon + text)
+          - seller_avatar + seller_nickname
+        sold_overlay:
+          enabled: true
+          text: "已售出"
+          bg: "rgba(0,0,0,0.5)"
+      horizontal:
+        layout: horizontal
+        image_size: 80px
+        border_radius: border_radius.md
+        fields:
+          - cover_image (左)
+          - title + price + condition_tag (右)
+    pages_used:
+      - home (grid variant)
+      - search_results (grid variant)
+      - profile_published_list (horizontal variant)
+      - profile_sold_list (horizontal variant)
+      - favorites_list (horizontal variant)
+
+  UserInfoCard:
+    description: 卖家信息卡片（商品详情页用）
+    atoms_used: [Avatar, StarRating, Tag]
+    fields:
+      - avatar (medium)
+      - nickname
+      - verified_badge (条件渲染)
+      - credit_score (badge 样式)
+      - star_rating
+      - completed_trades_count
+    arrow_icon: true
+    clickable: true
+    pages_used:
+      - goods_detail
+
+  MessageBubble:
+    description: 私信气泡组件
+    atoms_used: [Avatar]
+    variants:
+      text_self:
+        bg: color.brand.primary
+        text_color: color.neutral.white
+        align: right
+      text_other:
+        bg: color.neutral.gray_100
+        text_color: color.neutral.gray_900
+        align: left
+      image:
+        max_width: 200px
+        border_radius: border_radius.md
+      meet_request_card:
+        bg: color.neutral.white
+        border: "1px solid color.brand.primary"
+        border_radius: border_radius.md
+        icon: calendar
+        fields: [meet_time, meet_place, action_buttons]
+      system:
+        bg: color.neutral.gray_100
+        text_color: color.neutral.gray_500
+        align: center
+        font_size: typography.font_size.xs
+    pages_used:
+      - conversation
+
+  ReviewCard:
+    description: 评价卡片
+    atoms_used: [Avatar, StarRating, Tag]
+    fields:
+      - reviewer_avatar
+      - reviewer_nickname
+      - star_rating
+      - review_tags
+      - comment_text (3行截断)
+      - created_at (相对时间)
+    pages_used:
+      - goods_detail (最新一条)
+      - user_profile (评价列表)
+
+  SearchBar:
+    description: 搜索框组件
+    variants:
+      nav_style:
+        clickable: true             # 首页点击跳转，非输入
+        placeholder: "搜索商品..."
+        has_icon: true
+        bg: color.neutral.gray_100
+        border_radius: border_radius.full
+      input_style:
+        focusable: true             # 搜索页真实输入框
+        show_clear_btn: true
+        show_back_btn: true
+    pages_used:
+      - home (nav_style)
+      - search (input_style)
+
+  ImageUploader:
+    description: 图片上传区域组件
+    max_count: 9
+    add_btn_icon: "plus"
+    shows_progress: true
+    support_delete: true
+    image_ratio: "1:1"
+    pages_used:
+      - publish_goods
+
+  FilterPanel:
+    description: 底部筛选面板
+    type: bottom_sheet
+    sections:
+      - id: campus
+        label: "校区"
+        type: single_select
+      - id: category
+        label: "分类"
+        type: single_select
+      - id: condition
+        label: "成色"
+        type: multi_select
+      - id: price_range
+        label: "价格"
+        type: range_input
+      - id: sort
+        label: "排序"
+        type: single_select
+        options: [latest, price_asc, price_desc]
+    buttons: [reset, apply]
+    pages_used:
+      - home
+      - search
+
+  CategorySelector:
+    description: 分类选择器（底部弹出）
+    type: bottom_sheet
+    supports_two_level: true
+    pages_used:
+      - publish_goods
+
+  ConversationListItem:
+    description: 会话列表行组件
+    atoms_used: [Avatar, Badge]
+    fields:
+      - goods_cover (小图)
+      - other_user_avatar
+      - other_user_nickname
+      - last_message_preview (1行截断)
+      - last_message_time (相对时间)
+      - unread_count_badge
+    pages_used:
+      - conversation_list
+
+# ============================================================
+# 有机体组件 (Organisms)
+# ============================================================
+organisms:
+
+  HomeGoodsList:
+    description: 首页商品列表（双列瀑布流）
+    molecules_used: [GoodsCard]
+    features:
+      - 双列等宽布局
+      - 下拉刷新
+      - 上滑加载更多
+      - 加载中骨架屏
+    pages_used:
+      - home
+
+  CategoryTabBar:
+    description: 分类横向 Tab 栏
+    features:
+      - 横向滑动
+      - 选中项下划线高亮（brand.primary 色）
+      - 吸顶效果
+    pages_used:
+      - home
+
+  GoodsDetailImageSwiper:
+    description: 商品详情图片轮播
+    atoms_used: [Tag]
+    features:
+      - 横向滑动
+      - 底部页码指示器
+      - 点击全屏查看
+    pages_used:
+      - goods_detail
+
+  BottomActionBar:
+    description: 商品详情底部操作栏
+    variants:
+      buyer_view:
+        left: FavoriteButton (toggle)
+        right: ContactSellerButton (primary)
+      seller_view:
+        actions: [EditButton, WithdrawButton, MarkSoldButton]
+      sold_view:
+        content: SimilarGoodsLink
+    atoms_used: [Button, Badge]
+    pages_used:
+      - goods_detail
+
+  PublishGoodsForm:
+    description: 发布商品表单
+    molecules_used: [ImageUploader, CategorySelector]
+    atoms_used: [Input, Button, Tag]
+    sections:
+      - images
+      - title
+      - price + original_price
+      - category
+      - condition
+      - campus
+      - meet_location
+      - description
+    pages_used:
+      - publish_goods
+
+  ChatMessageList:
+    description: 私信消息列表
+    molecules_used: [MessageBubble]
+    features:
+      - 倒序加载（最新在底部）
+      - 上滑加载历史
+      - 时间戳分组展示（每隔5分钟）
+      - 新消息自动滚动到底部
+    pages_used:
+      - conversation
+
+  ChatInputBar:
+    description: 私信输入栏（底部固定）
+    atoms_used: [Button]
+    features:
+      - 文字输入
+      - 图片发送按钮
+      - 发起面交预约按钮
+      - 键盘弹出时上推内容区
+    pages_used:
+      - conversation
+
+  UserProfileHeader:
+    description: 用户主页顶部信息区
+    molecules_used: [UserInfoCard, StarRating]
+    fields:
+      - avatar (large)
+      - nickname
+      - verified_badge
+      - school_name + campus_name
+      - credit_score_badge
+      - completed_trades_count
+      - review_summary (平均分 + 总评价数)
+    pages_used:
+      - user_profile
+      - profile_self (我的主页)
+
+# ============================================================
+# 页面级组件映射
+# ============================================================
+pages:
+
+  home:
+    path: /pages/home/index
+    organisms: [CategoryTabBar, HomeGoodsList]
+    molecules: [SearchBar, FilterPanel]
+    atoms: [Toast, LoadingSpinner]
+    navigation: tab_bar_item
+
+  search:
+    path: /pages/search/index
+    organisms: [HomeGoodsList]
+    molecules: [SearchBar, FilterPanel]
+    atoms: [EmptyState, Toast]
+    navigation: stack_push
+
+  goods_detail:
+    path: /pages/goods/detail
+    organisms:
+      - GoodsDetailImageSwiper
+      - BottomActionBar
+    molecules:
+      - UserInfoCard
+      - ReviewCard
+    atoms:
+      - Tag (condition, category)
+      - Toast
+    navigation: stack_push
+
+  publish_goods:
+    path: /pages/publish/index
+    organisms: [PublishGoodsForm]
+    molecules: [ImageUploader, CategorySelector]
+    atoms: [Button, Input, Toast, LoadingSpinner]
+    navigation: tab_bar_item (center)
+
+  conversation_list:
+    path: /pages/messages/index
+    molecules: [ConversationListItem]
+    atoms: [EmptyState, Badge]
+    navigation: tab_bar_item
+
+  conversation:
+    path: /pages/messages/conversation
+    organisms: [ChatMessageList, ChatInputBar]
+    molecules: [MessageBubble]
+    atoms: [Avatar, Toast]
+    navigation: stack_push
+
+  user_profile:
+    path: /pages/profile/user
+    organisms: [UserProfileHeader, HomeGoodsList]
+    molecules: [ReviewCard]
+    atoms: [Tag, LoadingSpinner]
+    navigation: stack_push
+
+  profile_self:
+    path: /pages/profile/index
+    organisms: [UserProfileHeader]
+    molecules: [GoodsCard, ConversationListItem]
+    atoms: [Tag, Button, EmptyState]
+    navigation: tab_bar_item
+
+  verify_student:
+    path: /pages/auth/verify-student
+    atoms: [Input, Button, Toast]
+    navigation: stack_push (modal style)

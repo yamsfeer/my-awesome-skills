@@ -1,0 +1,840 @@
+# 拾物 —— API 接口定义
+# 版本: v1.0 | 创建日期: 2026-03-22
+# 规范: REST + JSON，所有接口需携带 Authorization: Bearer <token>（除标注 public 外）
+# Base URL: https://api.shiwo.app/v1
+
+openapi: "3.0.3"
+
+info:
+  title: 拾物 API
+  version: "1.0.0"
+  description: 拾物校园闲置交易小程序后端接口
+
+servers:
+  - url: https://api.shiwo.app/v1
+    description: 生产环境
+  - url: https://api-staging.shiwo.app/v1
+    description: 测试环境
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # 通用响应结构
+    BaseResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: 业务状态码（0 表示成功）
+        message:
+          type: string
+        data:
+          type: object
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total:
+          type: integer
+        has_more:
+          type: boolean
+
+    # 用户简要信息（对外安全版本）
+    UserBrief:
+      type: object
+      properties:
+        id:
+          type: string
+        nickname:
+          type: string
+        avatar_url:
+          type: string
+        credit_score:
+          type: integer
+        completed_trades:
+          type: integer
+        is_verified:
+          type: boolean
+        campus_name:
+          type: string
+
+    # 商品简要信息（列表页）
+    GoodsBrief:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        price:
+          type: number
+        cover_image:
+          type: string
+        condition:
+          type: string
+        campus_name:
+          type: string
+        category_name:
+          type: string
+        status:
+          type: string
+        published_at:
+          type: string (datetime)
+        seller:
+          $ref: '#/components/schemas/UserBrief'
+
+    # 商品详情
+    GoodsDetail:
+      allOf:
+        - $ref: '#/components/schemas/GoodsBrief'
+        - type: object
+          properties:
+            description:
+              type: string
+            original_price:
+              type: number
+            images:
+              type: array
+              items:
+                type: string
+            meet_location:
+              type: string
+            view_count:
+              type: integer
+            favorite_count:
+              type: integer
+            is_favorited:
+              type: boolean
+
+paths:
+
+  # ============================================================
+  # 认证模块
+  # ============================================================
+  /auth/wx-login:
+    post:
+      tags: [Auth]
+      summary: 微信登录
+      description: 使用微信 code 换取平台 token（PUBLIC，无需鉴权）
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+                  description: 微信 wx.login() 返回的 code
+      responses:
+        "200":
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 0
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                        description: JWT token，有效期 7 天
+                      user:
+                        $ref: '#/components/schemas/UserBrief'
+                      is_new_user:
+                        type: boolean
+                        description: 是否首次登录
+
+  /auth/verify-student:
+    post:
+      tags: [Auth]
+      summary: 学生身份认证
+      description: 通过校园邮箱或学号完成实名认证
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [school_id, verify_type]
+              properties:
+                school_id:
+                  type: string
+                verify_type:
+                  type: string
+                  enum: [email, student_id]
+                email:
+                  type: string
+                  description: 校园邮箱（verify_type=email 时必填）
+                student_id:
+                  type: string
+                  description: 学号（verify_type=student_id 时必填）
+      responses:
+        "200":
+          description: 认证成功或发送验证码成功
+
+  /auth/verify-code:
+    post:
+      tags: [Auth]
+      summary: 提交邮箱验证码
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code]
+              properties:
+                email:
+                  type: string
+                code:
+                  type: string
+
+  # ============================================================
+  # 用户模块
+  # ============================================================
+  /users/me:
+    get:
+      tags: [User]
+      summary: 获取当前用户信息
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  data:
+                    $ref: '#/components/schemas/UserBrief'
+
+    patch:
+      tags: [User]
+      summary: 更新当前用户信息
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nickname:
+                  type: string
+                avatar_url:
+                  type: string
+                campus_id:
+                  type: string
+      responses:
+        "200":
+          description: 更新成功
+
+  /users/{userId}:
+    get:
+      tags: [User]
+      summary: 获取指定用户公开信息
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 成功，返回用户公开信息（不含敏感字段）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  data:
+                    $ref: '#/components/schemas/UserBrief'
+
+  /users/{userId}/goods:
+    get:
+      tags: [User]
+      summary: 获取指定用户发布的商品列表
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [published, sold]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: 商品列表
+
+  /users/{userId}/reviews:
+    get:
+      tags: [User]
+      summary: 获取指定用户的评价列表
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+
+  # ============================================================
+  # 商品模块
+  # ============================================================
+  /goods:
+    get:
+      tags: [Goods]
+      summary: 获取商品列表（首页/搜索/分类浏览）
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: keyword
+          in: query
+          schema:
+            type: string
+          description: 搜索关键词
+        - name: category_id
+          in: query
+          schema:
+            type: string
+        - name: campus_id
+          in: query
+          schema:
+            type: string
+        - name: min_price
+          in: query
+          schema:
+            type: number
+        - name: max_price
+          in: query
+          schema:
+            type: number
+        - name: condition
+          in: query
+          schema:
+            type: string
+            enum: [new, like_new, good, fair, poor]
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [latest, price_asc, price_desc]
+          default: latest
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  data:
+                    type: object
+                    properties:
+                      list:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/GoodsBrief'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags: [Goods]
+      summary: 发布商品
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, price, category_id, campus_id, images, condition]
+              properties:
+                title:
+                  type: string
+                  maxLength: 50
+                description:
+                  type: string
+                  maxLength: 1000
+                price:
+                  type: number
+                  minimum: 0.01
+                original_price:
+                  type: number
+                category_id:
+                  type: string
+                campus_id:
+                  type: string
+                meet_location:
+                  type: string
+                  maxLength: 100
+                images:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  maxItems: 9
+                condition:
+                  type: string
+                  enum: [new, like_new, good, fair, poor]
+      responses:
+        "201":
+          description: 发布成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  data:
+                    $ref: '#/components/schemas/GoodsDetail'
+
+  /goods/{goodsId}:
+    get:
+      tags: [Goods]
+      summary: 获取商品详情
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: goodsId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  data:
+                    $ref: '#/components/schemas/GoodsDetail'
+
+    patch:
+      tags: [Goods]
+      summary: 修改商品信息（仅卖家可操作）
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: goodsId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                price:
+                  type: number
+                status:
+                  type: string
+                  enum: [published, withdrawn]
+
+    delete:
+      tags: [Goods]
+      summary: 删除商品（仅卖家可操作，已成交不可删除）
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: goodsId
+          in: path
+          required: true
+          schema:
+            type: string
+
+  /goods/{goodsId}/favorite:
+    post:
+      tags: [Goods]
+      summary: 收藏商品
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: goodsId
+          in: path
+          required: true
+          schema:
+            type: string
+
+    delete:
+      tags: [Goods]
+      summary: 取消收藏
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: goodsId
+          in: path
+          required: true
+          schema:
+            type: string
+
+  # ============================================================
+  # 分类模块
+  # ============================================================
+  /categories:
+    get:
+      tags: [Category]
+      summary: 获取所有商品分类（PUBLIC）
+      security: []
+      responses:
+        "200":
+          description: 分类列表
+
+  # ============================================================
+  # 学校/校区模块
+  # ============================================================
+  /schools:
+    get:
+      tags: [School]
+      summary: 获取支持的学校列表（PUBLIC）
+      security: []
+      parameters:
+        - name: keyword
+          in: query
+          schema:
+            type: string
+
+  /schools/{schoolId}/campuses:
+    get:
+      tags: [School]
+      summary: 获取指定学校的校区列表（PUBLIC）
+      security: []
+      parameters:
+        - name: schoolId
+          in: path
+          required: true
+          schema:
+            type: string
+
+  # ============================================================
+  # 私信模块
+  # ============================================================
+  /conversations:
+    get:
+      tags: [IM]
+      summary: 获取当前用户的会话列表
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: 会话列表
+
+  /conversations/init:
+    post:
+      tags: [IM]
+      summary: 发起私信（买家对商品发起第一条消息时创建会话）
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [goods_id, message]
+              properties:
+                goods_id:
+                  type: string
+                message:
+                  type: string
+                  description: 第一条消息内容
+
+  /conversations/{conversationId}/messages:
+    get:
+      tags: [IM]
+      summary: 获取会话消息历史
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: before_id
+          in: query
+          schema:
+            type: string
+          description: 分页游标，返回该消息之前的历史
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 30
+
+    post:
+      tags: [IM]
+      summary: 发送消息
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type]
+              properties:
+                type:
+                  type: string
+                  enum: [text, image, meet_request]
+                content:
+                  type: string
+                  description: 文字内容（type=text 时必填）
+                image_url:
+                  type: string
+                  description: 图片地址（type=image 时必填）
+                meet_time:
+                  type: string
+                  description: 面交时间 ISO8601（type=meet_request 时必填）
+                meet_place:
+                  type: string
+                  description: 面交地点（type=meet_request 时必填）
+
+  # ============================================================
+  # 交易模块
+  # ============================================================
+  /trades:
+    post:
+      tags: [Trade]
+      summary: 创建交易记录（面交后由卖家/买家发起）
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [goods_id, buyer_id, final_price]
+              properties:
+                goods_id:
+                  type: string
+                buyer_id:
+                  type: string
+                final_price:
+                  type: number
+
+  /trades/{tradeId}/confirm:
+    post:
+      tags: [Trade]
+      summary: 确认交易完成（买卖双方各需确认一次）
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: tradeId
+          in: path
+          required: true
+          schema:
+            type: string
+
+  # ============================================================
+  # 评价模块
+  # ============================================================
+  /trades/{tradeId}/review:
+    post:
+      tags: [Review]
+      summary: 提交交易评价
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: tradeId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [score]
+              properties:
+                score:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                comment:
+                  type: string
+                  maxLength: 500
+                tags:
+                  type: array
+                  items:
+                    type: string
+
+  # ============================================================
+  # 媒体上传
+  # ============================================================
+  /media/upload-token:
+    post:
+      tags: [Media]
+      summary: 获取图片上传凭证（返回 OSS 直传签名 URL）
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                file_type:
+                  type: string
+                  enum: [image/jpeg, image/png, image/webp]
+                use_for:
+                  type: string
+                  enum: [goods_image, avatar]
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  upload_url:
+                    type: string
+                    description: OSS 预签名上传地址
+                  cdn_url:
+                    type: string
+                    description: 上传成功后的 CDN 访问地址
+
+  # ============================================================
+  # 举报模块
+  # ============================================================
+  /reports:
+    post:
+      tags: [Report]
+      summary: 提交举报
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [target_type, target_id, reason]
+              properties:
+                target_type:
+                  type: string
+                  enum: [user, goods, message]
+                target_id:
+                  type: string
+                reason:
+                  type: string
+                  enum: [fake_goods, fraud, inappropriate, spam, other]
+                description:
+                  type: string
+                  maxLength: 500
+
+  # ============================================================
+  # 我的收藏
+  # ============================================================
+  /users/me/favorites:
+    get:
+      tags: [User]
+      summary: 获取我的收藏列表
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+
+# 错误码规范
+# 0        - 成功
+# 400001   - 参数错误
+# 401001   - 未登录或 token 失效
+# 401002   - 未完成实名认证，无法执行此操作
+# 403001   - 无权限操作
+# 404001   - 资源不存在
+# 409001   - 资源状态冲突（如商品已售出）
+# 429001   - 请求频率过高
+# 500001   - 服务内部错误

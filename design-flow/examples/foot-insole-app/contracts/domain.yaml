@@ -1,0 +1,173 @@
+# 足迹 APP - 领域层数据契约
+# 此文件为后端内部使用，包含完整字段（含敏感字段），禁止直接暴露给前端
+
+version: "1.0"
+layer: domain
+
+entities:
+
+  User:
+    table: users
+    fields:
+      id:          { type: bigint, pk: true, auto_increment: true }
+      phone:       { type: varchar(20), unique: true }  # ⚠️ 禁止暴露（完整手机号）
+      password_hash: { type: varchar(128) }             # ⚠️ 禁止暴露
+      nickname:    { type: varchar(50) }
+      avatar_url:  { type: varchar(512) }
+      gender:      { type: tinyint, enum: [0=未知, 1=男, 2=女] }
+      age:         { type: tinyint, unsigned: true }
+      weight_kg:   { type: decimal(5,1), comment: "体重（公斤）" }
+      openid_wx:   { type: varchar(128), nullable: true }  # ⚠️ 禁止暴露（微信OpenID）
+      status:      { type: tinyint, enum: [0=禁用, 1=正常] }
+      created_at:  { type: datetime }
+      updated_at:  { type: datetime }
+    indexes:
+      - phone (unique)
+      - status
+
+  Address:
+    table: addresses
+    fields:
+      id:          { type: bigint, pk: true, auto_increment: true }
+      user_id:     { type: bigint, fk: users.id }
+      name:        { type: varchar(50), comment: "收货人姓名" }
+      phone:       { type: varchar(20), comment: "收货人手机号" }  # ⚠️ 禁止在列表页完整暴露
+      province:    { type: varchar(20) }
+      city:        { type: varchar(20) }
+      district:    { type: varchar(20) }
+      detail:      { type: varchar(200), comment: "详细地址" }
+      is_default:  { type: tinyint(1), default: 0 }
+      created_at:  { type: datetime }
+    indexes:
+      - user_id
+      - (user_id, is_default)
+
+  Category:
+    table: categories
+    fields:
+      id:          { type: int, pk: true, auto_increment: true }
+      name:        { type: varchar(50) }
+      icon_url:    { type: varchar(512) }
+      sort_order:  { type: int, default: 0 }
+      parent_id:   { type: int, nullable: true, comment: "支持二级分类" }
+      status:      { type: tinyint, enum: [0=下架, 1=上架] }
+    indexes:
+      - parent_id
+      - sort_order
+
+  Product:
+    table: products
+    fields:
+      id:          { type: bigint, pk: true, auto_increment: true }
+      category_id: { type: int, fk: categories.id }
+      name:        { type: varchar(200) }
+      price:       { type: decimal(10,2), comment: "售价（元）" }
+      original_price: { type: decimal(10,2), nullable: true, comment: "划线价" }
+      stock:       { type: int, unsigned: true, default: 0 }
+      sales_count: { type: int, unsigned: true, default: 0 }
+      images:      { type: json, comment: "商品图片列表" }
+      description: { type: text }
+      detail_html: { type: longtext, comment: "商品详情富文本" }  # ⚠️ 详情页才加载
+      arch_types:  { type: json, comment: "适用足弓类型: [flat, normal, high]" }
+      tags:        { type: json, comment: "标签列表" }
+      status:      { type: tinyint, enum: [0=下架, 1=上架] }
+      created_at:  { type: datetime }
+      updated_at:  { type: datetime }
+    indexes:
+      - category_id
+      - status
+      - (status, sales_count)
+
+  CartItem:
+    table: cart_items
+    fields:
+      id:          { type: bigint, pk: true, auto_increment: true }
+      user_id:     { type: bigint, fk: users.id }
+      product_id:  { type: bigint, fk: products.id }
+      quantity:    { type: int, unsigned: true, default: 1 }
+      selected:    { type: tinyint(1), default: 1, comment: "是否勾选" }
+      created_at:  { type: datetime }
+      updated_at:  { type: datetime }
+    indexes:
+      - (user_id, product_id) (unique)
+
+  Order:
+    table: orders
+    fields:
+      id:          { type: bigint, pk: true, auto_increment: true }
+      order_no:    { type: varchar(32), unique: true, comment: "业务订单号" }
+      user_id:     { type: bigint, fk: users.id }
+      address_snapshot: { type: json, comment: "下单时的地址快照" }  # 不关联 address_id，防地址修改影响订单
+      total_amount:  { type: decimal(10,2), comment: "实付金额（元）" }
+      status:      { type: tinyint, enum: [0=待付款, 1=待发货, 2=已发货, 3=已完成, 4=已取消, 5=已退款] }
+      remark:      { type: varchar(500), nullable: true }
+      paid_at:     { type: datetime, nullable: true }
+      shipped_at:  { type: datetime, nullable: true }
+      completed_at: { type: datetime, nullable: true }
+      created_at:  { type: datetime }
+      updated_at:  { type: datetime }
+    indexes:
+      - order_no (unique)
+      - user_id
+      - (user_id, status)
+
+  OrderItem:
+    table: order_items
+    fields:
+      id:          { type: bigint, pk: true, auto_increment: true }
+      order_id:    { type: bigint, fk: orders.id }
+      product_id:  { type: bigint, fk: products.id }
+      product_name: { type: varchar(200), comment: "商品名快照" }
+      product_image: { type: varchar(512), comment: "商品图快照" }
+      price:       { type: decimal(10,2), comment: "下单时单价快照" }
+      quantity:    { type: int, unsigned: true }
+      subtotal:    { type: decimal(10,2), comment: "= price × quantity" }
+    indexes:
+      - order_id
+
+  Payment:
+    table: payments
+    fields:
+      id:          { type: bigint, pk: true, auto_increment: true }
+      order_id:    { type: bigint, fk: orders.id, unique: true }
+      channel:     { type: varchar(20), enum: [wechat, alipay] }
+      amount:      { type: decimal(10,2) }
+      third_trade_no: { type: varchar(64), nullable: true }  # ⚠️ 禁止暴露（第三方交易号）
+      status:      { type: tinyint, enum: [0=待支付, 1=支付成功, 2=支付失败, 3=已退款] }
+      paid_at:     { type: datetime, nullable: true }
+      raw_callback: { type: text, nullable: true }  # ⚠️ 禁止暴露（支付回调原始报文）
+      created_at:  { type: datetime }
+    indexes:
+      - order_id (unique)
+
+  FootVideo:
+    table: foot_videos
+    fields:
+      id:          { type: bigint, pk: true, auto_increment: true }
+      user_id:     { type: bigint, fk: users.id }
+      file_key:    { type: varchar(256), comment: "OSS 存储 key" }  # ⚠️ 禁止暴露原始 key
+      file_url:    { type: varchar(512), comment: "临时访问 URL（有效期）" }
+      duration_sec: { type: int, comment: "视频时长（秒）" }
+      shoot_type:  { type: varchar(20), enum: [front_static, side_static, walking] }
+      upload_status: { type: tinyint, enum: [0=上传中, 1=上传成功, 2=上传失败] }
+      analyze_status: { type: tinyint, enum: [0=待分析, 1=分析中, 2=分析完成, 3=分析失败] }
+      created_at:  { type: datetime }
+    indexes:
+      - user_id
+      - (user_id, analyze_status)
+
+  AnalysisReport:
+    table: analysis_reports
+    fields:
+      id:          { type: bigint, pk: true, auto_increment: true }
+      user_id:     { type: bigint, fk: users.id }
+      video_id:    { type: bigint, fk: foot_videos.id }
+      arch_type:   { type: varchar(20), enum: [flat, normal, high] }
+      risk_level:  { type: tinyint, enum: [0=低风险, 1=中风险, 2=高风险] }
+      risk_items:  { type: json, comment: "风险项列表 [{code, name, desc, level}]" }
+      recommend_product_ids: { type: json, comment: "推荐商品 ID 列表" }
+      ai_raw_result: { type: json }  # ⚠️ 禁止暴露（AI 原始分析数据）
+      created_at:  { type: datetime }
+    indexes:
+      - user_id
+      - (user_id, created_at)

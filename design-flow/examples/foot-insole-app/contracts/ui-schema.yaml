@@ -1,0 +1,193 @@
+# 足迹 APP - UI 层数据契约
+# 定义前端展示字段、格式化规则、状态多态、字段来源映射
+
+version: "1.0"
+layer: ui
+
+# ────────────────────────────────────
+# 格式化规则
+# ────────────────────────────────────
+formatters:
+  price:
+    rule: "¥{value.toFixed(2)}"
+    example: "¥128.00"
+  phone_masked:
+    rule: "前3后4中间4个*"
+    example: "138****8888"
+  arch_type:
+    flat: "扁平足"
+    normal: "正常足弓"
+    high: "高弓足"
+  risk_level:
+    0: { label: "低风险", color: "green" }
+    1: { label: "中风险", color: "orange" }
+    2: { label: "高风险", color: "red" }
+  order_status:
+    0: { label: "待付款", action: "立即支付" }
+    1: { label: "待发货", action: "查看订单" }
+    2: { label: "已发货", action: "查看物流" }
+    3: { label: "已完成", action: "再次购买" }
+    4: { label: "已取消", action: null }
+    5: { label: "已退款", action: null }
+  datetime:
+    full: "YYYY-MM-DD HH:mm"
+    date_only: "MM月DD日"
+  shoot_type:
+    front_static: "正面站立"
+    side_static: "侧面站立"
+    walking: "行走步态"
+
+# ────────────────────────────────────
+# 页面状态多态
+# ────────────────────────────────────
+page_states:
+  loading:
+    display: "骨架屏（SkeletonLoader）"
+    trigger: "接口请求中"
+  empty:
+    display: "插画 + 提示文字 + 引导按钮"
+    variants:
+      - page: 购物车, text: "购物车空空如也", action: "去逛逛"
+      - page: 订单列表, text: "暂无订单", action: "去购物"
+      - page: 分析报告, text: "还没有分析记录", action: "立即检测"
+  error:
+    display: "错误图标 + 错误描述 + 重试按钮"
+    trigger: "接口报错 / 网络异常"
+  success:
+    display: "正常内容渲染"
+
+# ────────────────────────────────────
+# 组件-数据映射
+# ────────────────────────────────────
+screens:
+
+  # 首页
+  HomeScreen:
+    data_sources:
+      - api: GET /categories
+        bind_to: category_tabs
+      - api: GET /products?page=1
+        bind_to: product_list
+    components:
+      - name: SearchBar
+        placeholder: "搜索鞋垫品牌/适用场景"
+      - name: CategoryTabs
+        data: category_tabs
+        fields: [id, name, icon_url]
+      - name: ProductGrid
+        data: product_list.list
+        item_component: ProductCard
+      - name: FloatingAnalysisButton
+        label: "脚型检测"
+        route: VideoUploadScreen
+
+  # 商品卡片（复用组件）
+  ProductCard:
+    data_source: ProductCard（来自 api.yaml）
+    fields:
+      - field: cover_image,     component: Image,     size: "全宽 16:9"
+      - field: name,            component: Text,      style: body-md,   max_lines: 2
+      - field: price,           component: Text,      style: price-lg,  format: price
+      - field: original_price,  component: Text,      style: price-sm-through, nullable: true
+      - field: tags,            component: TagList,   max_display: 3
+      - field: arch_types,      component: ArchBadge, format: arch_type
+
+  # 商品详情页
+  ProductDetailScreen:
+    data_source: GET /products/:id
+    components:
+      - name: ImageCarousel,    fields: [images]
+      - name: ProductTitle,     fields: [name], style: heading-md
+      - name: PriceRow,         fields: [price, original_price], format: price
+      - name: ArchTypeTag,      fields: [arch_types], format: arch_type
+      - name: TagRow,           fields: [tags]
+      - name: DescriptionText,  fields: [description]
+      - name: DetailHtml,       fields: [detail_html],  lazy_load: true
+      - name: AddToCartBar,     sticky: bottom
+        states:
+          out_of_stock: { disabled: true, label: "已售罄" }
+          normal: { label: "加入购物车" }
+
+  # 购物车页
+  CartScreen:
+    data_source: GET /cart
+    components:
+      - name: CartItemList
+        item_fields: [product.cover_image, product.name, product.price, quantity, subtotal, selected]
+        swipe_delete: true
+      - name: CheckoutBar
+        fields: [selected_total, selected_count]
+        format: { selected_total: price }
+        states:
+          empty: { disabled: true, label: "购物车为空" }
+          normal: { label: "结算 ({selected_count})" }
+
+  # 订单确认页
+  OrderConfirmScreen:
+    components:
+      - name: AddressSelector,       data: GET /user/addresses
+      - name: OrderItemList,         data: 来自购物车选中项
+      - name: PriceSummaryRow,       fields: [total_amount], format: price
+      - name: SubmitOrderButton,     label: "提交订单"
+
+  # 订单列表页
+  OrderListScreen:
+    data_source: GET /orders
+    tabs: [全部, 待付款, 待发货, 已发货, 已完成]
+    components:
+      - name: OrderCard
+        fields: [order_no, status_text, total_amount, items_snapshot, created_at]
+        format: { total_amount: price, created_at: date_only }
+        actions:
+          status_0: [立即支付, 取消订单]
+          status_1: [查看详情]
+          status_2: [查看物流]
+          status_3: [再次购买]
+
+  # 视频上传页
+  VideoUploadScreen:
+    steps:
+      - step: 1, title: "选择拍摄类型"
+        component: ShootTypeSelector
+        options: [front_static, side_static, walking]
+        format: shoot_type
+      - step: 2, title: "拍摄引导"
+        component: GuideAnimation
+        desc: "按照提示保持姿势，录制 5-10 秒"
+      - step: 3, title: "录制/上传"
+        component: VideoRecorder
+        states:
+          recording: { label: "录制中...", show_timer: true }
+          preview: { actions: [重新拍摄, 使用此视频] }
+          uploading: { label: "上传中 {progress}%", disabled: true }
+          analyzing: { label: "AI 分析中...", show_spinner: true }
+          done: { redirect: AnalysisReportScreen }
+          error: { label: "分析失败，请重试", action: retry }
+
+  # 分析报告页
+  AnalysisReportScreen:
+    data_source: GET /reports/:id
+    components:
+      - name: ArchTypeCard
+        fields: [arch_type_text, risk_level_text]
+        format: { risk_level: risk_level }
+        visual: 足弓形态示意图（根据 arch_type 切换）
+      - name: RiskItemList
+        fields: [risk_items[].name, risk_items[].description, risk_items[].level]
+        format: { level: risk_level }
+      - name: RecommendProductSection
+        title: "为您推荐"
+        data: recommended_products
+        item_component: ProductCard
+
+  # 个人中心页
+  ProfileScreen:
+    components:
+      - name: UserInfoRow,    fields: [avatar_url, nickname, phone_masked]
+      - name: MenuList
+        items:
+          - 我的订单 → OrderListScreen
+          - 收货地址 → AddressListScreen
+          - 检测报告 → ReportListScreen
+          - 关于我们
+          - 退出登录

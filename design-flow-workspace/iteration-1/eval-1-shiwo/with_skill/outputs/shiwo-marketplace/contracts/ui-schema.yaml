@@ -1,0 +1,486 @@
+# UI 层数据契约 - 拾物（shiwo-marketplace）
+# 说明：定义 UI 组件直接消费的数据格式，包含展示规则和多态状态
+# 平台：微信小程序
+
+
+# ========== 全局格式化规则 ==========
+
+format_rules:
+  date:
+    - condition: "距今 < 1 分钟"
+      format: "刚刚"
+    - condition: "距今 < 60 分钟"
+      format: "N 分钟前"
+    - condition: "距今 < 24 小时"
+      format: "N 小时前"
+    - condition: "今年内"
+      format: "M月D日"
+    - condition: "跨年"
+      format: "YYYY年M月D日"
+
+  price:
+    unit: "分（整数存储）"
+    display: "¥ + 元（整数时不显示小数，否则保留两位）"
+    examples:
+      - 存储 1990 → 显示 ¥19.90
+      - 存储 2000 → 显示 ¥20
+      - 存储 100  → 显示 ¥1
+
+  number:
+    - condition: "≥ 10,000"
+      format: "1.2w"
+    - condition: "≥ 1,000"
+      format: "1.2k"
+    - condition: "< 1,000"
+      format: "原始数字"
+
+  condition:
+    mapping:
+      new:      { label: "全新",   color: success }
+      like_new: { label: "近新",   color: success }
+      good:     { label: "良好",   color: info }
+      fair:     { label: "一般",   color: warning }
+      poor:     { label: "较差",   color: neutral }
+
+  product_status:
+    mapping:
+      on_sale:  { label: "在售",   color: success }
+      reserved: { label: "已预约", color: warning }
+      sold:     { label: "已售出", color: neutral }
+      draft:    { label: "草稿",   color: neutral }
+      removed:  { label: "已下架", color: error }
+
+  trust_score:
+    display: "保留一位小数，如 4.8"
+    icon: "星形图标"
+    thresholds:
+      excellent: ">= 4.5, 金色星"
+      good: ">= 3.5, 橙色星"
+      poor: "< 3.5, 灰色星 + 红色感叹号"
+
+
+# ========== 页面 / 组件定义 ==========
+
+pages:
+
+  # ========== 首页（商品列表） ==========
+  HomePage:
+    route: "/pages/home/index"
+    data_source: "GET /api/v1/products"
+
+    states:
+      loading:
+        ui: "顶部搜索栏 + 分类 Tab 骨架 + 4 个商品卡片骨架屏"
+        trigger: "页面首次挂载"
+
+      success:
+        ui: "完整商品瀑布流列表"
+        trigger: "数据加载成功"
+
+      empty:
+        ui: "空状态插画 + '该校区暂无在售商品' + [去发布] 按钮"
+        trigger: "items.length === 0"
+
+      error:
+        ui: "错误提示图 + '加载失败' + [重试] 按钮"
+        trigger: "接口返回错误"
+
+      loading_more:
+        ui: "列表底部加载动画"
+        trigger: "滚动到底部且 has_more === true"
+
+    components:
+
+      - name: SearchBar
+        description: "顶部搜索栏"
+        fields:
+          - field: placeholder
+            format: "在[校区名]找好物..."
+            source: "user.campus.name"
+
+      - name: CategoryTab
+        description: "分类横向滚动 Tab"
+        data_source: "GET /api/v1/categories"
+        fields:
+          - field: icon
+            format: "24×24px 图标"
+            source: "items[].icon"
+          - field: name
+            format: "1行，最多4字"
+            source: "items[].name"
+
+      - name: ProductCard
+        description: "商品卡片（双列瀑布流）"
+        data_source: "items[]"
+        fields:
+          - field: cover_image
+            format: "图片比例 3:4，圆角 8px，懒加载"
+            source: "items[].images[0]"
+            fallback: "灰色占位图"
+
+          - field: title
+            format: "最多 2 行，超出省略号，font-size: 14px"
+            source: "items[].title"
+
+          - field: price
+            format: "¥XX.XX，主色高亮，font-size: 16px bold"
+            source: "items[].price"
+
+          - field: condition_badge
+            format: "小角标，左上角浮在图片上"
+            source: "items[].condition"
+            mapping: "见 format_rules.condition"
+
+          - field: seller_avatar
+            format: "圆形头像 20×20px"
+            source: "items[].seller.avatar_url"
+            fallback: "默认头像"
+
+          - field: seller_name
+            format: "1 行，最多 6 字，gray-500，font-size: 12px"
+            source: "items[].seller.nickname"
+
+          - field: status_overlay
+            format: "已售出/已预约时，图片加半透明蒙层 + 状态文字"
+            source: "items[].status"
+            condition: "status !== 'on_sale'"
+
+          - field: favorite_btn
+            format: "右下角心形图标，收藏数"
+            source: "items[].is_favorited + items[].favorite_count"
+
+
+  # ========== 商品详情页 ==========
+  ProductDetailPage:
+    route: "/pages/product/detail"
+    data_source: "GET /api/v1/products/:id"
+
+    states:
+      loading:
+        ui: "图片轮播骨架 + 价格/标题骨架 + 卖家信息骨架"
+
+      success:
+        ui: "完整详情"
+
+      not_found:
+        ui: "'商品不存在或已下架' + [返回首页] 按钮"
+        trigger: "API 返回 404"
+
+      error:
+        ui: "通用错误提示 + [重试] 按钮"
+
+    components:
+
+      - name: ImageSwiper
+        fields:
+          - field: images
+            format: "全宽轮播，比例 1:1，圆角 0，下方小圆点指示器"
+            source: "images"
+
+      - name: PriceBlock
+        fields:
+          - field: price
+            format: "¥ + 大号主色字体（font-size: 24px bold）"
+            source: "price"
+          - field: original_price
+            format: "¥XX.XX 删除线，gray-400，font-size: 14px"
+            source: "original_price"
+            condition: "original_price !== null"
+          - field: condition_tag
+            format: "小标签，见 format_rules.condition"
+            source: "condition"
+
+      - name: ProductInfo
+        fields:
+          - field: title
+            format: "font-size: 18px, semibold, 不限行"
+            source: "title"
+          - field: description
+            format: "font-size: 14px, gray-600, 超过 5 行展示[展开]"
+            source: "description"
+          - field: category
+            format: "分类名 + 图标，inline tag 样式"
+            source: "category.name + category.icon"
+          - field: campus
+            format: "校区名，inline，gray-500，font-size: 12px"
+            source: "campus.name"
+          - field: post_time
+            format: "发布于 X 小时前（见全局日期格式）"
+            source: "created_at"
+          - field: view_count
+            format: "X 人看过，gray-400，font-size: 12px"
+            source: "view_count"
+
+      - name: SellerCard
+        fields:
+          - field: avatar
+            format: "圆形头像 48×48px"
+            source: "seller.avatar_url"
+          - field: nickname
+            format: "font-size: 15px, semibold"
+            source: "seller.nickname"
+          - field: trust_score
+            format: "星形 + 分值（见 format_rules.trust_score）"
+            source: "seller.trust_score"
+          - field: trade_count
+            format: "已成交 N 件"
+            source: "seller.trade_count"
+          - field: verified_badge
+            format: "蓝色'已认证'小标，is_verified 为 true 时显示"
+            source: "seller.is_verified"
+            condition: "seller.is_verified === true"
+
+      - name: ActionBar
+        description: "底部操作栏（固定定位）"
+        fields:
+          - field: favorite_btn
+            format: "左侧心形图标 + '收藏'文字，已收藏时变主色"
+            source: "is_favorited"
+          - field: contact_btn
+            format: "主要按钮'联系卖家'，占 60% 宽度"
+            visibility: "status === 'on_sale' && seller.id !== current_user.id"
+          - field: sold_badge
+            format: "灰色禁用按钮'已售出'，status !== 'on_sale' 时显示"
+            condition: "status !== 'on_sale'"
+          - field: manage_btn
+            format: "编辑 + 下架按钮，仅卖家本人可见"
+            visibility: "seller.id === current_user.id"
+
+
+  # ========== 发布商品页 ==========
+  PublishPage:
+    route: "/pages/publish/index"
+
+    states:
+      idle:
+        ui: "空表单"
+      uploading_image:
+        ui: "上传中转圈，最多 9 张图片进度显示"
+      submitting:
+        ui: "发布按钮 loading 状态，防重复提交"
+      success:
+        ui: "Toast '发布成功！' + 跳转商品详情页"
+      error:
+        ui: "Toast 具体错误提示（参数校验 / 网络失败）"
+
+    components:
+
+      - name: ImageUploader
+        fields:
+          - field: images
+            format: "宫格布局，每格 80×80px，最多 9 张，左下角有删除按钮"
+            constraint: "🔴 至少 1 张图片，最多 9 张"
+          - field: add_btn
+            format: "+号按钮，已达 9 张时隐藏"
+
+      - name: FormFields
+        fields:
+          - field: title
+            format: "输入框，placeholder='宝贝标题（如：人教版高数上册）'，实时显示字数 0/60"
+            constraint: "🔴 必填，最多 60 字"
+          - field: category_picker
+            format: "选择器，展示选中分类图标+名称"
+            constraint: "🔴 必填"
+          - field: condition_picker
+            format: "横向单选按钮组（全新/近新/良好/一般/较差）"
+            constraint: "🔴 必填"
+          - field: price_input
+            format: "¥ 前缀 + 数字键盘，单位元（提交时×100转为分）"
+            constraint: "🔴 必填，最低 ¥0.01"
+          - field: original_price_input
+            format: "可选，显示折扣率提示"
+          - field: description
+            format: "多行文本域，placeholder='描述物品状态、有无划痕等...'，字数 0/1000"
+          - field: campus_display
+            format: "只读，显示当前用户校区，提示'将展示给同校区同学'"
+
+      - name: SubmitBtn
+        fields:
+          - field: btn_text
+            format: "'立即发布'（status=on_sale）或'保存草稿'（status=draft）"
+
+
+  # ========== 私信页 / 会话列表 ==========
+  ConversationListPage:
+    route: "/pages/message/list"
+    data_source: "GET /api/v1/conversations"
+
+    states:
+      loading:
+        ui: "3 个会话行骨架屏"
+      success:
+        ui: "会话列表"
+      empty:
+        ui: "空状态 + '还没有消息，去逛逛吧' + [去浏览]"
+      error:
+        ui: "加载失败 + [重试]"
+
+    components:
+
+      - name: ConversationRow
+        fields:
+          - field: product_image
+            format: "商品封面图 48×48px，圆角 4px"
+            source: "items[].product.images[0]"
+          - field: other_user_avatar
+            format: "圆形头像 36×36px，悬浮在商品图右下角"
+            source: "items[].other_user.avatar_url"
+          - field: other_user_name
+            format: "1行，font-size: 15px, semibold"
+            source: "items[].other_user.nickname"
+          - field: last_message
+            format: "1行，gray-500，font-size: 13px，超出省略"
+            source: "items[].last_message"
+          - field: last_message_time
+            format: "相对时间（见全局日期格式）"
+            source: "items[].last_message_at"
+          - field: unread_badge
+            format: "红色圆形数字角标，unread_count > 0 时显示"
+            source: "items[].unread_count"
+            condition: "unread_count > 0"
+
+
+  # ========== 聊天页 ==========
+  ChatPage:
+    route: "/pages/message/chat"
+    data_source: "GET /api/v1/conversations/:id/messages"
+
+    states:
+      loading:
+        ui: "消息列表骨架屏（交替左右两侧气泡）"
+      success:
+        ui: "消息气泡列表 + 底部输入框"
+      error:
+        ui: "加载失败 + [重试]"
+      sending:
+        ui: "发送中气泡显示转圈，发送失败显示红色感叹号"
+
+    components:
+
+      - name: ProductBanner
+        description: "顶部商品信息条（固定）"
+        fields:
+          - field: product_image
+            format: "40×40px 缩略图"
+            source: "conversation.product.images[0]"
+          - field: product_title
+            format: "1行，font-size: 14px"
+            source: "conversation.product.title"
+          - field: product_price
+            format: "¥XX，主色，font-size: 14px bold"
+            source: "conversation.product.price"
+          - field: product_status
+            format: "状态标签，已售出时灰色"
+            source: "conversation.product.status"
+
+      - name: MessageBubble
+        fields:
+          - field: content
+            format: "自己发的在右侧（主色背景），对方在左侧（白色背景）"
+            source: "items[].content"
+          - field: time
+            format: "消息间隔 > 5 分钟时显示时间，format: HH:mm"
+            source: "items[].created_at"
+          - field: read_status
+            format: "自己发的消息右下角：已读/未读小字"
+            source: "items[].is_read"
+            visibility: "sender_id === current_user.id"
+
+      - name: AppointmentCard
+        description: "预约面交卡片消息"
+        fields:
+          - field: meet_time
+            format: "MM月DD日 HH:mm"
+            source: "extra_data.meet_time"
+          - field: meet_location
+            format: "地点文字"
+            source: "extra_data.meet_location"
+          - field: status
+            format: "待确认/已确认/已取消，对应颜色"
+            source: "extra_data.status"
+
+      - name: InputBar
+        description: "底部输入栏（固定）"
+        fields:
+          - field: text_input
+            format: "最多 500 字，支持换行"
+          - field: appointment_btn
+            format: "'预约面交'快捷按钮，仅商品在售时显示"
+            condition: "product.status === 'on_sale'"
+          - field: send_btn
+            format: "发送按钮，有内容时高亮"
+
+
+  # ========== 个人中心页 ==========
+  ProfilePage:
+    route: "/pages/profile/index"
+    data_source: "GET /api/v1/users/me"
+
+    states:
+      loading:
+        ui: "头部骨架屏 + 数据卡片骨架"
+      success:
+        ui: "完整个人主页"
+      error:
+        ui: "加载失败 + [重试]"
+
+    components:
+
+      - name: UserHeader
+        fields:
+          - field: avatar
+            format: "圆形头像 72×72px，点击可修改"
+            source: "avatar_url"
+            fallback: "默认头像（首字母）"
+          - field: nickname
+            format: "font-size: 20px, bold，点击可修改"
+            source: "nickname"
+          - field: campus
+            format: "校区名 + 大学名，gray-500，font-size: 13px"
+            source: "campus.name + campus.university"
+          - field: verified_badge
+            format: "蓝色'已认证'标，is_verified 时显示"
+            source: "is_verified"
+          - field: trust_score
+            format: "星形 + 分值 + '评分'（见 format_rules.trust_score）"
+            source: "trust_score"
+          - field: trade_count
+            format: "已成交 N 件"
+            source: "trade_count"
+
+      - name: StatsRow
+        fields:
+          - field: publish_count
+            format: "数字 + '在售'"
+          - field: sold_count
+            format: "数字 + '已售'"
+          - field: favorite_count
+            format: "数字 + '收藏'"
+
+      - name: MenuList
+        fields:
+          - item: "我的发布（跳转商品列表）"
+          - item: "我的购买（跳转交易记录）"
+          - item: "我的收藏（跳转收藏列表）"
+          - item: "我的评价（跳转评价列表）"
+          - item: "帮助与反馈"
+
+
+# ========== 全局 UI 状态规范 ==========
+
+global_states:
+  network_error:
+    ui: "顶部 Toast，'网络连接失败，请检查网络'"
+    duration: 3000ms
+
+  session_expired:
+    ui: "全屏弹窗'登录状态已过期，请重新登录' + [重新登录] 按钮"
+    action: "清除本地 token，跳转微信登录"
+
+  permission_denied:
+    ui: "Toast '无权限执行此操作'"
+    duration: 2000ms
+
+  image_upload_failed:
+    ui: "Toast '图片上传失败，请重试'"
+    duration: 2500ms

@@ -1,0 +1,99 @@
+# 领域层数据契约模板
+# 说明：包含所有字段，含敏感字段。后端内部使用，禁止直接暴露给前端。
+# 使用方式：复制此模板，替换实体名称和字段
+
+entities:
+
+  User:
+    description: 用户账户
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key, indexed
+      email:
+        type: string
+        constraints: unique, indexed, required
+        note: "⚠️ 禁止暴露 - 需脱敏后才可返回给前端"
+      password_hash:
+        type: string
+        note: "⚠️ 禁止暴露 - 永远不返回给前端"
+      name:
+        type: string
+        constraints: required, max_length:50
+      avatar_url:
+        type: string
+        constraints: nullable
+      role:
+        type: enum
+        values: [user, moderator, admin]
+        default: user
+        note: "⚠️ 禁止暴露 - 权限控制用，前端不可见"
+      is_verified:
+        type: boolean
+        default: false
+      created_at:
+        type: timestamp
+        constraints: auto_set
+      updated_at:
+        type: timestamp
+        constraints: auto_update
+      deleted_at:
+        type: timestamp
+        constraints: nullable
+        note: "⚠️ 禁止暴露 - 软删除标记"
+
+  # --- 替换为你的核心实体 ---
+
+  ExampleEntity:
+    description: 示例实体（替换为实际实体）
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      user_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed
+      title:
+        type: string
+        constraints: required, max_length:200
+      content:
+        type: text
+        constraints: nullable
+      status:
+        type: enum
+        values: [draft, published, archived]
+        default: draft
+      metadata:
+        type: jsonb
+        nullable: true
+        note: "⚠️ 禁止暴露 - 内部元数据"
+      view_count:
+        type: integer
+        default: 0
+      created_at:
+        type: timestamp
+        constraints: auto_set
+      updated_at:
+        type: timestamp
+        constraints: auto_update
+
+relationships:
+  - "User ──1:N──> ExampleEntity (via user_id)"
+  # 添加更多关系
+
+indexes:
+  - table: ExampleEntity
+    fields: [user_id, created_at]
+    type: composite
+    purpose: "用户内容列表查询"
+  - table: ExampleEntity
+    fields: [status, created_at]
+    type: composite
+    purpose: "按状态筛选内容"
+
+sensitive_fields_summary:
+  - "User.email - 需脱敏"
+  - "User.password_hash - 永远不暴露"
+  - "User.role - 权限字段"
+  - "User.deleted_at - 软删除标记"
+  - "ExampleEntity.metadata - 内部元数据"

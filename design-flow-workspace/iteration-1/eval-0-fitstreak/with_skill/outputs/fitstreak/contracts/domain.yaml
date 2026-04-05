@@ -1,0 +1,333 @@
+# FitStreak - 领域层数据契约
+# 说明：包含所有字段，含敏感字段。后端内部使用，禁止直接暴露给前端。
+
+entities:
+
+  User:
+    description: 用户账户（手机号注册，无密码）
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key, indexed
+      phone:
+        type: string
+        constraints: unique, indexed, required, max_length:20
+        note: "⚠️ 禁止暴露 - 需脱敏后才可返回给前端"
+      name:
+        type: string
+        constraints: required, max_length:30
+      avatar_url:
+        type: string
+        constraints: nullable
+      subscription_type:
+        type: enum
+        values: [free, premium]
+        default: free
+      subscription_expires_at:
+        type: timestamp
+        constraints: nullable
+        note: "⚠️ 禁止暴露 - 仅后端用于校验有效期"
+      streak_count:
+        type: integer
+        default: 0
+        note: "连续打卡天数，由后端维护"
+      longest_streak:
+        type: integer
+        default: 0
+      total_checkin_days:
+        type: integer
+        default: 0
+      last_checkin_date:
+        type: date
+        constraints: nullable
+        note: "⚠️ 禁止暴露 - 后端用于判断当天是否已打卡"
+      is_active:
+        type: boolean
+        default: true
+        note: "⚠️ 禁止暴露 - 账号封禁标记"
+      device_tokens:
+        type: jsonb
+        constraints: nullable
+        note: "⚠️ 禁止暴露 - Push 通知 token 列表"
+      created_at:
+        type: timestamp
+        constraints: auto_set
+      updated_at:
+        type: timestamp
+        constraints: auto_update
+      deleted_at:
+        type: timestamp
+        constraints: nullable
+        note: "⚠️ 禁止暴露 - 软删除标记"
+
+  WorkoutLog:
+    description: 每日打卡运动记录
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      user_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed, required
+      workout_type:
+        type: enum
+        values: [running, gym, swimming, cycling, yoga, hiit, walking, other]
+        required: true
+      duration_min:
+        type: integer
+        constraints: required, min:1, max:480
+        note: "运动时长，单位：分钟"
+      calories:
+        type: integer
+        constraints: nullable
+        note: "消耗卡路里（可选录入）"
+      heart_rate_avg:
+        type: integer
+        constraints: nullable
+        note: "平均心率（可选）"
+      photo_url:
+        type: string
+        constraints: nullable
+        note: "打卡配图（OSS 存储路径）"
+      note:
+        type: string
+        constraints: nullable, max_length:200
+      checked_at:
+        type: date
+        constraints: required, indexed
+        note: "打卡日期（自然日，YYYY-MM-DD），唯一约束见 indexes"
+      created_at:
+        type: timestamp
+        constraints: auto_set
+
+  WorkoutPlan:
+    description: 用户运动计划
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      user_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed, required
+      goal_type:
+        type: enum
+        values: [fat_loss, muscle_gain, maintenance, endurance]
+        required: true
+      title:
+        type: string
+        constraints: required, max_length:50
+      plan_data:
+        type: jsonb
+        required: true
+        note: "周计划数据，结构：{mon:[...], tue:[...], ...}"
+      duration_weeks:
+        type: integer
+        constraints: required, min:1, max:52
+      start_date:
+        type: date
+        constraints: required
+      is_active:
+        type: boolean
+        default: true
+      is_ai_generated:
+        type: boolean
+        default: false
+        note: "是否由 AI 生成（高级版功能）"
+      created_at:
+        type: timestamp
+        constraints: auto_set
+      updated_at:
+        type: timestamp
+        constraints: auto_update
+
+  Friendship:
+    description: 好友关系（双向）
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      requester_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed, required
+      addressee_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed, required
+      status:
+        type: enum
+        values: [pending, accepted, blocked]
+        default: pending
+      created_at:
+        type: timestamp
+        constraints: auto_set
+      updated_at:
+        type: timestamp
+        constraints: auto_update
+
+  Challenge:
+    description: 好友挑战赛
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      creator_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed, required
+      title:
+        type: string
+        constraints: required, max_length:50
+      description:
+        type: string
+        constraints: nullable, max_length:200
+      duration_days:
+        type: integer
+        values: [7, 21, 30]
+        required: true
+      status:
+        type: enum
+        values: [pending, active, completed, cancelled]
+        default: pending
+      start_date:
+        type: date
+        constraints: nullable
+        note: "发起后待成员加入，接受后设定"
+      end_date:
+        type: date
+        constraints: nullable
+      max_participants:
+        type: integer
+        default: 10
+      created_at:
+        type: timestamp
+        constraints: auto_set
+      updated_at:
+        type: timestamp
+        constraints: auto_update
+
+  ChallengeParticipant:
+    description: 挑战赛参与者
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      challenge_id:
+        type: uuid
+        constraints: foreign_key(Challenge.id), indexed, required
+      user_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed, required
+      current_streak:
+        type: integer
+        default: 0
+        note: "在本挑战中的连续打卡天数"
+      total_checkins:
+        type: integer
+        default: 0
+      rank:
+        type: integer
+        constraints: nullable
+        note: "排名（结束后计算）"
+      joined_at:
+        type: timestamp
+        constraints: auto_set
+
+  Achievement:
+    description: 成就/徽章记录
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      user_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed, required
+      badge_type:
+        type: enum
+        values:
+          - streak_7      # 坚持 7 天
+          - streak_30     # 坚持 30 天
+          - streak_100    # 坚持 100 天
+          - streak_365    # 坚持一年
+          - early_bird    # 连续 7 天早晨打卡
+          - iron_man      # 单次运动 90 分钟+
+          - challenger    # 完成第一个挑战
+          - champion      # 挑战赛排名第一
+          - weight_loss_5 # 体重减少 5kg
+          - premium_member # 开通高级版
+        required: true
+      earned_at:
+        type: timestamp
+        constraints: auto_set
+
+  BodyRecord:
+    description: 身体数据记录（体重/体脂等）
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      user_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed, required
+      weight_kg:
+        type: decimal
+        constraints: nullable, precision:5, scale:1
+        note: "体重，单位 kg，精度 0.1"
+      body_fat_pct:
+        type: decimal
+        constraints: nullable, precision:4, scale:1
+        note: "体脂率，单位 %，精度 0.1"
+      muscle_mass_kg:
+        type: decimal
+        constraints: nullable, precision:5, scale:1
+        note: "肌肉量（可选）"
+      waist_cm:
+        type: decimal
+        constraints: nullable, precision:5, scale:1
+        note: "腰围（可选）"
+      recorded_date:
+        type: date
+        constraints: required, indexed
+      created_at:
+        type: timestamp
+        constraints: auto_set
+
+relationships:
+  - "User ──1:N──> WorkoutLog (via user_id)"
+  - "User ──1:N──> WorkoutPlan (via user_id)"
+  - "User ──N:M──> User (via Friendship: requester_id, addressee_id)"
+  - "User ──1:N──> Achievement (via user_id)"
+  - "User ──1:N──> BodyRecord (via user_id)"
+  - "User ──N:M──> Challenge (via ChallengeParticipant: user_id)"
+  - "Challenge ──1:N──> ChallengeParticipant (via challenge_id)"
+
+indexes:
+  - table: WorkoutLog
+    fields: [user_id, checked_at]
+    type: composite_unique
+    purpose: "防止同一用户同一天重复打卡"
+  - table: WorkoutLog
+    fields: [user_id, checked_at DESC]
+    type: composite
+    purpose: "用户打卡历史查询（按时间倒序）"
+  - table: Friendship
+    fields: [requester_id, addressee_id]
+    type: composite_unique
+    purpose: "防止重复添加好友"
+  - table: ChallengeParticipant
+    fields: [challenge_id, user_id]
+    type: composite_unique
+    purpose: "防止重复加入同一挑战"
+  - table: ChallengeParticipant
+    fields: [challenge_id, current_streak DESC]
+    type: composite
+    purpose: "挑战赛排行榜查询"
+  - table: BodyRecord
+    fields: [user_id, recorded_date DESC]
+    type: composite
+    purpose: "用户身体数据时间序列查询"
+
+sensitive_fields_summary:
+  - "User.phone - 需脱敏（显示为 138****8888）"
+  - "User.subscription_expires_at - 仅后端校验"
+  - "User.last_checkin_date - 后端状态字段"
+  - "User.is_active - 封禁标记"
+  - "User.device_tokens - Push token，永不暴露"
+  - "User.deleted_at - 软删除标记"

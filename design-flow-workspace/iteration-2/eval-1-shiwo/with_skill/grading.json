@@ -1,0 +1,31 @@
+{
+  "eval_id": 1,
+  "config": "with_skill",
+  "expectations": [
+    {
+      "text": "核心文件是否创建",
+      "passed": true,
+      "evidence": "product-overview.md 和 contracts/ 存在=True"
+    },
+    {
+      "text": "API 契约端点数量 ≥ 5",
+      "passed": true,
+      "evidence": "检测到端点数=26"
+    },
+    {
+      "text": "敏感字段是否标注",
+      "passed": true,
+      "evidence": "含'禁止暴露'=True"
+    },
+    {
+      "text": "Design Token 是否冻结",
+      "passed": true,
+      "evidence": "含'_frozen'=True"
+    },
+    {
+      "text": "可交互 HTML 是否生成",
+      "passed": true,
+      "evidence": "HTML 存在，STATES 对象=True"
+    }
+  ]
+}

@@ -1,0 +1,279 @@
+# 足迹 APP - UE 状态机
+# 定义各核心页面的状态、转换条件和异常路径
+
+version: "1.0"
+
+pages:
+
+  # ──────────────────────────────────
+  # 登录/注册页
+  # ──────────────────────────────────
+  LoginScreen:
+    initial_state: idle
+    states:
+      idle:
+        description: 手机号输入框聚焦，发送验证码按钮可点
+        transitions:
+          - on: 输入手机号(11位)
+            to: phone_ready
+          - on: 输入非法手机号
+            to: phone_error
+      phone_ready:
+        description: 手机号格式正确，发送验证码按钮激活
+        transitions:
+          - on: 点击发送验证码
+            to: sms_sending
+      sms_sending:
+        description: 接口请求中，按钮 loading
+        transitions:
+          - on: 发送成功
+            to: code_input
+          - on: 发送失败（频率限制）
+            to: sms_error
+      code_input:
+        description: 验证码输入框激活，倒计时 60s
+        transitions:
+          - on: 输入6位验证码
+            to: code_ready
+          - on: 倒计时结束
+            to: resend_ready
+      code_ready:
+        description: 验证码已填写，登录按钮激活
+        transitions:
+          - on: 点击登录
+            to: logging_in
+      logging_in:
+        description: 验证码校验中，全屏 loading
+        transitions:
+          - on: 验证成功(新用户)
+            to: → 完善资料页（可选）→ 首页
+          - on: 验证成功(老用户)
+            to: → 首页
+          - on: 验证码错误
+            to: code_error
+          - on: 验证码过期
+            to: code_expired
+      phone_error:
+        description: 手机号格式错误，红色提示
+      sms_error:
+        description: 发送失败，显示错误原因（如"操作太频繁"）
+      code_error:
+        description: 验证码错误，文字变红，可重新输入
+      code_expired:
+        description: 验证码已过期，提示重新发送
+        transitions:
+          - on: 重新发送
+            to: sms_sending
+      resend_ready:
+        description: 倒计时结束，重新发送按钮激活
+
+  # ──────────────────────────────────
+  # 首页
+  # ──────────────────────────────────
+  HomeScreen:
+    initial_state: loading
+    states:
+      loading:
+        description: 骨架屏，分类 Tab 和商品列表占位
+        transitions:
+          - on: 数据加载成功
+            to: content
+          - on: 网络异常
+            to: error
+      content:
+        description: 正常展示分类Tab + 商品列表
+        transitions:
+          - on: 切换分类Tab
+            to: tab_loading
+          - on: 滚动到底部
+            to: list_loading_more
+          - on: 点击商品
+            to: → ProductDetailScreen
+          - on: 点击搜索框
+            to: → SearchScreen
+          - on: 点击脚型检测悬浮按钮
+            to: → VideoUploadScreen（需要登录）
+      tab_loading:
+        description: 切换分类，列表区域骨架屏
+        transitions:
+          - on: 加载完成
+            to: content
+      list_loading_more:
+        description: 底部加载 spinner
+        transitions:
+          - on: 加载完成（有数据）
+            to: content
+          - on: 加载完成（无更多）
+            to: content_end
+      content_end:
+        description: 底部显示"没有更多了"
+      error:
+        description: 错误提示 + 重试按钮
+        transitions:
+          - on: 点击重试
+            to: loading
+
+  # ──────────────────────────────────
+  # 商品详情页
+  # ──────────────────────────────────
+  ProductDetailScreen:
+    initial_state: loading
+    states:
+      loading:
+        description: 图片/标题/价格骨架屏
+        transitions:
+          - on: 加载成功
+            to: content
+          - on: 加载失败（商品不存在/已下架）
+            to: not_found
+      content:
+        description: 完整展示商品信息
+        transitions:
+          - on: 点击加入购物车（已登录）
+            to: adding_to_cart
+          - on: 点击加入购物车（未登录）
+            to: → LoginScreen
+          - on: 点击立即购买
+            to: → OrderConfirmScreen
+      adding_to_cart:
+        description: 加入购物车中，按钮 loading
+        transitions:
+          - on: 成功
+            to: cart_added（底部弹出成功提示 1.5s 后自动关闭）
+          - on: 库存不足
+            to: out_of_stock
+      cart_added:
+        description: 展示成功 Toast，按钮恢复
+        transitions:
+          - on: 自动 1.5s
+            to: content
+      out_of_stock:
+        description: 提示"库存不足"，底部按钮变灰禁用
+      not_found:
+        description: 商品已下架或不存在，提示返回首页
+
+  # ──────────────────────────────────
+  # 购物车页
+  # ──────────────────────────────────
+  CartScreen:
+    initial_state: loading
+    states:
+      loading:
+        description: 骨架屏加载购物车列表
+        transitions:
+          - on: 加载成功（有商品）
+            to: content
+          - on: 加载成功（空购物车）
+            to: empty
+      content:
+        description: 商品列表 + 底部结算栏
+        transitions:
+          - on: 勾选/取消勾选商品
+            to: content（重新计算合计）
+          - on: 修改数量
+            to: updating
+          - on: 左滑删除
+            to: deleting
+          - on: 点击结算（有勾选商品）
+            to: → OrderConfirmScreen
+          - on: 点击结算（无勾选商品）
+            to: 提示"请选择商品"（Toast，不跳转）
+      updating:
+        description: 数量修改中，接口更新
+        transitions:
+          - on: 成功
+            to: content
+          - on: 超出库存
+            to: content（Toast提示"库存不足"）
+      deleting:
+        description: 删除中
+        transitions:
+          - on: 成功
+            to: content / empty（视剩余商品数）
+      empty:
+        description: 空购物车，插画 + "去逛逛"按钮
+        transitions:
+          - on: 点击去逛逛
+            to: → HomeScreen
+
+  # ──────────────────────────────────
+  # 视频上传 & 分析流程
+  # ──────────────────────────────────
+  VideoUploadScreen:
+    initial_state: step1_select_type
+    states:
+      step1_select_type:
+        description: 选择拍摄类型（正面/侧面/行走）
+        transitions:
+          - on: 选择类型
+            to: step2_guide
+      step2_guide:
+        description: 展示拍摄引导动画，倒计时 3s 后自动进入拍摄
+        transitions:
+          - on: 倒计时结束 / 用户点击开始
+            to: step3_recording
+      step3_recording:
+        description: 摄像头开启，录制进行中（最长 15 秒）
+        transitions:
+          - on: 用户点击停止 / 超时自动停止
+            to: step4_preview
+          - on: 摄像头权限拒绝
+            to: permission_denied
+      step4_preview:
+        description: 视频本地预览
+        transitions:
+          - on: 点击"重新拍摄"
+            to: step3_recording
+          - on: 点击"使用此视频"
+            to: uploading
+      uploading:
+        description: 上传进度展示（百分比进度条）
+        transitions:
+          - on: 上传成功
+            to: analyzing
+          - on: 上传失败（网络）
+            to: upload_error
+      analyzing:
+        description: AI 分析中，动画展示（轮询接口 /videos/:id/status）
+        transitions:
+          - on: 分析完成（report_id 返回）
+            to: → AnalysisReportScreen
+          - on: 分析失败
+            to: analyze_error
+          - on: 等待超时（超过 120s）
+            to: analyze_timeout
+      permission_denied:
+        description: 摄像头权限被拒，引导用户去系统设置
+      upload_error:
+        description: 上传失败，重试按钮
+        transitions:
+          - on: 重试
+            to: uploading
+      analyze_error:
+        description: AI 分析失败，错误提示 + 重新拍摄
+      analyze_timeout:
+        description: 分析超时，提示"稍后在报告列表查看"
+
+  # ──────────────────────────────────
+  # 分析报告页
+  # ──────────────────────────────────
+  AnalysisReportScreen:
+    initial_state: loading
+    states:
+      loading:
+        description: 骨架屏加载报告
+        transitions:
+          - on: 加载成功
+            to: content
+      content:
+        description: 展示足弓类型、风险提示、推荐商品
+        transitions:
+          - on: 点击推荐商品
+            to: → ProductDetailScreen
+          - on: 点击分享
+            to: sharing
+      sharing:
+        description: 系统分享弹窗
+        transitions:
+          - on: 分享成功/取消
+            to: content

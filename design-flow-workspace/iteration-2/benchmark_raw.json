@@ -1,0 +1,42 @@
+[
+  {
+    "eval_id": 0,
+    "eval_name": "fitstreak-fitness-app",
+    "config": "with_skill",
+    "expectations_total": 7,
+    "expectations_passed": 7,
+    "pass_rate": 1.0
+  },
+  {
+    "eval_id": 1,
+    "eval_name": "shiwo-campus-marketplace",
+    "config": "with_skill",
+    "expectations_total": 5,
+    "expectations_passed": 5,
+    "pass_rate": 1.0
+  },
+  {
+    "eval_id": 2,
+    "eval_name": "freelancebook-finance-tool",
+    "config": "with_skill",
+    "expectations_total": 5,
+    "expectations_passed": 5,
+    "pass_rate": 1.0
+  },
+  {
+    "eval_id": 3,
+    "eval_name": "contract-validator",
+    "config": "with_skill",
+    "expectations_total": 4,
+    "expectations_passed": 4,
+    "pass_rate": 1.0
+  },
+  {
+    "eval_id": 3,
+    "eval_name": "contract-validator",
+    "config": "without_skill",
+    "expectations_total": 4,
+    "expectations_passed": 4,
+    "pass_rate": 1.0
+  }
+]

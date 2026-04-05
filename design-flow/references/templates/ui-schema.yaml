@@ -1,0 +1,197 @@
+# UI 层数据契约模板
+# 说明：定义 UI 组件直接消费的数据格式，包含展示规则和多态状态
+# 使用方式：复制此模板，按页面/组件组织
+
+# ========== 全局格式化规则 ==========
+
+format_rules:
+  date:
+    - condition: "距今 < 1 分钟"
+      format: "刚刚"
+    - condition: "距今 < 60 分钟"
+      format: "N 分钟前"
+    - condition: "距今 < 24 小时"
+      format: "N 小时前"
+    - condition: "今年内"
+      format: "M月D日"
+    - condition: "跨年"
+      format: "YYYY年M月D日"
+
+  number:
+    - condition: "≥ 100,000"
+      format: "10w+"
+    - condition: "≥ 10,000"
+      format: "1.2w"
+    - condition: "≥ 1,000"
+      format: "1.2k"
+    - condition: "< 1,000"
+      format: "原始数字"
+
+  currency:
+    unit: "分（整数存储）"
+    display: "元（保留两位小数）"
+    example: "存储 1990 → 显示 ¥19.90"
+
+
+# ========== 页面 / 组件定义 ==========
+
+pages:
+
+  # ---------- 示例：内容列表页 ----------
+  ExampleListPage:
+    route: "/items"
+    data_source: "GET /api/v1/items"
+
+    states:
+      loading:
+        ui: 显示 3 个骨架屏卡片
+        trigger: 页面挂载时
+
+      success:
+        ui: 正常列表
+        trigger: 数据加载成功
+
+      empty:
+        ui: 空状态插画 + "还没有内容" + [去发布] 按钮
+        trigger: items.length === 0
+
+      error:
+        ui: 错误提示 + [重试] 按钮
+        trigger: 接口返回错误
+
+      loading_more:
+        ui: 列表末尾显示加载动画
+        trigger: 滚动到底部时触发加载更多
+
+    components:
+      - name: ItemCard
+        data_source: "items[]"
+        fields:
+          - field: title
+            format: "最多 2 行，超出省略号"
+            source: items[].title
+
+          - field: summary
+            format: "最多 3 行，超出省略号"
+            source: items[].summary
+
+          - field: author_avatar
+            format: "圆形头像，40×40px"
+            source: items[].author.avatar_url
+            fallback: "用户名首字母头像"
+
+          - field: author_name
+            format: "1 行，超出省略号"
+            source: items[].author.name
+
+          - field: created_at
+            format: "相对时间（见全局格式化规则）"
+            source: items[].created_at
+
+          - field: status_badge
+            format: "标签"
+            source: items[].status
+            mapping:
+              draft: { label: "草稿", color: neutral }
+              published: { label: "已发布", color: success }
+              archived: { label: "已归档", color: warning }
+
+
+  # ---------- 示例：内容详情页 ----------
+  ExampleDetailPage:
+    route: "/items/:id"
+    data_source: "GET /api/v1/items/:id"
+
+    states:
+      loading:
+        ui: 顶部骨架屏（标题 + 作者区域）
+
+      success:
+        ui: 完整详情
+
+      not_found:
+        ui: "内容不存在或已删除" + [返回首页] 按钮
+        trigger: API 返回 404
+
+      error:
+        ui: 通用错误提示
+
+    components:
+      - name: ArticleHeader
+        fields:
+          - field: title
+            format: "大标题，不限行数"
+            source: title
+
+          - field: author_info
+            format: "头像(32px) + 姓名 + 发布时间"
+            source: "author + created_at"
+
+          - field: updated_at
+            format: "如与 created_at 不同，显示"最后更新于 X""
+            source: updated_at
+            condition: "updated_at !== created_at"
+
+      - name: ArticleContent
+        fields:
+          - field: content
+            format: "Markdown 渲染"
+            source: content
+
+
+  # ---------- 示例：用户个人页 ----------
+  UserProfilePage:
+    route: "/users/:id"
+    data_source: "GET /api/v1/users/me（本人）或 /users/:id（他人）"
+
+    states:
+      loading:
+        ui: 骨架屏
+
+      success_self:
+        ui: 完整个人页 + 编辑按钮
+        trigger: user.id === current_user.id
+
+      success_other:
+        ui: 公开信息页，无编辑按钮
+        trigger: user.id !== current_user.id
+
+      error:
+        ui: 通用错误提示
+
+    components:
+      - name: UserHeader
+        fields:
+          - field: avatar
+            format: "圆形头像，80×80px"
+            source: avatar_url
+            fallback: "首字母默认头像"
+
+          - field: name
+            format: "大号字体，1 行"
+            source: name
+
+          - field: email_masked
+            format: "仅本人可见"
+            source: email_masked
+            visibility: "self_only"
+
+          - field: join_date
+            format: ""加入于 2024年1月""
+            source: created_at
+
+
+# ========== 全局 UI 状态规范 ==========
+
+global_states:
+  network_error:
+    ui: 顶部 Toast，"网络连接失败，请检查网络"
+    duration: 3000ms
+
+  session_expired:
+    ui: 全屏遮罩 + 弹窗"登录已过期，请重新登录"
+    action: 跳转登录页，保存当前路由用于登录后回跳
+
+  permission_denied:
+    ui: Toast "无权限执行此操作"
+    duration: 2000ms

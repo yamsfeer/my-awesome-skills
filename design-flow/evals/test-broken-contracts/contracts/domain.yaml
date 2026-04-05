@@ -1,0 +1,60 @@
+# 领域层数据契约 — 测试用（含已知问题）
+entities:
+
+  User:
+    description: 用户账户
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key, indexed
+      email:
+        type: string
+        constraints: unique, indexed, required
+      password_hash:
+        type: string
+        note: "⚠️ 禁止暴露 - 永远不返回给前端"
+      phone:
+        type: string
+        note: "⚠️ 禁止暴露 - 需脱敏后才可返回给前端"
+      name:
+        type: string
+        constraints: required, max_length:50
+      role:
+        type: enum
+        values: [user, admin]
+        default: user
+        note: "⚠️ 禁止暴露 - 权限控制用"
+      created_at:
+        type: timestamp
+        constraints: auto_set
+
+  Product:
+    description: 商品
+    fields:
+      id:
+        type: uuid
+        constraints: primary_key
+      seller_id:
+        type: uuid
+        constraints: foreign_key(User.id), indexed
+      title:
+        type: string
+        constraints: required, max_length:100
+      price:
+        type: integer
+        constraints: required
+      status:
+        type: enum
+        values: [on_sale, sold, offline]
+        default: on_sale
+      created_at:
+        type: timestamp
+        constraints: auto_set
+
+relationships:
+  - "User ──1:N──> Product (via seller_id)"
+
+sensitive_fields_summary:
+  - "User.password_hash - 永远不暴露"
+  - "User.phone - 需脱敏"
+  - "User.role - 权限字段"

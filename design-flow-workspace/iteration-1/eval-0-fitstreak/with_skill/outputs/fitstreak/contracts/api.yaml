@@ -1,0 +1,515 @@
+# FitStreak - API 层数据契约
+# 说明：定义前后端契约，聚合响应，过滤敏感字段。
+
+version: "1.0"
+base_url: "/api/v1"
+auth: "Bearer Token (JWT，通过手机号+验证码换取)"
+
+# ========== 响应体定义 ==========
+
+responses:
+
+  SuccessResponse:
+    code: 200
+    data: any
+    message: string
+
+  ErrorResponse:
+    code: number
+    error: string
+    message: string
+
+  PaginationMeta:
+    total: number
+    page: number
+    per_page: number
+    total_pages: number
+
+  # --- 用户相关 ---
+
+  UserProfile:
+    description: "用户基础信息（好友列表、排行榜中使用）"
+    id: string
+    name: string
+    avatar_url: string | null
+    streak_count: number
+    total_checkin_days: number
+
+  UserDetail:
+    description: "当前登录用户详情"
+    id: string
+    name: string
+    avatar_url: string | null
+    phone_masked: string        # 脱敏手机号，如 138****8888
+    subscription_type: string   # "free" | "premium"
+    subscription_expires_at: string | null  # ISO 8601，仅 premium 有值
+    streak_count: number
+    longest_streak: number
+    total_checkin_days: number
+    has_checked_today: boolean  # 今天是否已打卡（后端计算）
+    created_at: string
+
+  # --- 打卡记录相关 ---
+
+  WorkoutLogItem:
+    description: "打卡记录列表项"
+    id: string
+    workout_type: string        # "running" | "gym" | ...
+    workout_type_label: string  # "跑步" | "健身房" | ... (后端翻译)
+    duration_min: number
+    calories: number | null
+    photo_url: string | null
+    note: string | null
+    checked_at: string          # "YYYY-MM-DD"
+
+  WorkoutLogDetail:
+    description: "打卡记录详情"
+    id: string
+    workout_type: string
+    workout_type_label: string
+    duration_min: number
+    calories: number | null
+    heart_rate_avg: number | null
+    photo_url: string | null
+    note: string | null
+    checked_at: string
+    created_at: string
+
+  WorkoutLogListResponse:
+    items: WorkoutLogItem[]
+    pagination: PaginationMeta
+
+  # --- 运动计划相关 ---
+
+  WorkoutPlanItem:
+    id: string
+    title: string
+    goal_type: string           # "fat_loss" | "muscle_gain" | ...
+    goal_type_label: string     # "减脂" | "增肌" | ...
+    duration_weeks: number
+    start_date: string
+    is_active: boolean
+    is_ai_generated: boolean
+    progress_pct: number        # 完成进度百分比（后端计算）
+
+  WorkoutPlanDetail:
+    id: string
+    title: string
+    goal_type: string
+    goal_type_label: string
+    duration_weeks: number
+    start_date: string
+    is_active: boolean
+    is_ai_generated: boolean
+    plan_data:
+      mon: PlanDayItem[]
+      tue: PlanDayItem[]
+      wed: PlanDayItem[]
+      thu: PlanDayItem[]
+      fri: PlanDayItem[]
+      sat: PlanDayItem[]
+      sun: PlanDayItem[]
+    progress_pct: number
+
+  PlanDayItem:
+    exercise_name: string
+    sets: number | null
+    reps: number | null
+    duration_min: number | null
+    rest_sec: number | null
+
+  # --- 好友与排行榜相关 ---
+
+  FriendItem:
+    id: string
+    name: string
+    avatar_url: string | null
+    streak_count: number
+    total_checkin_days: number
+    friendship_status: string   # "accepted" | "pending_sent" | "pending_received"
+
+  LeaderboardItem:
+    rank: number
+    user: UserProfile
+    streak_count: number
+    is_self: boolean
+
+  LeaderboardResponse:
+    items: LeaderboardItem[]
+    self_rank: number | null
+
+  # --- 挑战相关 ---
+
+  ChallengeItem:
+    id: string
+    title: string
+    duration_days: number
+    status: string              # "pending" | "active" | "completed" | "cancelled"
+    start_date: string | null
+    end_date: string | null
+    participant_count: number
+    creator: UserProfile
+    my_current_streak: number   # 当前用户在此挑战的连续天数
+    my_rank: number | null
+
+  ChallengeDetail:
+    id: string
+    title: string
+    description: string | null
+    duration_days: number
+    status: string
+    start_date: string | null
+    end_date: string | null
+    creator: UserProfile
+    participants: ChallengeParticipantItem[]
+
+  ChallengeParticipantItem:
+    rank: number
+    user: UserProfile
+    current_streak: number
+    total_checkins: number
+
+  # --- 成就相关 ---
+
+  AchievementItem:
+    id: string
+    badge_type: string
+    badge_label: string         # "坚持7天" | "钢铁战士" | ...
+    badge_icon_url: string      # 徽章图标 URL
+    badge_description: string
+    earned_at: string
+
+  # --- 身体数据相关 ---
+
+  BodyRecordItem:
+    id: string
+    weight_kg: number | null
+    body_fat_pct: number | null
+    muscle_mass_kg: number | null
+    waist_cm: number | null
+    recorded_date: string
+
+  BodyTrendResponse:
+    records: BodyRecordItem[]
+    summary:
+      latest_weight_kg: number | null
+      weight_change_kg: number | null     # 与最早一条对比的变化值（负数表示减重）
+      latest_body_fat_pct: number | null
+
+
+# ========== 端点定义 ==========
+
+endpoints:
+
+  auth:
+    - method: POST
+      path: /auth/send-code
+      description: 发送手机验证码
+      auth_required: false
+      request_body:
+        phone: string, required
+      response: SuccessResponse
+
+    - method: POST
+      path: /auth/verify-code
+      description: 验证码登录/注册（新用户自动注册）
+      auth_required: false
+      request_body:
+        phone: string, required
+        code: string, required, length:6
+      response:
+        token: string
+        user: UserDetail
+        is_new_user: boolean
+
+    - method: POST
+      path: /auth/logout
+      description: 登出（使当前 token 失效）
+      auth_required: true
+      response: SuccessResponse
+
+  user:
+    - method: GET
+      path: /users/me
+      description: 获取当前登录用户完整信息
+      auth_required: true
+      response: UserDetail
+
+    - method: PUT
+      path: /users/me
+      description: 更新个人资料
+      auth_required: true
+      request_body:
+        name: string, optional, max:30
+        avatar_url: string, optional
+      response: UserDetail
+
+    - method: GET
+      path: /users/:id
+      description: 获取指定用户公开信息（好友主页）
+      auth_required: true
+      response: UserProfile
+
+  checkin:
+    - method: POST
+      path: /checkins
+      description: 今日打卡
+      auth_required: true
+      premium_required: false
+      request_body:
+        workout_type: string, required
+        duration_min: integer, required, min:1, max:480
+        calories: integer, optional
+        heart_rate_avg: integer, optional
+        note: string, optional, max:200
+        checked_at: string, required  # "YYYY-MM-DD"，必须为今天或昨天
+      response: WorkoutLogDetail
+      error_cases:
+        - code: 409
+          scenario: "今日已打卡"
+
+    - method: GET
+      path: /checkins
+      description: 获取打卡记录列表
+      auth_required: true
+      query_params:
+        user_id: string, optional, default:me
+        year: integer, optional
+        month: integer, optional
+        page: integer, default:1
+        per_page: integer, default:20, max:100
+      response: WorkoutLogListResponse
+
+    - method: GET
+      path: /checkins/calendar
+      description: 获取打卡日历（某月哪些天打卡了）
+      auth_required: true
+      query_params:
+        year: integer, required
+        month: integer, required
+        user_id: string, optional, default:me
+      response:
+        year: number
+        month: number
+        checked_dates: string[]   # ["2024-01-01", "2024-01-03", ...]
+
+    - method: PUT
+      path: /checkins/:id/photo
+      description: 上传打卡配图
+      auth_required: true
+      request_body:
+        photo: multipart/form-data
+      response: WorkoutLogDetail
+
+    - method: DELETE
+      path: /checkins/:id
+      description: 删除打卡记录（仅今日打卡可删除）
+      auth_required: true
+      ownership_required: true
+      response: SuccessResponse
+
+  plan:
+    - method: GET
+      path: /plans
+      description: 获取我的运动计划列表
+      auth_required: true
+      response:
+        items: WorkoutPlanItem[]
+
+    - method: GET
+      path: /plans/:id
+      description: 获取运动计划详情
+      auth_required: true
+      ownership_required: true
+      response: WorkoutPlanDetail
+
+    - method: POST
+      path: /plans
+      description: 创建运动计划（基础版最多 1 个，高级版无限）
+      auth_required: true
+      request_body:
+        title: string, required, max:50
+        goal_type: string, required
+        duration_weeks: integer, required, min:1, max:52
+        start_date: string, required
+        plan_data: object, required
+      response: WorkoutPlanDetail
+      error_cases:
+        - code: 403
+          scenario: "基础版用户已有 1 个计划，需升级"
+
+    - method: PUT
+      path: /plans/:id
+      description: 更新运动计划
+      auth_required: true
+      ownership_required: true
+      request_body:
+        title: string, optional
+        plan_data: object, optional
+        is_active: boolean, optional
+      response: WorkoutPlanDetail
+
+    - method: POST
+      path: /plans/ai-generate
+      description: AI 生成运动计划（高级版专属）
+      auth_required: true
+      premium_required: true
+      request_body:
+        goal_type: string, required
+        duration_weeks: integer, required
+        fitness_level: string, required  # "beginner" | "intermediate" | "advanced"
+        available_days: string[], required  # ["mon","wed","fri"]
+      response: WorkoutPlanDetail
+
+  friends:
+    - method: GET
+      path: /friends
+      description: 获取好友列表
+      auth_required: true
+      response:
+        items: FriendItem[]
+
+    - method: GET
+      path: /friends/requests
+      description: 获取好友申请列表（收到的）
+      auth_required: true
+      response:
+        items: FriendItem[]
+
+    - method: POST
+      path: /friends/request
+      description: 发送好友申请
+      auth_required: true
+      request_body:
+        user_id: string, required
+      response: SuccessResponse
+      error_cases:
+        - code: 409
+          scenario: "已是好友或已申请"
+        - code: 403
+          scenario: "基础版好友上限 5 人，需升级"
+
+    - method: PUT
+      path: /friends/request/:id/accept
+      description: 接受好友申请
+      auth_required: true
+      response: FriendItem
+
+    - method: DELETE
+      path: /friends/:id
+      description: 删除好友
+      auth_required: true
+      response: SuccessResponse
+
+    - method: GET
+      path: /friends/leaderboard
+      description: 好友排行榜（按连续打卡天数）
+      auth_required: true
+      response: LeaderboardResponse
+
+  challenges:
+    - method: GET
+      path: /challenges
+      description: 获取我参与的挑战列表
+      auth_required: true
+      query_params:
+        status: string, optional
+      response:
+        items: ChallengeItem[]
+
+    - method: GET
+      path: /challenges/:id
+      description: 获取挑战详情（含排行榜）
+      auth_required: true
+      response: ChallengeDetail
+
+    - method: POST
+      path: /challenges
+      description: 发起挑战
+      auth_required: true
+      request_body:
+        title: string, required, max:50
+        description: string, optional, max:200
+        duration_days: integer, required, values:[7,21,30]
+        invite_user_ids: string[], required, min:1, max:9
+      response: ChallengeDetail
+
+    - method: POST
+      path: /challenges/:id/join
+      description: 接受挑战邀请
+      auth_required: true
+      response: ChallengeItem
+
+    - method: DELETE
+      path: /challenges/:id/leave
+      description: 退出挑战（进行中不可退出）
+      auth_required: true
+      response: SuccessResponse
+
+  achievements:
+    - method: GET
+      path: /achievements
+      description: 获取我的成就列表
+      auth_required: true
+      response:
+        items: AchievementItem[]
+        total: number
+
+  body:
+    - method: GET
+      path: /body/records
+      description: 获取身体数据趋势
+      auth_required: true
+      query_params:
+        days: integer, default:90, max:365
+      response: BodyTrendResponse
+
+    - method: POST
+      path: /body/records
+      description: 录入身体数据
+      auth_required: true
+      request_body:
+        weight_kg: number, optional
+        body_fat_pct: number, optional
+        muscle_mass_kg: number, optional
+        waist_cm: number, optional
+        recorded_date: string, required
+      response: BodyRecordItem
+
+  subscription:
+    - method: GET
+      path: /subscription/plans
+      description: 获取订阅套餐信息
+      auth_required: false
+      response:
+        plans:
+          - id: premium_monthly
+            name: "高级版月度订阅"
+            price_fen: 1800     # 单位：分
+            price_display: "¥18.00"
+            duration_days: 30
+            features: string[]
+
+    - method: POST
+      path: /subscription/purchase
+      description: 发起订阅购买（返回支付参数）
+      auth_required: true
+      request_body:
+        plan_id: string, required
+        payment_method: string, required  # "wechat" | "alipay" | "apple_iap"
+      response:
+        order_id: string
+        payment_params: object   # 各支付渠道所需参数
+
+
+# ========== 错误码定义 ==========
+
+error_codes:
+  400: "请求参数错误"
+  401: "未登录或 Token 已过期"
+  403: "无权限（或需要高级版订阅）"
+  404: "资源不存在"
+  409: "资源冲突（如今日已打卡、已是好友）"
+  422: "业务逻辑错误"
+  429: "请求频率过高（短信验证码限流）"
+  500: "服务器内部错误"

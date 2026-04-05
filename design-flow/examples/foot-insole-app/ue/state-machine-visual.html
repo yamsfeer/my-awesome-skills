@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>足迹 APP · 状态机可视化</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="./state-machine-data.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'PingFang SC','Noto Sans SC',sans-serif; background:#F8FAFC; color:#1E293B; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+
+header { background:linear-gradient(135deg,#00B96B,#009A59); color:#fff; padding:12px 20px; display:flex; align-items:center; gap:12px; flex-shrink:0; }
+header h1 { font-size:16px; font-weight:700; }
+header p  { font-size:12px; opacity:.75; margin-left:auto; }
+
+.layout { display:flex; flex:1; overflow:hidden; }
+
+/* ── 左侧页面导航 ── */
+.sidebar { width:168px; background:#fff; border-right:1px solid #E2E8F0; display:flex; flex-direction:column; flex-shrink:0; overflow-y:auto; }
+.sidebar-title { padding:12px 14px 8px; font-size:11px; font-weight:600; color:#94A3B8; text-transform:uppercase; letter-spacing:.6px; }
+.page-btn { padding:10px 14px; cursor:pointer; font-size:13px; border-left:3px solid transparent; color:#475569; transition:all .15s; display:flex; align-items:center; gap:8px; }
+.page-btn:hover { background:#F1F5F9; }
+.page-btn.active { border-left-color:#00B96B; background:#E6FBF3; color:#007A47; font-weight:600; }
+.page-btn .dot { width:7px; height:7px; border-radius:50%; background:#CBD5E1; flex-shrink:0; }
+.page-btn.active .dot { background:#00B96B; }
+
+/* ── 中间：状态机图 ── */
+.center { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+
+.diagram-wrap { flex:1; overflow:auto; padding:16px 20px; background:#fff; border-bottom:1px solid #E2E8F0; min-height:0; }
+.diagram-wrap h2 { font-size:13px; color:#94A3B8; margin-bottom:12px; font-weight:500; }
+#mermaid-box { display:flex; justify-content:center; }
+#mermaid-box svg { max-width:100%; }
+
+/* 点击提示 */
+.click-tip { font-size:12px; color:#94A3B8; text-align:center; margin-top:8px; }
+
+/* ── 底部状态列表 ── */
+.states-row { height:48px; background:#F8FAFC; border-bottom:1px solid #E2E8F0; display:flex; align-items:center; gap:6px; padding:0 16px; overflow-x:auto; flex-shrink:0; }
+.state-chip { padding:4px 12px; border-radius:99px; font-size:12px; cursor:pointer; border:1px solid #CBD5E1; background:#fff; color:#475569; white-space:nowrap; transition:all .15s; }
+.state-chip:hover { border-color:#00B96B; color:#00B96B; }
+.state-chip.active { background:#00B96B; border-color:#00B96B; color:#fff; font-weight:600; }
+.state-chip.error-state { border-color:#FCA5A5; color:#DC2626; }
+.state-chip.error-state.active { background:#EF4444; border-color:#EF4444; color:#fff; }
+
+/* ── 右侧：线框图 ── */
+.wireframe-panel { width:340px; display:flex; flex-direction:column; border-left:1px solid #E2E8F0; flex-shrink:0; overflow:hidden; }
+.wf-header { padding:10px 14px; background:#1E293B; display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.wf-header h3 { font-size:12px; color:#94A3B8; font-weight:500; flex:1; }
+.wf-state-badge { font-size:11px; padding:2px 8px; border-radius:4px; background:#00B96B; color:#fff; font-weight:600; }
+.wf-content { flex:1; overflow-y:auto; background:#1E293B; padding:14px; }
+.wf-pre { font-family:'SF Mono','Courier New',monospace; font-size:11.5px; line-height:1.65; color:#CBD5E1; white-space:pre; }
+.wf-pre .hl  { color:#4DD9A2; font-weight:700; }   /* 高亮当前状态对应区域 */
+.wf-pre .dim { color:#475569; }                      /* 暗化非当前区域 */
+.wf-desc { margin-top:12px; padding:10px 12px; border-radius:6px; background:#0F172A; }
+.wf-desc .label { font-size:11px; color:#64748B; margin-bottom:4px; }
+.wf-desc .value { font-size:12px; color:#E2E8F0; line-height:1.5; }
+.wf-transitions { margin-top:8px; }
+.wf-transitions .t-item { font-size:11px; color:#7DD3FC; line-height:1.6; padding-left:4px; border-left:2px solid #2563EB; margin-bottom:4px; }
+.wf-empty { display:flex; align-items:center; justify-content:center; height:100%; color:#475569; font-size:13px; text-align:center; padding:20px; line-height:1.7; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>足迹 APP · UE 状态机可视化</h1>
+  </div>
+  <p>点击状态节点或底部状态片查看对应线框图 →</p>
+</header>
+
+<div class="layout">
+
+  <!-- 左侧页面列表 -->
+  <nav class="sidebar">
+    <div class="sidebar-title">页面列表</div>
+    <!-- 由 JS 渲染 -->
+  </nav>
+
+  <!-- 中间：Mermaid 图 + 状态chips -->
+  <div class="center">
+    <div class="diagram-wrap">
+      <h2 id="diagram-title">选择左侧页面查看状态机</h2>
+      <div id="mermaid-box"></div>
+      <p class="click-tip" id="click-tip"></p>
+    </div>
+    <div class="states-row" id="states-row"></div>
+  </div>
+
+  <!-- 右侧：线框图 -->
+  <aside class="wireframe-panel">
+    <div class="wf-header">
+      <h3>线框图对应</h3>
+      <span class="wf-state-badge" id="wf-badge" style="display:none"></span>
+    </div>
+    <div class="wf-content" id="wf-content">
+      <div class="wf-empty">← 点击左侧页面<br>选择状态后<br>查看对应线框图</div>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+mermaid.initialize({ startOnLoad: false, theme: 'neutral', flowchart: { curve: 'basis' } });
+
+let currentPage = null;
+let currentState = null;
+
+// ── 渲染侧边栏 ──────────────────────────────────────
+function renderSidebar() {
+  const nav = document.querySelector('.sidebar');
+  const existing = nav.querySelector('.sidebar-title');
+  // 清除旧 buttons
+  nav.querySelectorAll('.page-btn').forEach(el => el.remove());
+
+  SM_PAGES.forEach(page => {
+    const btn = document.createElement('div');
+    btn.className = 'page-btn' + (currentPage?.id === page.id ? ' active' : '');
+    btn.innerHTML = `<span class="dot"></span>${page.label}`;
+    btn.onclick = () => selectPage(page.id);
+    nav.appendChild(btn);
+  });
+}
+
+// ── 选择页面 ────────────────────────────────────────
+async function selectPage(pageId) {
+  currentPage = SM_PAGES.find(p => p.id === pageId);
+  currentState = null;
+  renderSidebar();
+  document.getElementById('diagram-title').textContent = currentPage.label + ' · 状态机';
+  document.getElementById('click-tip').textContent = '↓ 点击下方状态片查看对应线框图';
+
+  // 渲染 Mermaid
+  const box = document.getElementById('mermaid-box');
+  box.innerHTML = '';
+  try {
+    const { svg } = await mermaid.render('sm_' + pageId + '_' + Date.now(), currentPage.mermaid);
+    box.innerHTML = svg;
+    // 清除 mermaid 可能遗留在 body 上的错误元素
+    document.querySelectorAll('body > [id^="dmermaid"]').forEach(el => el.remove());
+  } catch(e) {
+    box.innerHTML = `<p style="color:#EF4444;padding:20px;">状态图渲染失败：${e.message}</p>`;
+  }
+
+  // 渲染状态列表
+  renderStateChips();
+  clearWireframe();
+}
+
+// ── 渲染底部状态 chips ────────────────────────────────
+function renderStateChips() {
+  const row = document.getElementById('states-row');
+  row.innerHTML = '';
+  if (!currentPage) return;
+  currentPage.states.forEach(s => {
+    const chip = document.createElement('div');
+    const isErr = s.type === 'error';
+    chip.className = 'state-chip' + (isErr ? ' error-state' : '') + (currentState?.id === s.id ? ' active' : '');
+    chip.textContent = s.label;
+    chip.title = s.description;
+    chip.onclick = () => selectState(s.id);
+    row.appendChild(chip);
+  });
+}
+
+// ── 选择状态，显示线框图 ─────────────────────────────
+function selectState(stateId) {
+  if (!currentPage) return;
+  currentState = currentPage.states.find(s => s.id === stateId);
+  renderStateChips();
+
+  const badge = document.getElementById('wf-badge');
+  badge.style.display = 'inline';
+  badge.textContent = currentState.label;
+  if (currentState.type === 'error') {
+    badge.style.background = '#EF4444';
+  } else {
+    badge.style.background = '#00B96B';
+  }
+
+  const wfContent = document.getElementById('wf-content');
+  const wf = currentState.wireframe;
+
+  let html = `<pre class="wf-pre">${escapeHtml(wf.ascii)}</pre>`;
+  html += `<div class="wf-desc"><div class="label">UI 状态说明</div><div class="value">${escapeHtml(wf.desc)}</div></div>`;
+
+  if (wf.transitions && wf.transitions.length) {
+    html += `<div class="wf-transitions">`;
+    wf.transitions.forEach(t => {
+      html += `<div class="t-item">→ ${escapeHtml(t)}</div>`;
+    });
+    html += `</div>`;
+  }
+
+  if (wf.constraints && wf.constraints.length) {
+    html += `<div class="wf-desc" style="margin-top:8px"><div class="label">约束条件</div>`;
+    wf.constraints.forEach(c => {
+      html += `<div class="value" style="margin-top:4px">${escapeHtml(c)}</div>`;
+    });
+    html += `</div>`;
+  }
+
+  wfContent.innerHTML = html;
+}
+
+function clearWireframe() {
+  document.getElementById('wf-badge').style.display = 'none';
+  document.getElementById('wf-content').innerHTML =
+    '<div class="wf-empty">↑ 点击底部状态片<br>查看对应线框图</div>';
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── 初始化 ────────────────────────────────────────────
+renderSidebar();
+// 默认打开第一个页面
+selectPage(SM_PAGES[0].id);
+</script>
+</body>
+</html>

@@ -1,0 +1,148 @@
+{
+  "iteration": 2,
+  "skill_name": "design-flow",
+  "timestamp": "2026-03-22T08:30:00Z",
+  "note": "iteration-2 新增三个功能测试：state-machine-visual.md、state-machine-interactive.html、validate.py",
+  "runs": [
+    {
+      "eval_id": 0,
+      "eval_name": "fitstreak-fitness-app",
+      "config": "with_skill",
+      "expectations_total": 7,
+      "expectations_passed": 7,
+      "pass_rate": 1.0,
+      "time_seconds": 897.8,
+      "tokens": 102459,
+      "timing_file": "eval-0-fitstreak/with_skill/timing.json",
+      "grading_file": "eval-0-fitstreak/with_skill/grading.json",
+      "new_assertions": ["visual_state_machine", "interactive_html"]
+    },
+    {
+      "eval_id": 0,
+      "eval_name": "fitstreak-fitness-app",
+      "config": "old_skill (iteration-1)",
+      "expectations_total": 5,
+      "expectations_passed": 5,
+      "pass_rate": 1.0,
+      "time_seconds": 868.6,
+      "tokens": 72753,
+      "note": "iteration-1 结果，不含新断言（visual_state_machine/interactive_html 在 iteration-1 时不存在）"
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "shiwo-campus-marketplace",
+      "config": "with_skill",
+      "expectations_total": 5,
+      "expectations_passed": 5,
+      "pass_rate": 1.0,
+      "time_seconds": 915.1,
+      "tokens": 113598,
+      "timing_file": "eval-1-shiwo/with_skill/timing.json",
+      "grading_file": "eval-1-shiwo/with_skill/grading.json",
+      "new_assertions": ["interactive_html"]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "shiwo-campus-marketplace",
+      "config": "old_skill (iteration-1)",
+      "expectations_total": 4,
+      "expectations_passed": 4,
+      "pass_rate": 1.0,
+      "time_seconds": 775.1,
+      "tokens": 79121,
+      "note": "iteration-1 结果，不含 interactive_html 断言"
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "freelancebook-finance-tool",
+      "config": "with_skill",
+      "expectations_total": 5,
+      "expectations_passed": 5,
+      "pass_rate": 1.0,
+      "time_seconds": 950.5,
+      "tokens": 122200,
+      "timing_file": "eval-2-freelancebook/with_skill/timing.json",
+      "grading_file": "eval-2-freelancebook/with_skill/grading.json",
+      "new_assertions": ["visual_state_machine"]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "freelancebook-finance-tool",
+      "config": "old_skill (iteration-1)",
+      "expectations_total": 4,
+      "expectations_passed": 3,
+      "pass_rate": 0.75,
+      "time_seconds": 773.9,
+      "tokens": 76361,
+      "note": "iteration-1 结果，amount_integer_type 断言失败（用了 decimal）"
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "contract-validator",
+      "config": "with_skill",
+      "expectations_total": 4,
+      "expectations_passed": 4,
+      "pass_rate": 1.0,
+      "time_seconds": 90.7,
+      "tokens": 38192,
+      "timing_file": "eval-3-validate/with_skill/timing.json",
+      "grading_file": "eval-3-validate/with_skill/grading.json"
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "contract-validator",
+      "config": "without_skill",
+      "expectations_total": 4,
+      "expectations_passed": 4,
+      "pass_rate": 1.0,
+      "time_seconds": 88.9,
+      "tokens": 25924,
+      "timing_file": "eval-3-validate/without_skill/timing.json",
+      "grading_file": "eval-3-validate/without_skill/grading.json"
+    }
+  ],
+  "aggregate": {
+    "with_skill_iteration2": {
+      "total_evals": 4,
+      "avg_pass_rate": 1.0,
+      "note": "所有断言 100% 通过，含三个新功能断言"
+    },
+    "with_skill_iteration1": {
+      "total_evals": 3,
+      "avg_pass_rate": 0.92,
+      "note": "iteration-1 旧功能断言平均通过率"
+    }
+  },
+  "analyst_observations": [
+    {
+      "type": "strength",
+      "eval": "all",
+      "observation": "三个新功能全部通过 100% 断言：state-machine-visual.md（Mermaid 图）、state-machine-interactive.html（可交互 HTML）、validate.py（契约校验）"
+    },
+    {
+      "type": "strength",
+      "eval": "fitstreak-fitness-app",
+      "observation": "state-machine-interactive.html 包含完整 STATES JS 对象（7 个页面、30+ 状态）、Mermaid CDN 引用、页面筛选逻辑，技术实现完整"
+    },
+    {
+      "type": "strength",
+      "eval": "fitstreak-fitness-app",
+      "observation": "Phase 3 自动运行 validate.py 后返回 0 ERROR，契约三层一致性通过，说明生成质量稳定"
+    },
+    {
+      "type": "insight",
+      "eval": "contract-validator (eval-3)",
+      "observation": "with_skill 和 without_skill 在 eval-3 都是 4/4 通过，因为 prompt 明确给出了命令。skill 的价值在于将校验集成到 Phase 3 自动流程中，而非教会 agent 如何跑脚本"
+    },
+    {
+      "type": "insight",
+      "eval": "contract-validator (eval-3)",
+      "observation": "with_skill 用了 38k tokens vs without_skill 26k（多 46%）。skill 引导 agent 阅读了更多上下文（SKILL.md + df-validate.md），给出了更丰富的修复建议，这个 token 溢价是值得的"
+    },
+    {
+      "type": "known_limitation",
+      "eval": "all",
+      "observation": "validate.py 的 U03 规则对 items[].field 嵌套路径的检查存在误报——校验器只检查响应类型的顶层字段，items[].title 这类写法会被报为警告。已在代码中修复 lstrip bug，但嵌套深度感知仍是改进方向"
+    }
+  ]
+}

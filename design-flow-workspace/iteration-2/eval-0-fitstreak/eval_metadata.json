@@ -1,0 +1,14 @@
+{
+  "eval_id": 0,
+  "eval_name": "fitstreak-fitness-app",
+  "prompt": "帮我做一个完整的产品设计规划，以下是所有信息，请自动完成全部6个阶段，不需要等我确认，遇到设计决策时自己做出合理判断。\n\n产品信息：\n- 产品名称：FitStreak（健身打卡）\n- 核心问题：健身爱好者难以坚持运动计划，缺乏社交激励和进度可视化\n- 目标用户：18-35岁上班族，有健身意愿但自律性不足，每天有30-60分钟运动时间\n- 核心功能：1.每日打卡记录 2.运动计划制定 3.好友挑战/排行榜 4.成就系统/徽章 5.体重/体脂趋势图\n- 平台：iOS + Android（React Native）\n- 商业模式：免费基础版 + 订阅制高级版（¥18/月）\n\n请按顺序完成所有6个阶段，将文件输出到当前目录的 fitstreak/ 文件夹。",
+  "assertions": [
+    {"id": "files_created", "text": "fitstreak/ 目录下至少存在 product-overview.md, contracts/domain.yaml, design/tokens.json"},
+    {"id": "domain_sensitive_markers", "text": "domain.yaml 中有 ⚠️ 禁止暴露 的注释标记"},
+    {"id": "tokens_frozen", "text": "tokens.json 中有 _frozen: true 标记"},
+    {"id": "wireframes_created", "text": "wireframes/ 目录下至少有 1 个 .md 文件含 ASCII 线框图和约束标记"},
+    {"id": "state_machine_created", "text": "ue/state-machine.yaml 存在且包含 states 字段"},
+    {"id": "visual_state_machine", "text": "ue/state-machine-visual.md 存在且包含 stateDiagram-v2 的 mermaid 代码块"},
+    {"id": "interactive_html", "text": "ue/state-machine-interactive.html 存在且包含 mermaid CDN 引用和 const STATES = { JS 数据对象"}
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "expectations": [
+    {
+      "text": "note_saved_to_papers_dir: ~/papers/ 目录下存在至少一个新建的 .md 文件",
+      "passed": true,
+      "evidence": "~/papers/ 目录下存在 Alpha-CLIP：让CLIP聚焦于你关心的任意区域.md（13k，创建于 2026-03-22 02:42），以及对应原文文件，共 2 个与本次任务相关的 .md 文件。"
+    },
+    {
+      "text": "filename_is_chinese: 保存的笔记文件名包含中文字符（非 ASCII）",
+      "passed": true,
+      "evidence": "文件名为「Alpha-CLIP：让CLIP聚焦于你关心的任意区域.md」，包含大量中文字符，满足条件。"
+    },
+    {
+      "text": "has_required_sections: 笔记正文包含以下六个标题：一句话概括、问题与动机、核心方法、实验与结果、贡献与局限、讲解内容",
+      "passed": true,
+      "evidence": "笔记中六个标题全部存在：## 1. 一句话概括、## 2. 问题与动机、## 3. 核心方法、## 4. 实验与结果、## 5. 贡献与局限、## 6. 讲解内容，均已确认。"
+    },
+    {
+      "text": "explanation_has_depth: 讲解内容章节的文本长度 >= 500 字",
+      "passed": true,
+      "evidence": "第 6 节（讲解内容）总字符数为 2005，其中中文字符约 1105 个，远超 500 字要求。"
+    },
+    {
+      "text": "paper_identity_correct: 笔记正确识别了 2312.03818 实际对应的论文（Alpha-CLIP），而非盲目相信用户说的 Gaussian Splatting；加分项：提醒用户 ID 可能有误",
+      "passed": true,
+      "evidence": "笔记标题、正文均正确标注为 Alpha-CLIP（arXiv: 2312.03818, CVPR 2024），而非 Gaussian Splatting。论文身份识别正确。但笔记中未明确向用户提醒 arXiv ID 与 Gaussian Splatting 的对应关系有误，加分项未达到。"
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1.0
+  },
+  "timing": {
+    "executor_duration_seconds": 270.9
+  }
+}

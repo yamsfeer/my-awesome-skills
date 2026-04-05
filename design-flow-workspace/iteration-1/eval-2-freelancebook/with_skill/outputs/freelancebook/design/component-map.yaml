@@ -1,0 +1,440 @@
+# 组件-数据映射表 - FreelanceBook
+# 说明：将数据字段与 UI 组件绑定，明确每个组件的数据来源和样式规范
+
+design_system:
+  primary_color: "#2563eb"
+  font_family: "IBM Plex Sans"
+  style: "金融/效率工具：专业可信蓝色系，极简主义"
+
+
+# ========== 全局组件 ==========
+
+components:
+
+  # ---------- 导航组件 ----------
+  - name: Sidebar
+    description: 左侧固定导航栏
+    data_source: "用户状态（登录信息 + 订阅状态）"
+    width: "240px"
+    background: "color.surface.sidebar (#1e293b)"
+    fields:
+      - field: logo
+        component: Logo
+        style: "白色，顶部固定"
+      - field: nav_items
+        component: NavItem
+        items:
+          - icon: BarChart2, label: 仪表盘, route: /
+          - icon: Users, label: 客户, route: /clients
+          - icon: Folder, label: 项目, route: /projects
+          - icon: FileText, label: 发票, route: /invoices
+          - icon: Calculator, label: 税务预估, route: /tax
+        active_style: "背景 color.surface.sidebar_active，文字白色"
+      - field: subscription_badge
+        component: Badge
+        condition: "subscription_plan === 'trial'"
+        style: "warning色，显示剩余天数"
+      - field: user_avatar
+        component: Avatar
+        position: "底部"
+        size: "36px"
+
+  - name: Topbar
+    description: 顶部固定导航栏（桌面端与侧边栏配合）
+    height: "64px"
+    background: "color.neutral.0 (#ffffff)"
+    shadow: "shadow.sm"
+    fields:
+      - field: page_title
+        component: Text
+        style: "heading-md, color.neutral.800"
+      - field: notification_bell
+        component: IconButton
+        icon: Bell
+        badge: "未读通知数"
+      - field: user_menu
+        component: DropdownMenu
+        trigger: Avatar
+        items: [个人设置, 订阅管理, 退出登录]
+
+  - name: Toast
+    description: 全局消息提示
+    position: "右上角"
+    duration: "3000ms"
+    variants:
+      - type: success
+        icon: CheckCircle
+        background: "color.semantic.success_bg"
+        border: "color.semantic.success"
+      - type: error
+        icon: XCircle
+        background: "color.semantic.error_bg"
+        border: "color.semantic.error"
+      - type: warning
+        icon: AlertTriangle
+        background: "color.semantic.warning_bg"
+        border: "color.semantic.warning"
+      - type: info
+        icon: Info
+        background: "color.semantic.info_bg"
+        border: "color.semantic.info"
+
+
+  # ---------- 仪表盘组件 ----------
+  - name: StatCard
+    description: 统计数字卡片
+    data_source: "GET /api/v1/stats/income"
+    layout: "三列等宽"
+    padding: "layout.card_padding (24px)"
+    radius: "radius.lg (12px)"
+    shadow: "shadow.sm"
+    fields:
+      - field: label
+        component: Text
+        style: "typography.sm, color.neutral.500"
+      - field: value
+        component: Text
+        style: "typography.3xl, fontWeight.bold, color.neutral.900"
+        format: "金额格式化（¥X,XXX.XX 或 ¥X.X万）"
+      - field: trend
+        component: TrendBadge
+        style: "正值绿色+上箭头，负值红色+下箭头"
+        condition: "有同比数据时显示"
+      - field: overdue_indicator
+        component: Badge
+        color: "color.semantic.overdue"
+        condition: "字段为 total_overdue 且值 > 0"
+
+  - name: IncomeLineChart
+    description: 月度收入折线图
+    data_source: "GET /api/v1/stats/income → by_month"
+    library: "Recharts / Chart.js"
+    fields:
+      - field: x_axis
+        source: by_month[].month
+        format: "M月"
+      - field: y_axis
+        source: by_month[].total_amount
+        format: "¥X万"
+      - field: tooltip
+        format: "月份 + ¥X,XXX.XX 详细金额"
+      - field: line_color
+        value: "color.primary.600 (#2563eb)"
+
+  - name: ClientPieChart
+    description: 按客户收入分布饼图
+    data_source: "GET /api/v1/stats/income → by_client"
+    fields:
+      - field: slices
+        source: by_client[]
+        max_slices: 5
+        note: "超过5个客户合并为'其他'"
+      - field: legend
+        format: "客户名 + 金额 + 占比%"
+
+
+  # ---------- 客户组件 ----------
+  - name: ClientCard
+    description: 客户列表卡片
+    data_source: "GET /api/v1/clients → items[]"
+    padding: "spacing.4 (16px) spacing.6 (24px)"
+    radius: "radius.lg"
+    shadow: "shadow.xs"
+    hover: "shadow.md, cursor-pointer"
+    fields:
+      - field: name
+        component: Text
+        style: "typography.base, fontWeight.semibold, color.neutral.900"
+        max_lines: 1
+        source: items[].name
+      - field: company_name
+        component: Text
+        style: "typography.sm, color.neutral.500"
+        max_lines: 1
+        source: items[].company_name
+        fallback: "（个人）"
+      - field: tags
+        component: TagGroup
+        max_tags: 3
+        source: items[].tags
+        style: "typography.xs, radius.full, background neutral.100"
+      - field: primary_contact
+        component: ContactMini
+        source: items[].primary_contact
+        format: "头像(24px) + 姓名 + 邮箱/电话"
+      - field: unpaid_amount
+        component: Text
+        source: items[].unpaid_amount
+        format: "¥X,XXX.XX"
+        color_condition:
+          - condition: "value > 0"
+            color: "color.semantic.error"
+          - condition: "value === 0"
+            color: "color.neutral.400"
+      - field: actions
+        component: ActionGroup
+        visibility: "hover"
+        items: [编辑, 更多菜单]
+
+  - name: ContactListItem
+    description: 联系人列表项
+    data_source: "GET /api/v1/clients/:id → contacts[]"
+    fields:
+      - field: avatar
+        component: Avatar
+        size: "32px"
+        source: contacts[].name
+        format: "名字首字母生成"
+      - field: name
+        component: Text
+        style: "typography.sm, fontWeight.medium"
+        source: contacts[].name
+      - field: title
+        component: Text
+        style: "typography.xs, color.neutral.500"
+        source: contacts[].title
+      - field: primary_badge
+        component: Badge
+        color: "color.primary.100, text color.primary.700"
+        condition: "contacts[].is_primary === true"
+        label: "主联系人"
+      - field: contact_links
+        component: ContactLinks
+        format: "邮箱图标链接 + 电话图标链接"
+
+
+  # ---------- 发票组件 ----------
+  - name: InvoiceStatusBadge
+    description: 发票状态标签
+    variants:
+      - status: draft
+        label: "草稿"
+        background: "color.neutral.100"
+        text: "color.neutral.600"
+        icon: Edit2
+      - status: sent
+        label: "已发送"
+        background: "color.semantic.info_bg"
+        text: "color.semantic.info_text"
+        icon: Send
+      - status: paid
+        label: "已收款"
+        background: "color.semantic.success_bg"
+        text: "color.semantic.success_text"
+        icon: CheckCircle
+      - status: overdue
+        label: "逾期"
+        background: "color.semantic.error_bg"
+        text: "color.semantic.error_text"
+        icon: AlertCircle
+
+  - name: InvoiceRow
+    description: 发票列表行
+    data_source: "GET /api/v1/invoices → items[]"
+    fields:
+      - field: invoice_number
+        component: Link
+        style: "typography.sm, color.primary.600"
+        source: items[].invoice_number
+      - field: title
+        component: Text
+        style: "typography.sm, color.neutral.700"
+        max_lines: 1
+        source: items[].title
+      - field: client_name
+        component: Text
+        style: "typography.sm, color.neutral.500"
+        source: items[].client.name
+      - field: amount
+        component: Text
+        style: "typography.sm, fontWeight.medium, color.neutral.900"
+        format: "¥X,XXX.XX，右对齐"
+        source: items[].amount
+      - field: status
+        component: InvoiceStatusBadge
+        source: items[].status
+      - field: due_date
+        component: Text
+        style: "typography.sm"
+        source: items[].due_date
+        format: "YYYY-MM-DD"
+        color_condition:
+          - condition: "status === 'overdue'"
+            color: "color.semantic.error"
+      - field: row_background
+        condition: "status === 'overdue'"
+        style: "background: color.semantic.error_bg (浅红背景)"
+
+  - name: InvoiceItemsTable
+    description: 发票明细表格
+    data_source: "GET /api/v1/invoices/:id → items[]"
+    fields:
+      - field: description
+        component: Text
+        style: "typography.sm, color.neutral.700"
+        source: items[].description
+      - field: quantity
+        component: Text
+        style: "typography.sm, color.neutral.500, text-right"
+        source: items[].quantity
+      - field: unit_price
+        component: Text
+        style: "typography.sm, color.neutral.700, text-right"
+        format: "¥X,XXX.XX"
+        source: items[].unit_price
+      - field: amount
+        component: Text
+        style: "typography.sm, fontWeight.medium, text-right"
+        format: "¥X,XXX.XX"
+        source: items[].amount
+      - field: total_row
+        component: TotalRow
+        style: "typography.lg, fontWeight.bold, color.neutral.900, text-right"
+        label: "总计"
+
+
+  # ---------- 项目组件 ----------
+  - name: ProjectCard
+    description: 项目列表卡片
+    data_source: "GET /api/v1/projects → items[]"
+    fields:
+      - field: title
+        component: Text
+        style: "typography.base, fontWeight.semibold"
+        source: items[].title
+      - field: client_name
+        component: Text
+        style: "typography.sm, color.neutral.500"
+        source: items[].client.name
+      - field: status_badge
+        component: ProjectStatusBadge
+        source: items[].status
+      - field: contract_amount
+        component: Text
+        style: "typography.sm, fontWeight.medium"
+        format: "合同额：¥X,XXX.XX"
+        source: items[].contract_amount
+      - field: progress_bar
+        component: ProgressBar
+        value: "paid_amount / contract_amount"
+        color: "color.primary.500"
+        height: "6px"
+        radius: "radius.full"
+      - field: date_range
+        component: Text
+        style: "typography.xs, color.neutral.400"
+        format: "YYYY.MM.DD - YYYY.MM.DD"
+        source: "start_date + end_date"
+
+
+  # ---------- 税务组件 ----------
+  - name: TaxSummaryCard
+    description: 税务预估结果卡片
+    data_source: "GET /api/v1/tax/estimate"
+    fields:
+      - field: total_tax
+        component: Text
+        style: "typography.5xl, fontWeight.bold, color.semantic.error"
+        format: "¥X,XXX.XX"
+        source: total_tax_estimate
+      - field: effective_rate
+        component: Text
+        style: "typography.xl, color.neutral.600"
+        format: "综合税率 X.X%"
+        source: effective_rate
+      - field: breakdown_items
+        component: TaxBreakdownList
+        source: breakdown[]
+
+  - name: TaxSettingsForm
+    description: 税务参数配置表单
+    data_source: "GET/PUT /api/v1/tax/settings"
+    fields:
+      - field: annual_exemption
+        component: NumberInput
+        label: "年度免征额（元）"
+        placeholder: "60000"
+        unit: "元"
+      - field: vat_rate
+        component: NumberInput
+        label: "增值税税率"
+        placeholder: "3"
+        unit: "%"
+        max: 100
+      - field: save_button
+        component: Button
+        variant: "primary"
+        label: "保存配置"
+
+
+  # ---------- 通用表单组件 ----------
+  - name: FormInput
+    description: 通用输入框
+    height: "40px"
+    padding: "spacing.3 (12px) spacing.4 (16px)"
+    radius: "radius.md (8px)"
+    border: "1px solid color.surface.input_border"
+    focus_border: "2px solid color.surface.input_focus"
+    error_border: "2px solid color.semantic.error"
+    font: "typography.sm, fontFamily.sans"
+
+  - name: Button
+    description: 按钮组件
+    variants:
+      - type: primary
+        background: "color.primary.600"
+        text: "white"
+        hover: "color.primary.700"
+        padding: "spacing.2.5 spacing.5"
+        radius: "radius.md"
+        font: "typography.sm, fontWeight.medium"
+      - type: secondary
+        background: "transparent"
+        border: "1px solid color.neutral.300"
+        text: "color.neutral.700"
+        hover: "background color.neutral.50"
+      - type: danger
+        background: "color.semantic.error"
+        text: "white"
+        hover: "color.semantic.error_text (#991b1b)"
+      - type: ghost
+        background: "transparent"
+        text: "color.primary.600"
+        hover: "background color.primary.50"
+
+  - name: EmptyState
+    description: 空状态组件
+    fields:
+      - field: illustration
+        component: SVGIcon
+        size: "80px"
+        color: "color.neutral.300"
+      - field: title
+        component: Text
+        style: "typography.lg, fontWeight.medium, color.neutral.700"
+      - field: description
+        component: Text
+        style: "typography.sm, color.neutral.500"
+      - field: action_button
+        component: Button
+        variant: "primary"
+
+  - name: SkeletonLoader
+    description: 骨架屏占位组件
+    animation: "pulse (1.5s infinite)"
+    background: "color.neutral.100"
+    radius: "radius.md"
+    variants:
+      - type: text_sm
+        height: "16px"
+        width: "random 60-90%"
+      - type: text_lg
+        height: "24px"
+        width: "random 40-70%"
+      - type: card
+        height: "120px"
+        width: "100%"
+      - type: avatar
+        height: "40px"
+        width: "40px"
+        radius: "radius.full"

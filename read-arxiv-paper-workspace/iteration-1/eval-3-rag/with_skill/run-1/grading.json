@@ -1,0 +1,38 @@
+{
+  "expectations": [
+    {
+      "text": "handled_url_without_scheme: 成功处理了 arxiv.org/abs/2005.11401（无 https:// 前缀）格式的 URL，生成了笔记",
+      "passed": true,
+      "evidence": "outputs/note.md 和 ~/papers/检索增强生成 RAG.md 均已成功生成，笔记头部记录了 ArXiv: [2005.11401](https://arxiv.org/abs/2005.11401)，说明技能正确处理了无协议前缀的 URL 并完成了论文阅读与笔记生成。"
+    },
+    {
+      "text": "filename_is_chinese: 保存的笔记文件名包含中文字符（非 ASCII）",
+      "passed": true,
+      "evidence": "保存到 ~/papers/ 的笔记文件名为「检索增强生成 RAG.md」，包含中文字符。outputs/ 目录下的中间产物为 note.md（无中文），但最终保存的笔记文件名满足要求。"
+    },
+    {
+      "text": "has_required_sections: 笔记正文包含以下六个标题：一句话概括、问题与动机、核心方法、实验与结果、贡献与局限、讲解内容",
+      "passed": true,
+      "evidence": "笔记中可找到全部六个二级标题：## 一句话概括、## 问题与动机、## 核心方法、## 实验与结果、## 贡献与局限、## 讲解内容，完全符合要求。"
+    },
+    {
+      "text": "addresses_rag_vs_lm_difference: 讲解内容中明确讨论了 RAG 与普通语言模型（LLM）的本质区别",
+      "passed": true,
+      "evidence": "在「讲解内容」章节中，以「开卷考试 vs 闭卷考试」类比明确对比了 RAG 与纯参数化 LM（如 GPT）的本质差异：「纯参数化语言模型（如 GPT）相当于闭卷考试选手——所有知识都背在脑子里，一旦遇到冷门知识或知识更新，就会出错。而 RAG 就是那个开卷考试的聪明学生」，并从知识不过时、答案可追溯两方面展开讨论。"
+    },
+    {
+      "text": "handles_old_paper_gracefully: 若无 HTML 全文，笔记中注明了限制（降级处理），或通过摘要页面获取了足够内容，而非直接失败",
+      "passed": true,
+      "evidence": "2005.11401 是 2020 年的论文，笔记内容极为丰富，包含完整的方法细节（两种变体公式、DPR 架构、训练目标）、多个数据集的实验数值对比表、消融实验结论，说明技能通过摘要页面或其他途径获取了足够内容，未出现失败或内容缺失，也未需要注明降级限制。"
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1.0
+  },
+  "timing": {
+    "executor_duration_seconds": 260.0
+  }
+}

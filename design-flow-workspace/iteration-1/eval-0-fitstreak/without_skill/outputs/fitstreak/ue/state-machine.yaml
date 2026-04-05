@@ -1,0 +1,493 @@
+# FitStreak 页面状态机定义
+# version: 1.0.0
+# updated: 2026-03-22
+# 使用 XState 兼容格式描述应用页面流转逻辑
+
+# ─────────────────────────────────────────
+# 全局应用状态机
+# ─────────────────────────────────────────
+AppStateMachine:
+  id: fitstreak_app
+  initial: bootstrap
+  description: 应用顶层状态机，管理启动和认证路由
+
+  states:
+
+    bootstrap:
+      description: 应用启动初始化
+      entry:
+        - action: check_local_token
+        - action: load_app_config
+      transitions:
+        - event: TOKEN_VALID
+          target: main
+        - event: TOKEN_INVALID
+          target: auth
+        - event: TOKEN_EXPIRED
+          target: auth
+          action: clear_local_token
+
+    auth:
+      id: auth_flow
+      initial: phone_input
+      description: 未登录用户认证流程
+      states:
+
+        phone_input:
+          description: 输入手机号页面
+          entry:
+            - action: clear_otp_state
+          transitions:
+            - event: SUBMIT_PHONE
+              target: otp_sending
+              guard: phone_is_valid
+            - event: APPLE_LOGIN
+              target: apple_login_loading
+            - event: GOOGLE_LOGIN
+              target: google_login_loading
+
+        otp_sending:
+          description: 正在发送短信验证码
+          entry:
+            - action: api_send_otp
+          transitions:
+            - event: OTP_SENT
+              target: otp_input
+            - event: OTP_SEND_FAILED
+              target: phone_input
+              action: show_error_toast
+            - event: RATE_LIMITED
+              target: phone_input
+              action: show_cooldown_timer
+
+        otp_input:
+          description: 输入验证码页面（60秒倒计时）
+          entry:
+            - action: start_countdown_60s
+          transitions:
+            - event: SUBMIT_OTP
+              target: otp_verifying
+              guard: otp_length_is_6
+            - event: RESEND_OTP
+              target: otp_sending
+              guard: countdown_expired
+            - event: BACK
+              target: phone_input
+            - event: COUNTDOWN_EXPIRE
+              action: enable_resend_button
+
+        otp_verifying:
+          description: 验证中（Loading 状态）
+          entry:
+            - action: api_verify_otp
+          transitions:
+            - event: VERIFY_SUCCESS_NEW_USER
+              target: onboarding
+            - event: VERIFY_SUCCESS_EXISTING_USER
+              target: main
+              action: save_token_locally
+            - event: VERIFY_FAILED
+              target: otp_input
+              action: show_error_shake_animation
+
+        apple_login_loading:
+          description: Apple 登录中
+          entry:
+            - action: trigger_apple_auth_sdk
+          transitions:
+            - event: APPLE_AUTH_SUCCESS
+              target: apple_api_verifying
+            - event: APPLE_AUTH_CANCELLED
+              target: phone_input
+            - event: APPLE_AUTH_FAILED
+              target: phone_input
+              action: show_error_toast
+
+        apple_api_verifying:
+          description: 将 Apple token 发给后端验证
+          entry:
+            - action: api_apple_login
+          transitions:
+            - event: LOGIN_SUCCESS_NEW_USER
+              target: onboarding
+            - event: LOGIN_SUCCESS_EXISTING_USER
+              target: main
+            - event: LOGIN_FAILED
+              target: phone_input
+              action: show_error_toast
+
+        google_login_loading:
+          description: Google 登录中
+          entry:
+            - action: trigger_google_auth_sdk
+          transitions:
+            - event: GOOGLE_AUTH_SUCCESS
+              target: google_api_verifying
+            - event: GOOGLE_AUTH_CANCELLED
+              target: phone_input
+            - event: GOOGLE_AUTH_FAILED
+              target: phone_input
+              action: show_error_toast
+
+        google_api_verifying:
+          entry:
+            - action: api_google_login
+          transitions:
+            - event: LOGIN_SUCCESS_NEW_USER
+              target: onboarding
+            - event: LOGIN_SUCCESS_EXISTING_USER
+              target: main
+
+        onboarding:
+          id: onboarding_flow
+          initial: welcome
+          description: 新用户引导流程（3步）
+          states:
+
+            welcome:
+              description: 欢迎页，展示 FitStreak 核心价值
+              transitions:
+                - event: NEXT
+                  target: goal_setup
+
+            goal_setup:
+              description: 选择健身目标（减脂/增肌/塑形/提升耐力）
+              transitions:
+                - event: NEXT
+                  target: level_setup
+                  guard: goal_selected
+                - event: SKIP
+                  target: level_setup
+
+            level_setup:
+              description: 选择当前健身水平（初级/中级/高级）
+              transitions:
+                - event: COMPLETE
+                  target: complete
+                  action: api_update_user_profile
+                - event: SKIP
+                  target: complete
+
+            complete:
+              type: final
+              description: 引导完成，进入主界面
+              entry:
+                - action: navigate_to_main
+                - action: show_first_checkin_prompt
+
+    main:
+      id: main_app
+      description: 主应用（已登录），底部 Tab 导航
+      type: parallel
+      regions:
+
+        tab_navigation:
+          initial: home
+          states:
+            home:
+              on:
+                TAB_SOCIAL: social
+                TAB_PLANS: plans
+                TAB_PROFILE: profile
+            social:
+              on:
+                TAB_HOME: home
+                TAB_PLANS: plans
+                TAB_PROFILE: profile
+            plans:
+              on:
+                TAB_HOME: home
+                TAB_SOCIAL: social
+                TAB_PROFILE: profile
+            profile:
+              on:
+                TAB_HOME: home
+                TAB_SOCIAL: social
+                TAB_PLANS: plans
+
+        global_modals:
+          initial: idle
+          states:
+            idle:
+              transitions:
+                - event: OPEN_CHECKIN_MODAL
+                  target: checkin_flow
+                - event: OPEN_PREMIUM_PAYWALL
+                  target: premium_paywall
+                - event: ACHIEVEMENT_UNLOCKED
+                  target: achievement_popup
+
+            checkin_flow:
+              id: checkin_state_machine
+              initial: step_exercise
+              description: 打卡流程状态机（3步）
+              states:
+
+                step_exercise:
+                  description: 步骤1：选择运动类型
+                  entry:
+                    - action: load_exercise_types
+                  transitions:
+                    - event: SELECT_EXERCISE
+                      target: step_duration
+                      guard: exercise_type_selected
+                      action: save_selected_exercise
+                    - event: DISMISS
+                      target: dismissed
+
+                step_duration:
+                  description: 步骤2：输入运动时长
+                  transitions:
+                    - event: CONFIRM_DURATION
+                      target: step_note
+                      guard: duration_is_valid
+                      action: save_duration
+                    - event: START_TIMER
+                      target: timer_running
+                    - event: BACK
+                      target: step_exercise
+
+                timer_running:
+                  description: 计时器运行中
+                  entry:
+                    - action: start_countdown_timer
+                  transitions:
+                    - event: STOP_TIMER
+                      target: step_duration
+                      action: save_elapsed_duration
+                    - event: PAUSE_TIMER
+                      target: timer_paused
+
+                timer_paused:
+                  transitions:
+                    - event: RESUME_TIMER
+                      target: timer_running
+                    - event: STOP_TIMER
+                      target: step_duration
+                      action: save_elapsed_duration
+
+                step_note:
+                  description: 步骤3：备注（可选）
+                  transitions:
+                    - event: SUBMIT
+                      target: submitting
+                    - event: SKIP
+                      target: submitting
+                    - event: BACK
+                      target: step_duration
+
+                submitting:
+                  description: 提交打卡中
+                  entry:
+                    - action: api_create_checkin
+                  transitions:
+                    - event: SUBMIT_SUCCESS
+                      target: success
+                    - event: SUBMIT_FAILED
+                      target: step_note
+                      action: show_error_toast
+                    - event: ALREADY_CHECKED_IN
+                      target: dismissed
+                      action: show_already_checked_in_notice
+
+                success:
+                  description: 打卡成功页面
+                  entry:
+                    - action: play_confetti_animation
+                    - action: update_home_screen_data
+                    - action: check_achievement_unlock
+                  transitions:
+                    - event: SHARE
+                      action: open_share_sheet
+                    - event: DISMISS
+                      target: dismissed
+
+                dismissed:
+                  type: final
+                  entry:
+                    - action: close_modal
+
+              on:
+                DISMISS_CHECKIN:
+                  target: idle
+
+            premium_paywall:
+              description: Premium 订阅弹窗
+              initial: idle
+              states:
+                idle:
+                  transitions:
+                    - event: SELECT_PLAN
+                      action: save_selected_plan
+                    - event: SUBSCRIBE
+                      target: processing_payment
+                    - event: DISMISS
+                      target: dismissed
+
+                processing_payment:
+                  description: 支付处理中
+                  entry:
+                    - action: trigger_payment_sdk
+                  transitions:
+                    - event: PAYMENT_SUCCESS
+                      target: payment_success
+                    - event: PAYMENT_CANCELLED
+                      target: idle
+                    - event: PAYMENT_FAILED
+                      target: payment_failed
+
+                payment_success:
+                  description: 支付成功
+                  entry:
+                    - action: api_verify_subscription
+                    - action: update_user_premium_status
+                    - action: show_success_animation
+                  transitions:
+                    - event: DISMISS
+                      target: dismissed
+
+                payment_failed:
+                  transitions:
+                    - event: RETRY
+                      target: idle
+                    - event: DISMISS
+                      target: dismissed
+
+                dismissed:
+                  type: final
+                  entry:
+                    - action: close_modal
+              on:
+                DISMISS_PAYWALL:
+                  target: idle
+
+            achievement_popup:
+              description: 成就解锁弹窗（自动3秒后消失）
+              entry:
+                - action: play_achievement_animation
+                - action: start_auto_dismiss_timer_3s
+              transitions:
+                - event: TAP
+                  target: idle
+                  action: navigate_to_achievements
+                - event: AUTO_DISMISS
+                  target: idle
+
+# ─────────────────────────────────────────
+# 独立页面状态机
+# ─────────────────────────────────────────
+
+LeaderboardStateMachine:
+  id: leaderboard
+  initial: loading
+  states:
+    loading:
+      entry:
+        - action: api_fetch_leaderboard
+      transitions:
+        - event: LOAD_SUCCESS
+          target: display
+        - event: LOAD_FAILED
+          target: error
+
+    display:
+      description: 展示排行榜数据
+      transitions:
+        - event: CHANGE_PERIOD
+          target: loading
+          action: save_selected_period
+        - event: PULL_TO_REFRESH
+          target: refreshing
+
+    refreshing:
+      entry:
+        - action: api_fetch_leaderboard
+      transitions:
+        - event: REFRESH_SUCCESS
+          target: display
+        - event: REFRESH_FAILED
+          target: display
+          action: show_error_toast
+
+    error:
+      transitions:
+        - event: RETRY
+          target: loading
+
+ChallengeCreateStateMachine:
+  id: challenge_create
+  initial: check_premium
+  states:
+
+    check_premium:
+      entry:
+        - action: check_user_premium_status
+      transitions:
+        - event: IS_PREMIUM
+          target: form
+        - event: NOT_PREMIUM
+          target: blocked
+          action: open_premium_paywall
+
+    blocked:
+      type: final
+      description: 非 Premium 用户，弹出订阅引导
+
+    form:
+      initial: basic_info
+      states:
+        basic_info:
+          description: 填写挑战名称和类型
+          transitions:
+            - event: NEXT
+              target: invite_friends
+              guard: title_and_type_filled
+
+        invite_friends:
+          description: 选择邀请的好友（最多9人）
+          entry:
+            - action: load_friend_list
+          transitions:
+            - event: NEXT
+              target: confirm
+              guard: at_least_one_friend_selected
+            - event: BACK
+              target: basic_info
+
+        confirm:
+          description: 确认挑战信息预览
+          transitions:
+            - event: SUBMIT
+              target: submitting
+            - event: BACK
+              target: invite_friends
+
+        submitting:
+          entry:
+            - action: api_create_challenge
+          transitions:
+            - event: SUCCESS
+              target: success
+            - event: FAILED
+              target: confirm
+              action: show_error_toast
+
+        success:
+          type: final
+          entry:
+            - action: navigate_to_challenge_detail
+            - action: show_success_toast
+
+# ─────────────────────────────────────────
+# 全局事件（任意状态均可触发）
+# ─────────────────────────────────────────
+global_events:
+  TOKEN_EXPIRED:
+    target: auth
+    action: show_session_expired_toast
+  NETWORK_ERROR:
+    action: show_network_error_banner
+  FORCE_UPDATE_REQUIRED:
+    action: show_force_update_dialog
+  PUSH_NOTIFICATION_RECEIVED:
+    action: handle_notification_routing

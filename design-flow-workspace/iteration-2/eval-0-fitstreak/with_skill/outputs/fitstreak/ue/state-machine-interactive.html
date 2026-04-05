@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FitStreak — 交互状态机查看器</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f7;
+      color: #1d1d1f;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ===== Header ===== */
+    .header {
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo { font-size: 20px; }
+    .title { font-size: 16px; font-weight: 600; }
+    .subtitle { font-size: 12px; color: #6b7280; }
+
+    .page-filter {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .page-filter label { font-size: 13px; color: #6b7280; }
+    .page-filter select {
+      padding: 6px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 13px;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    /* ===== Main Layout ===== */
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ===== Left Panel: Diagram ===== */
+    .diagram-panel {
+      flex: 1;
+      overflow: auto;
+      padding: 20px;
+      background: #fafafa;
+      border-right: 1px solid #e5e7eb;
+    }
+
+    .diagram-container {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      min-height: 400px;
+    }
+
+    #mermaid-output svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    /* State node click styles */
+    .clickable-state {
+      cursor: pointer;
+    }
+    .clickable-state:hover rect,
+    .clickable-state:hover circle {
+      filter: brightness(0.92);
+    }
+
+    /* ===== State List (left sidebar within diagram area) ===== */
+    .state-list {
+      margin-top: 20px;
+    }
+    .state-list-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+    .state-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .state-chip {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      cursor: pointer;
+      border: 1.5px solid #e5e7eb;
+      background: #fff;
+      color: #374151;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .state-chip:hover {
+      border-color: #ff6b35;
+      color: #ff6b35;
+    }
+    .state-chip.active {
+      background: #ff6b35;
+      border-color: #ff6b35;
+      color: #fff;
+      font-weight: 500;
+    }
+
+    /* ===== Right Panel: Detail ===== */
+    .detail-panel {
+      width: 380px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .detail-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid #e5e7eb;
+      background: #fff;
+    }
+    .detail-header h3 { font-size: 14px; font-weight: 600; color: #374151; }
+
+    .detail-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      color: #9ca3af;
+      text-align: center;
+      gap: 8px;
+    }
+    .empty-state .empty-icon { font-size: 36px; }
+    .empty-state p { font-size: 13px; }
+
+    /* State Detail Card */
+    .state-info {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .page-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      background: #fff7ed;
+      color: #ea580c;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid #fed7aa;
+    }
+
+    .state-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: #111827;
+      line-height: 1.3;
+    }
+
+    .trigger-info {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 8px 12px;
+      background: #f0f9ff;
+      border-radius: 8px;
+      border-left: 3px solid #38bdf8;
+    }
+    .trigger-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #0284c7;
+      white-space: nowrap;
+      margin-top: 1px;
+    }
+    .trigger-text {
+      font-size: 12px;
+      color: #0369a1;
+    }
+
+    .wireframe-section { }
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+    .wireframe-box {
+      background: #f8f9fa;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 12px;
+      overflow-x: auto;
+    }
+    .wireframe-box pre {
+      font-family: 'Courier New', 'SF Mono', Menlo, monospace;
+      font-size: 11.5px;
+      line-height: 1.6;
+      color: #1f2937;
+      white-space: pre;
+    }
+
+    .constraints-section { }
+    .constraints-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .constraint-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+    .constraint-item.hard {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+    }
+    .constraint-item.soft {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e40af;
+    }
+    .constraint-item.design {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #166534;
+    }
+    .constraint-badge {
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+    .constraint-text { line-height: 1.4; }
+
+    .transitions-section { }
+    .transition-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 12px;
+    }
+    .transition-item:last-child { border-bottom: none; }
+    .transition-arrow { color: #ff6b35; font-weight: 600; flex-shrink: 0; }
+    .transition-event { font-weight: 500; color: #374151; }
+    .transition-target { color: #6b7280; }
+
+    /* ===== Scrollbar ===== */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <span class="logo">🔥</span>
+    <div>
+      <div class="title">FitStreak — 交互状态机查看器</div>
+      <div class="subtitle">点击状态节点或下方标签查看线框图</div>
+    </div>
+  </div>
+  <div class="page-filter">
+    <label>筛选页面：</label>
+    <select id="pageFilter" onchange="filterByPage(this.value)">
+      <option value="all">全部页面</option>
+      <option value="LoginPage">登录页</option>
+      <option value="HomePage">首页</option>
+      <option value="CheckInPage">打卡页</option>
+      <option value="SocialPage">社交/排行榜页</option>
+      <option value="ProfilePage">个人主页</option>
+      <option value="PlanPage">运动计划页</option>
+    </select>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Left: Diagram -->
+  <div class="diagram-panel">
+    <div class="diagram-container">
+      <div id="mermaid-output"></div>
+    </div>
+
+    <div class="state-list">
+      <div class="state-list-title">所有状态（点击查看线框图）</div>
+      <div class="state-chips" id="stateChips"></div>
+    </div>
+  </div>
+
+  <!-- Right: Detail -->
+  <div class="detail-panel">
+    <div class="detail-header">
+      <h3>📋 状态详情</h3>
+    </div>
+    <div class="detail-content" id="detailContent">
+      <div class="empty-state">
+        <div class="empty-icon">👆</div>
+        <p>点击左侧状态节点<br>或下方标签查看详情</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ===== 状态数据 =====
+const STATES = {
+  "splash_checking": {
+    page: "启动页",
+    label: "Token 检查中",
+    trigger: "App 启动",
+    wireframe: `┌─────────────────────────────────┐
+│                                 │
+│                                 │
+│         🔥 FitStreak            │
+│                                 │
+│      让每一次运动被看见          │
+│                                 │
+│           ⏳ 加载中...           │
+│                                 │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "🔴", type: "hard", text: "检查本地 Token，有效跳首页，无效跳登录页" },
+      { level: "🟢", type: "design", text: "网络不可用时若有缓存数据，进入离线模式" }
+    ],
+    transitions: [
+      { event: "token_valid", target: "home_loading" },
+      { event: "token_invalid", target: "login_idle" }
+    ]
+  },
+
+  "login_idle": {
+    page: "登录页",
+    label: "输入手机号",
+    trigger: "Token 无效 / 首次启动",
+    wireframe: `┌─────────────────────────────────┐
+│         🔥 FitStreak            │
+│      让每一次运动被看见          │
+├─────────────────────────────────┤
+│  手机号登录                      │
+│                                 │
+│  +86  [___________________]    │
+│       手机号                    │
+│                                 │
+│  [      获取验证码      ]       │
+│                                 │
+│  登录即表示同意《用户协议》       │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "🔴", type: "hard", text: "仅允许输入数字，非11位时按钮禁用" },
+      { level: "🔴", type: "hard", text: "获取验证码按钮：手机号格式正确才可点击" }
+    ],
+    transitions: [
+      { event: "send_code_tap", target: "login_code_sending" }
+    ]
+  },
+
+  "login_code_input": {
+    page: "登录页",
+    label: "输入验证码",
+    trigger: "验证码发送成功",
+    wireframe: `┌─────────────────────────────────┐
+│         🔥 FitStreak            │
+├─────────────────────────────────┤
+│  验证码已发送至                  │
+│  138****8888                    │
+│                                 │
+│  [ _ ][ _ ][ _ ][ _ ][ _ ][ _ ]│
+│                                 │
+│  60秒后可重新获取                │
+│                                 │
+│  [更换手机号]                   │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "🔴", type: "hard", text: "手机号脱敏展示（138****8888）" },
+      { level: "🔴", type: "hard", text: "输入满6位自动触发验证，禁止手动点击" },
+      { level: "🔵", type: "soft", text: "倒计时60秒，结束前重发按钮禁用" }
+    ],
+    transitions: [
+      { event: "code_complete (6位)", target: "login_verifying" },
+      { event: "change_phone_tap", target: "login_idle" },
+      { event: "resend_tap (倒计时结束后)", target: "login_code_sending" }
+    ]
+  },
+
+  "login_verifying": {
+    page: "登录页",
+    label: "验证中",
+    trigger: "输入满6位自动触发",
+    wireframe: `┌─────────────────────────────────┐
+│         🔥 FitStreak            │
+├─────────────────────────────────┤
+│  验证码已发送至                  │
+│  138****8888                    │
+│                                 │
+│  [✓][✓][✓][✓][✓][✓]          │
+│                                 │
+│  ⏳ 验证中...                   │
+│                                 │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "🔴", type: "hard", text: "验证过程中输入框禁用，用户无法操作" },
+      { level: "🔴", type: "hard", text: "不允许重复提交" }
+    ],
+    transitions: [
+      { event: "verify_success", target: "home_loading" },
+      { event: "verify_error_wrong_code", target: "login_code_input" },
+      { event: "verify_error_expired", target: "login_code_input" }
+    ]
+  },
+
+  "home_loading": {
+    page: "首页",
+    label: "加载中",
+    trigger: "页面挂载 / Token 验证通过",
+    wireframe: `┌─────────────────────────────────┐
+│  FitStreak         [🔔] [👤]   │
+├─────────────────────────────────┤
+│  ████████████████████████████  │
+│  ████████████████████████████  │
+│  ████████████████████████████  │
+│                                 │
+│  ████████████████████████████  │
+│  ████████  ████████            │
+│  ████████████████████████████  │
+│                                 │
+│  ████████████████████████████  │
+└─────────────────────────────────┘
+│ [🏠首页] [📊计划] [🏆社交] [👤我的] │
+└──────────────────────────────────┘`,
+    constraints: [
+      { level: "🔵", type: "soft", text: "骨架屏：用户状态卡片 + 3个动态卡片占位" }
+    ],
+    transitions: [
+      { event: "load_success (未打卡)", target: "home_success_not_checked" },
+      { event: "load_success (已打卡)", target: "home_success_checked" },
+      { event: "load_error", target: "home_error" }
+    ]
+  },
+
+  "home_success_not_checked": {
+    page: "首页",
+    label: "今日未打卡",
+    trigger: "数据加载成功且今日未打卡",
+    wireframe: `┌─────────────────────────────────┐
+│  FitStreak         [🔔] [👤]   │
+├─────────────────────────────────┤
+│ ┌─────────────────────────────┐ │
+│ │  🔥 连续打卡 12 天           │ │
+│ │  本周目标：3/5天             │ │
+│ │  [  + 今日打卡  ]           │ │
+│ └─────────────────────────────┘ │
+│  好友动态                        │
+│ ┌─────────────────────────────┐ │
+│ │ 👤 张三  跑步 🏃  30分钟    │ │
+│ │ 状态不错 😊  2小时前        │ │
+│ └─────────────────────────────┘ │
+└─────────────────────────────────┘
+│ [🏠首页] [📊计划] [🏆社交] [👤我的] │
+└──────────────────────────────────┘`,
+    constraints: [
+      { level: "🔴", type: "hard", text: "今日打卡按钮：橙色大按钮，突出显示" },
+      { level: "🔵", type: "soft", text: "好友动态按时间倒序排列" },
+      { level: "🟢", type: "design", text: "检测到Streak断了时，首次进入显示弹窗" }
+    ],
+    transitions: [
+      { event: "checkin_tap", target: "checkin_loading" },
+      { event: "pull_to_refresh", target: "home_loading" },
+      { event: "friend_card_tap", target: "profile_loading" },
+      { event: "streak_broken_detected", target: "home_streak_broken_dialog" }
+    ]
+  },
+
+  "home_success_checked": {
+    page: "首页",
+    label: "今日已打卡",
+    trigger: "数据加载成功且今日已打卡",
+    wireframe: `┌─────────────────────────────────┐
+│  FitStreak         [🔔] [👤]   │
+├─────────────────────────────────┤
+│ ┌─────────────────────────────┐ │
+│ │  ✅ 今日已打卡！             │ │
+│ │  🔥 连续打卡 13 天  +1      │ │
+│ │  今日：跑步 30分钟           │ │
+│ │  本周目标：4/5天             │ │
+│ └─────────────────────────────┘ │
+│  好友动态                        │
+│ ┌─────────────────────────────┐ │
+│ │ 👤 张三  跑步 🏃  30分钟    │ │
+│ └─────────────────────────────┘ │
+└─────────────────────────────────┘
+│ [🏠首页] [📊计划] [🏆社交] [👤我的] │
+└──────────────────────────────────┘`,
+    constraints: [
+      { level: "🔴", type: "hard", text: "已打卡状态：绿色已打卡徽章，不显示打卡按钮" },
+      { level: "🔵", type: "soft", text: "Streak +1 数字有浮现动效" }
+    ],
+    transitions: [
+      { event: "pull_to_refresh", target: "home_loading" },
+      { event: "friend_card_tap", target: "profile_loading" }
+    ]
+  },
+
+  "home_streak_broken_dialog": {
+    page: "首页",
+    label: "Streak断了弹窗",
+    trigger: "昨日未打卡，Streak归零",
+    wireframe: `┌─────────────────────────────────┐
+│  FitStreak         [🔔] [👤]   │
+├─────────────────────────────────┤
+│           （首页内容模糊）        │
+│   ╔═════════════════════════╗   │
+│   ║   💔 Streak 断了...      ║   │
+│   ║                         ║   │
+│   ║  昨天没有打卡，连续天数   ║   │
+│   ║  已重置为 0              ║   │
+│   ║                         ║   │
+│   ║  最高记录：23天           ║   │
+│   ║                         ║   │
+│   ║  [    继续加油 💪    ]   ║   │
+│   ╚═════════════════════════╝   │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "🔴", type: "hard", text: "全屏遮罩弹窗，必须点击才能关闭" },
+      { level: "🟢", type: "design", text: "展示历史最高Streak，鼓励用户继续" }
+    ],
+    transitions: [
+      { event: "dialog_confirm", target: "home_success_not_checked" }
+    ]
+  },
+
+  "home_error": {
+    page: "首页",
+    label: "加载失败",
+    trigger: "接口请求失败",
+    wireframe: `┌─────────────────────────────────┐
+│  FitStreak         [🔔] [👤]   │
+├─────────────────────────────────┤
+│                                 │
+│                                 │
+│         ⚠️ 加载失败             │
+│    网络连接不稳定，请重试         │
+│                                 │
+│    [        重试        ]       │
+│                                 │
+│                                 │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "🔴", type: "hard", text: "必须提供重试入口" }
+    ],
+    transitions: [
+      { event: "retry_tap", target: "home_loading" }
+    ]
+  },
+
+  "checkin_loading": {
+    page: "打卡页",
+    label: "检查今日状态",
+    trigger: "点击首页"今日打卡"",
+    wireframe: `┌─────────────────────────────────┐
+│  [← 返回]    今日打卡            │
+├─────────────────────────────────┤
+│                                 │
+│                                 │
+│           ⏳ 检查中...           │
+│                                 │
+│                                 │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "🔵", type: "soft", text: "检查今日是否已打卡，防止重复打卡" }
+    ],
+    transitions: [
+      { event: "check_not_done", target: "checkin_idle" },
+      { event: "check_already_done", target: "checkin_already_checked" }
+    ]
+  },
+
+  "checkin_idle": {
+    page: "打卡页",
+    label: "打卡表单",
+    trigger: "今日未打卡",
+    wireframe: `┌─────────────────────────────────┐
+│  [← 返回]    今日打卡            │
+├─────────────────────────────────┤
+│  运动类型（必填）                 │
+│  [🏃跑步][💪健身][🏊游泳][🚴骑行]│
+│  [🧘瑜伽][🏀篮球][⚽足球][🎯其他]│
+│                                 │
+│  运动时长：30分钟                │
+│  ←──────────●──────────────→   │
+│                                 │
+│  心情：😄 😊 😐 😅 😩           │
+│                                 │
+│  备注（选填）[_______________]   │
+│                                 │
+│  [        完成打卡 ✓        ]   │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "🔴", type: "hard", text: "运动类型必填，未选时按钮置灰" },
+      { level: "🔴", type: "hard", text: "运动时长必填，默认30分钟" },
+      { level: "🔵", type: "soft", text: "心情和备注为选填项" },
+      { level: "🟢", type: "design", text: "选中运动类型时橙色高亮" }
+    ],
+    transitions: [
+      { event: "submit_tap (类型+时长已填)", target: "checkin_submitting" },
+      { event: "back_tap", target: "home_success_not_checked" }
+    ]
+  },
+
+  "checkin_submitting": {
+    page: "打卡页",
+    label: "提交打卡中",
+    trigger: "点击"完成打卡"",
+    wireframe: `┌─────────────────────────────────┐
+│  [← 返回]    今日打卡            │
+├─────────────────────────────────┤
+│  运动类型：🏃 跑步（已选，禁用） │
+│  运动时长：30分钟（已填，禁用）  │
+│  心情：😊（已选，禁用）          │
+│                                 │
+│  [      ⏳ 提交打卡中...   ]    │
+│                                 │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "🔴", type: "hard", text: "提交过程中表单全部禁用" },
+      { level: "🔴", type: "hard", text: "按钮 loading 态，禁止重复点击" }
+    ],
+    transitions: [
+      { event: "submit_success", target: "checkin_success_animation" },
+      { event: "submit_error_duplicate (409)", target: "checkin_already_checked" },
+      { event: "submit_error (其他)", target: "checkin_idle" }
+    ]
+  },
+
+  "checkin_success_animation": {
+    page: "打卡页",
+    label: "打卡成功动画",
+    trigger: "API 返回 200",
+    wireframe: `┌─────────────────────────────────┐
+│                                 │
+│         🎉 🎊 🎉              │
+│                                 │
+│                                 │
+│       打卡成功！                 │
+│                                 │
+│       🔥 13 天                  │
+│      连续打卡天数                │
+│                                 │
+│      今日完成：跑步 30分钟        │
+│      本周 4/5 天  ✓✓✓✓○        │
+│                                 │
+│      [       好的 👍        ]   │
+│      3秒后自动返回               │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "🔴", type: "hard", text: "3秒后自动返回首页，也可手动点击" },
+      { level: "🟢", type: "design", text: "Streak 数字有放大动效，增强成就感" }
+    ],
+    transitions: [
+      { event: "animation_done / 点击好的", target: "home_success_checked" }
+    ]
+  },
+
+  "checkin_already_checked": {
+    page: "打卡页",
+    label: "今日已打卡",
+    trigger: "今日已有打卡 / API返回409",
+    wireframe: `┌─────────────────────────────────┐
+│  [← 返回]    今日打卡            │
+├─────────────────────────────────┤
+│                                 │
+│         ✅ 今天已经打卡了！       │
+│                                 │
+│  ┌──────────────────────────┐   │
+│  │  今日打卡记录              │   │
+│  │  跑步 🏃  30 分钟         │   │
+│  │  心情：😊 状态不错         │   │
+│  │  打卡时间：14:30           │   │
+│  └──────────────────────────┘   │
+│                                 │
+│  [    返回首页    ]              │
+│  [    撤销本次打卡    ]          │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "🔴", type: "hard", text: "撤销打卡为危险操作，样式用灰色文字按钮" },
+      { level: "🔴", type: "hard", text: "只能撤销当日打卡，撤销后 Streak 重新计算" }
+    ],
+    transitions: [
+      { event: "back_tap", target: "home_success_checked" }
+    ]
+  },
+
+  "social_loading": {
+    page: "社交/排行榜页",
+    label: "加载中",
+    trigger: "切换到社交 Tab",
+    wireframe: `┌─────────────────────────────────┐
+│  排行榜          [+添加好友]    │
+├─────────────────────────────────┤
+│  [本周 ●] [本月]               │
+├─────────────────────────────────┤
+│  ████████████████████████████  │
+│  ████████████  ████████        │
+│  ████████████████████████████  │
+│  ████████████  ████████        │
+│  ████████████████████████████  │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "🔵", type: "soft", text: "骨架屏展示排行榜占位" }
+    ],
+    transitions: [
+      { event: "load_success (有好友)", target: "social_success" },
+      { event: "load_success (无好友)", target: "social_empty_friends" },
+      { event: "load_error", target: "social_error" }
+    ]
+  },
+
+  "social_success": {
+    page: "社交/排行榜页",
+    label: "有好友，展示排行榜",
+    trigger: "好友列表非空，数据加载成功",
+    wireframe: `┌─────────────────────────────────┐
+│  排行榜          [+添加好友]    │
+├─────────────────────────────────┤
+│  [本周 ●] [本月]               │
+│  按打卡天数 | 按运动时长          │
+├─────────────────────────────────┤
+│  🥇  王五           5天        │
+│  🥈  张三           4天        │
+│  🥉  李四           4天        │
+│   4  赵六           3天        │
+│ ▶▶ 我  陈七（我）    3天        │
+│   6  周八           2天        │
+├─────────────────────────────────┤
+│  进行中的挑战：七天挑战 🏆       │
+│  我: 3/7  张三: 5/7             │
+│  [   + 发起新挑战   ]           │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "🔴", type: "hard", text: "我的行必须橙色高亮" },
+      { level: "🔵", type: "soft", text: "1-3名显示金银铜奖杯图标" }
+    ],
+    transitions: [
+      { event: "tab_switch", target: "social_loading" },
+      { event: "friend_tap", target: "profile_loading" },
+      { event: "add_friend_tap", target: "add_friend" }
+    ]
+  },
+
+  "social_empty_friends": {
+    page: "社交/排行榜页",
+    label: "无好友",
+    trigger: "好友列表为空",
+    wireframe: `┌─────────────────────────────────┐
+│  排行榜                         │
+├─────────────────────────────────┤
+│                                 │
+│                                 │
+│       （插画：两个小人奔跑）      │
+│                                 │
+│    还没有好友，快去邀请           │
+│  好友加入 FitStreak！           │
+│                                 │
+│  [      添加好友      ]         │
+│  [      分享邀请链接  ]          │
+│                                 │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "🔴", type: "hard", text: "空状态必须有明确引导操作" },
+      { level: "🟢", type: "design", text: "插画增强趣味性，减少用户挫败感" }
+    ],
+    transitions: [
+      { event: "add_friend_tap", target: "add_friend" }
+    ]
+  },
+
+  "profile_loading": {
+    page: "个人主页",
+    label: "加载中",
+    trigger: "点击"我的"Tab 或好友头像",
+    wireframe: `┌─────────────────────────────────┐
+│  [← 返回]      我的             │
+├─────────────────────────────────┤
+│      ████  骨架头像              │
+│      ████████  ████████         │
+│      ██████████████████████     │
+│      ██████    ██████    ██████  │
+│                                 │
+│  ████████████████████████████   │
+│  ████████████████████████████   │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "🔵", type: "soft", text: "骨架屏：头像+昵称+统计数据区域" }
+    ],
+    transitions: [
+      { event: "load_success (自己)", target: "profile_success_self" },
+      { event: "load_success (他人)", target: "profile_success_other" },
+      { event: "load_error", target: "profile_error" }
+    ]
+  },
+
+  "profile_success_self": {
+    page: "个人主页",
+    label: "自己的主页",
+    trigger: "查看自己的主页",
+    wireframe: `┌─────────────────────────────────┐
+│              我的      [⚙️设置]  │
+├─────────────────────────────────┤
+│         [头像 80×80]            │
+│         陈七  ⭐高级版会员       │
+│                                 │
+│  ┌────────┬────────┬────────┐   │
+│  │ 总打卡  │ 当前连续│ 最高连续│   │
+│  │  128天  │ 🔥13天 │  23天  │   │
+│  └────────┴────────┴────────┘   │
+│                                 │
+│  [  编辑资料  ]                  │
+│                                 │
+│  成就徽章墙（8个，灰色=未解锁）  │
+│                                 │
+│  体重趋势折线图（30天）          │
+│  68.5kg  ↘ -0.5kg              │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "🔴", type: "hard", text: "编辑资料按钮仅本人可见" },
+      { level: "🔴", type: "hard", text: "体重数据仅本人可见（隐私）" },
+      { level: "🔵", type: "soft", text: "高级版标签仅对高级会员显示" }
+    ],
+    transitions: [
+      { event: "edit_profile_tap", target: "edit_profile" },
+      { event: "badge_tap", target: "badge_detail" },
+      { event: "upgrade_tap (免费版)", target: "subscribe_page" }
+    ]
+  },
+
+  "profile_success_other": {
+    page: "个人主页",
+    label: "他人主页",
+    trigger: "查看他人主页",
+    wireframe: `┌─────────────────────────────────┐
+│  [← 返回]    张三的主页          │
+├─────────────────────────────────┤
+│         [头像 80×80]            │
+│         张三                    │
+│                                 │
+│  ┌────────┬────────┬────────┐   │
+│  │ 总打卡  │ 当前连续│ 最高连续│   │
+│  │  98天   │ 🔥5天  │  18天  │   │
+│  └────────┴────────┴────────┘   │
+│                                 │
+│  [  + 加好友  ]  [ 发起挑战 ]   │
+│                                 │
+│  已获得的成就（3个徽章）          │
+│                                 │
+│  （不展示体重数据）               │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "🔴", type: "hard", text: "不展示他人的体重/体脂数据（隐私保护）" },
+      { level: "🔴", type: "hard", text: "不展示编辑按钮" },
+      { level: "🔵", type: "soft", text: "已是好友显示"发起挑战"，未添加显示"加好友"" }
+    ],
+    transitions: [
+      { event: "back_tap", target: "social_success" },
+      { event: "add_friend_tap", target: "social_success" }
+    ]
+  },
+
+  "plan_loading": {
+    page: "运动计划页",
+    label: "加载中",
+    trigger: "切换到计划 Tab",
+    wireframe: `┌─────────────────────────────────┐
+│  我的计划                       │
+├─────────────────────────────────┤
+│  ████████████████████████████   │
+│  ████████████████████████████   │
+│  ████████████████████████████   │
+│                                 │
+│  ████████████████████████████   │
+│  ████████████████████████████   │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "🔵", type: "soft", text: "骨架屏等待计划数据加载" }
+    ],
+    transitions: [
+      { event: "load_success (有计划)", target: "plan_success_has_plan" },
+      { event: "load_success (无计划)", target: "plan_success_no_plan" },
+      { event: "load_error", target: "plan_error" }
+    ]
+  },
+
+  "plan_success_has_plan": {
+    page: "运动计划页",
+    label: "有激活计划",
+    trigger: "存在激活中的运动计划",
+    wireframe: `┌─────────────────────────────────┐
+│  我的计划          [修改计划]   │
+├─────────────────────────────────┤
+│  🎯 减脂塑形计划                │
+│                                 │
+│       （圆形进度环）             │
+│         4 / 5 天               │
+│        本周完成 80%              │
+│                                 │
+│  🔥 当前连续 13 天              │
+│  目标：每周5天，每次≥30分钟      │
+│                                 │
+│  本周：✓ ✓ ✓ ✓ ○ ○ ○           │
+│                                 │
+│  [     制定新计划     ]         │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "🔵", type: "soft", text: "圆形进度环可视化本周完成率" },
+      { level: "🟢", type: "design", text: "已打卡的日期显示绿色✓，未打卡显示灰色○" }
+    ],
+    transitions: [
+      { event: "edit_plan_tap", target: "edit_plan" },
+      { event: "create_new_plan_tap", target: "create_plan" }
+    ]
+  },
+
+  "plan_success_no_plan": {
+    page: "运动计划页",
+    label: "无计划引导",
+    trigger: "当前没有激活的运动计划",
+    wireframe: `┌─────────────────────────────────┐
+│  我的计划                       │
+├─────────────────────────────────┤
+│                                 │
+│     （插画：日历+运动小人）       │
+│                                 │
+│     还没有运动计划               │
+│   制定一个计划，让运动更有方向！  │
+│                                 │
+│   [      制定运动计划      ]    │
+│                                 │
+│   推荐模板：                    │
+│   [🔥减脂入门 每周3天 30分钟]    │
+│   [💪增肌计划 每周5天 60分钟]    │
+└─────────────────────────────────┘`,
+    constraints: [
+      { level: "🔴", type: "hard", text: "必须有明确的创建计划引导" },
+      { level: "🟢", type: "design", text: "提供预设模板，降低用户决策成本" }
+    ],
+    transitions: [
+      { event: "create_plan_tap", target: "create_plan" }
+    ]
+  }
+};
+
+// ===== Mermaid 图定义（按页面分类） =====
+const DIAGRAMS = {
+  all: `stateDiagram-v2
+  [*] --> splash_checking
+
+  state "启动页 SplashPage" as SplashPage {
+    [*] --> splash_checking
+    splash_checking --> [*] : token有效→首页
+    splash_checking --> [*] : token无效→登录页
+  }
+
+  SplashPage --> LoginPage : token无效
+  SplashPage --> HomePage : token有效
+
+  state "登录页 LoginPage" as LoginPage {
+    [*] --> login_idle
+    login_idle --> login_code_sending : 点击获取验证码
+    login_code_sending --> login_code_input : 发送成功
+    login_code_sending --> login_idle : 发送失败
+    login_code_input --> login_verifying : 输入满6位
+    login_code_input --> login_idle : 更换手机号
+    login_verifying --> [*] : 验证成功
+    login_verifying --> login_code_input : 验证失败
+  }
+
+  LoginPage --> HomePage : 验证通过
+
+  state "首页 HomePage" as HomePage {
+    [*] --> home_loading
+    home_loading --> home_success_not_checked : 未打卡
+    home_loading --> home_success_checked : 已打卡
+    home_loading --> home_error : 失败
+    home_success_not_checked --> home_streak_broken_dialog : Streak断了
+    home_streak_broken_dialog --> home_success_not_checked : 确认
+    home_success_not_checked --> home_loading : 下拉刷新
+    home_success_checked --> home_loading : 下拉刷新
+    home_error --> home_loading : 重试
+  }
+
+  HomePage --> CheckInPage : 点击打卡
+
+  state "打卡页 CheckInPage" as CheckInPage {
+    [*] --> checkin_loading
+    checkin_loading --> checkin_idle : 未打卡
+    checkin_loading --> checkin_already_checked : 已打卡
+    checkin_idle --> checkin_submitting : 提交
+    checkin_submitting --> checkin_success_animation : 成功
+    checkin_submitting --> checkin_already_checked : 409冲突
+    checkin_submitting --> checkin_idle : 失败
+    checkin_success_animation --> [*] : 返回首页
+    checkin_already_checked --> [*] : 返回首页
+  }
+
+  state "社交页 SocialPage" as SocialPage {
+    [*] --> social_loading
+    social_loading --> social_success : 有好友
+    social_loading --> social_empty_friends : 无好友
+    social_loading --> social_error : 失败
+    social_success --> social_loading : 切换周期
+    social_error --> social_loading : 重试
+  }
+
+  state "个人主页 ProfilePage" as ProfilePage {
+    [*] --> profile_loading
+    profile_loading --> profile_success_self : 查看自己
+    profile_loading --> profile_success_other : 查看他人
+    profile_loading --> profile_error : 失败
+    profile_error --> profile_loading : 重试
+  }
+
+  state "计划页 PlanPage" as PlanPage {
+    [*] --> plan_loading
+    plan_loading --> plan_success_has_plan : 有计划
+    plan_loading --> plan_success_no_plan : 无计划
+    plan_loading --> plan_error : 失败
+    plan_error --> plan_loading : 重试
+  }`,
+
+  LoginPage: `stateDiagram-v2
+  [*] --> login_idle
+  login_idle --> login_code_sending : 点击获取验证码（手机号格式正确）
+  login_code_sending --> login_code_input : 发送成功
+  login_code_sending --> login_idle : 发送失败（Toast提示）
+  login_code_input --> login_verifying : 输入满6位自动触发
+  login_code_input --> login_idle : 更换手机号
+  login_code_input --> login_code_sending : 重新获取（倒计时结束）
+  login_verifying --> [*] : 验证成功→跳首页
+  login_verifying --> login_code_input : 验证码错误/过期`,
+
+  HomePage: `stateDiagram-v2
+  [*] --> home_loading
+  home_loading --> home_success_not_checked : 加载成功，今日未打卡
+  home_loading --> home_success_checked : 加载成功，今日已打卡
+  home_loading --> home_error : 加载失败
+  home_success_not_checked --> home_loading : 下拉刷新
+  home_success_not_checked --> home_streak_broken_dialog : 检测到Streak断了
+  home_streak_broken_dialog --> home_success_not_checked : 点击继续加油
+  home_success_checked --> home_loading : 下拉刷新
+  home_error --> home_loading : 点击重试`,
+
+  CheckInPage: `stateDiagram-v2
+  [*] --> checkin_loading
+  checkin_loading --> checkin_idle : 今日未打卡
+  checkin_loading --> checkin_already_checked : 今日已打卡
+  checkin_idle --> checkin_submitting : 点击完成打卡（必填项已填）
+  checkin_submitting --> checkin_success_animation : 提交成功
+  checkin_submitting --> checkin_already_checked : 409今日已打卡
+  checkin_submitting --> checkin_idle : 其他错误
+  checkin_success_animation --> [*] : 3秒后/点击好的→返回首页
+  checkin_already_checked --> [*] : 点击返回首页`,
+
+  SocialPage: `stateDiagram-v2
+  [*] --> social_loading
+  social_loading --> social_success : 有好友
+  social_loading --> social_empty_friends : 无好友
+  social_loading --> social_error : 加载失败
+  social_success --> social_loading : 切换本周/本月
+  social_error --> social_loading : 点击重试`,
+
+  ProfilePage: `stateDiagram-v2
+  [*] --> profile_loading
+  profile_loading --> profile_success_self : 查看自己
+  profile_loading --> profile_success_other : 查看他人
+  profile_loading --> profile_error : 加载失败
+  profile_error --> profile_loading : 点击重试`,
+
+  PlanPage: `stateDiagram-v2
+  [*] --> plan_loading
+  plan_loading --> plan_success_has_plan : 有激活计划
+  plan_loading --> plan_success_no_plan : 无激活计划
+  plan_loading --> plan_error : 加载失败
+  plan_error --> plan_loading : 点击重试`
+};
+
+// ===== 当前选中状态 =====
+let currentState = null;
+let currentPage = 'all';
+
+// ===== 渲染 Mermaid 图 =====
+async function renderDiagram(page) {
+  const container = document.getElementById('mermaid-output');
+  container.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;">正在渲染状态图...</div>';
+
+  try {
+    const diagramDef = DIAGRAMS[page] || DIAGRAMS['all'];
+    const uniqueId = 'diagram-' + Date.now();
+    const { svg } = await mermaid.render(uniqueId, diagramDef);
+    container.innerHTML = svg;
+  } catch (e) {
+    container.innerHTML = '<div style="color:#ef4444;padding:20px;">图表渲染失败：' + e.message + '</div>';
+  }
+}
+
+// ===== 渲染状态标签 =====
+function renderStateChips(page) {
+  const container = document.getElementById('stateChips');
+  const states = Object.entries(STATES).filter(([key, val]) => {
+    if (page === 'all') return true;
+    return val.page === getPageLabel(page);
+  });
+
+  container.innerHTML = states.map(([key, val]) => `
+    <button
+      class="state-chip ${currentState === key ? 'active' : ''}"
+      onclick="selectState('${key}')"
+    >
+      ${val.page === getPageLabel(page) || page === 'all' ? '' : ''}${val.label}
+    </button>
+  `).join('');
+}
+
+function getPageLabel(page) {
+  const map = {
+    LoginPage: '登录页',
+    HomePage: '首页',
+    CheckInPage: '打卡页',
+    SocialPage: '社交/排行榜页',
+    ProfilePage: '个人主页',
+    PlanPage: '运动计划页'
+  };
+  return map[page] || '';
+}
+
+// ===== 选中状态 =====
+function selectState(stateId) {
+  currentState = stateId;
+
+  // 更新标签高亮
+  document.querySelectorAll('.state-chip').forEach(el => {
+    el.classList.remove('active');
+    if (el.getAttribute('onclick') === `selectState('${stateId}')`) {
+      el.classList.add('active');
+    }
+  });
+
+  const state = STATES[stateId];
+  if (!state) return;
+
+  renderDetailPanel(state);
+}
+
+// ===== 渲染详情面板 =====
+function renderDetailPanel(state) {
+  const panel = document.getElementById('detailContent');
+
+  const constraintsHtml = state.constraints.map(c => {
+    const typeClass = c.type === 'hard' ? 'hard' : c.type === 'soft' ? 'soft' : 'design';
+    return `<div class="constraint-item ${typeClass}">
+      <span class="constraint-badge">${c.level}</span>
+      <span class="constraint-text">${c.text}</span>
+    </div>`;
+  }).join('');
+
+  const transitionsHtml = state.transitions ? state.transitions.map(t => `
+    <div class="transition-item">
+      <span class="transition-arrow">→</span>
+      <div>
+        <div class="transition-event">${escapeHtml(t.event)}</div>
+        <div class="transition-target">目标：${escapeHtml(t.target)}</div>
+      </div>
+    </div>
+  `).join('') : '';
+
+  panel.innerHTML = `
+    <div class="state-info">
+      <div>
+        <span class="page-badge">${escapeHtml(state.page)}</span>
+      </div>
+      <div class="state-name">${escapeHtml(state.label)}</div>
+
+      <div class="trigger-info">
+        <span class="trigger-label">触发条件</span>
+        <span class="trigger-text">${escapeHtml(state.trigger)}</span>
+      </div>
+
+      <div class="wireframe-section">
+        <div class="section-label">线框图</div>
+        <div class="wireframe-box">
+          <pre>${escapeHtml(state.wireframe)}</pre>
+        </div>
+      </div>
+
+      ${state.constraints.length > 0 ? `
+      <div class="constraints-section">
+        <div class="section-label">约束标记</div>
+        <div class="constraints-list">
+          ${constraintsHtml}
+        </div>
+      </div>` : ''}
+
+      ${state.transitions && state.transitions.length > 0 ? `
+      <div class="transitions-section">
+        <div class="section-label">状态转换</div>
+        ${transitionsHtml}
+      </div>` : ''}
+    </div>
+  `;
+}
+
+// ===== 页面筛选 =====
+function filterByPage(page) {
+  currentPage = page;
+  currentState = null;
+
+  renderDiagram(page);
+  renderStateChips(page);
+
+  // 清空详情面板
+  document.getElementById('detailContent').innerHTML = `
+    <div class="empty-state">
+      <div class="empty-icon">👆</div>
+      <p>点击左侧状态节点<br>或下方标签查看详情</p>
+    </div>
+  `;
+}
+
+// ===== 工具函数 =====
+function escapeHtml(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ===== 初始化 =====
+mermaid.initialize({
+  startOnLoad: false,
+  securityLevel: 'loose',
+  theme: 'default',
+  stateDiagram: { useMaxWidth: false }
+});
+
+// 初始渲染
+renderDiagram('all');
+renderStateChips('all');
+
+// 默认选中第一个状态
+setTimeout(() => {
+  const firstState = Object.keys(STATES)[0];
+  selectState(firstState);
+}, 500);
+</script>
+</body>
+</html>

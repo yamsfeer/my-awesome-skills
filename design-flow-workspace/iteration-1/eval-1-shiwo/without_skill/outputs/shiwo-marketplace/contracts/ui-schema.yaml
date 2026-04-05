@@ -1,0 +1,312 @@
+# 拾物 —— UI 展示规范 (UI Schema)
+# 版本: v1.0 | 创建日期: 2026-03-22
+# 说明: 定义各数据字段在界面中的展示方式、格式化规则、交互约束
+
+# ============================================================
+# 全局展示规范
+# ============================================================
+global:
+  date_format: "MM月DD日 HH:mm"       # 同年显示
+  date_format_diff_year: "YYYY年MM月DD日"
+  relative_time:
+    enabled: true
+    threshold_minutes: 60             # 60分钟内显示"x分钟前"
+    threshold_hours: 24               # 24小时内显示"x小时前"
+    fallback: date_format
+  currency:
+    symbol: "¥"
+    decimal_places: 2
+    zero_display: "免费"              # 当 price=0 时展示
+  empty_state:
+    default_text: "暂无数据"
+    default_icon: "empty-box"
+  image:
+    fallback_url: "/assets/img-placeholder.png"
+    loading_bg: "#F5F5F5"
+
+# ============================================================
+# 用户相关展示规范
+# ============================================================
+user_display:
+  credit_score:
+    type: badge + progress_bar
+    ranges:
+      - min: 0
+        max: 39
+        label: "信用较差"
+        color: "#FF4D4F"              # 红色
+        icon: "credit-bad"
+      - min: 40
+        max: 59
+        label: "信用一般"
+        color: "#FAAD14"              # 黄色
+        icon: "credit-fair"
+      - min: 60
+        max: 79
+        label: "信用良好"
+        color: "#52C41A"              # 绿色
+        icon: "credit-good"
+      - min: 80
+        max: 100
+        label: "信用优秀"
+        color: "#1890FF"              # 蓝色
+        icon: "credit-excellent"
+
+  is_verified:
+    display: icon + tooltip
+    verified_icon: "shield-check"
+    verified_color: "#1890FF"
+    verified_label: "已认证"
+    unverified_hide: true             # 未认证时不展示认证标志
+
+  completed_trades:
+    format: "{n}笔成交"
+    zero_display: "暂无成交记录"
+
+  avatar:
+    default_fallback: "/assets/avatar-default.png"
+    shape: circle
+    sizes:
+      small: 32px
+      medium: 48px
+      large: 80px
+
+# ============================================================
+# 商品相关展示规范
+# ============================================================
+goods_display:
+  price:
+    format: "¥{price}"
+    integer_only: false               # 保留小数
+    highlight_color: "#FF4D24"        # 主价格颜色（品牌橙红色）
+    size_in_list: 18px
+    size_in_detail: 24px
+
+  original_price:
+    format: "¥{original_price}"
+    style: line-through
+    color: "#BFBFBF"
+    show_only_if_higher: true         # 原价必须高于现价才展示
+
+  condition:
+    type: tag
+    values:
+      new:
+        label: "全新"
+        color: "#FF4D24"
+        bg: "#FFF2EF"
+      like_new:
+        label: "几乎全新"
+        color: "#FA8C16"
+        bg: "#FFF7E6"
+      good:
+        label: "成色较好"
+        color: "#52C41A"
+        bg: "#F6FFED"
+      fair:
+        label: "成色一般"
+        color: "#8C8C8C"
+        bg: "#F5F5F5"
+      poor:
+        label: "成色较差"
+        color: "#595959"
+        bg: "#F0F0F0"
+
+  status:
+    type: overlay_badge
+    values:
+      published:
+        show: false                   # 上架中不展示状态标签
+      sold:
+        label: "已售出"
+        overlay_opacity: 0.5          # 半透明蒙层
+        color: "#FFFFFF"
+        bg: "rgba(0,0,0,0.5)"
+      withdrawn:
+        label: "已下架"
+        overlay_opacity: 0.5
+        color: "#FFFFFF"
+        bg: "rgba(0,0,0,0.5)"
+      expired:
+        label: "已过期"
+        overlay_opacity: 0.5
+        color: "#FFFFFF"
+        bg: "rgba(0,0,0,0.5)"
+
+  images:
+    list_cover:
+      aspect_ratio: "1:1"
+      object_fit: cover
+      border_radius: 8px
+    detail_swiper:
+      aspect_ratio: "1:1"
+      object_fit: contain
+      bg: "#F5F5F5"
+      show_counter: true              # 显示"1/3"页码
+    max_count: 9
+
+  meet_location:
+    prefix_icon: "location-pin"
+    color: "#8C8C8C"
+    max_length_in_list: 12            # 列表页截断长度
+
+  view_count:
+    format: "{n}人看过"
+    threshold: 1000
+    format_over_threshold: "{n/1000:.1f}k人看过"
+
+  favorite_count:
+    format: "{n}人收藏"
+
+# ============================================================
+# 评价相关展示规范
+# ============================================================
+review_display:
+  score:
+    type: star_rating
+    max: 5
+    active_color: "#FAAD14"
+    inactive_color: "#E8E8E8"
+    size: 16px
+
+  tags:
+    type: pill_list
+    positive_color: "#52C41A"
+    positive_bg: "#F6FFED"
+    negative_color: "#FF4D4F"
+    negative_bg: "#FFF1F0"
+    predefined_positive:
+      - "物品描述准确"
+      - "准时面交"
+      - "态度友好"
+      - "物品成色好"
+      - "沟通顺畅"
+    predefined_negative:
+      - "物品与描述不符"
+      - "爽约"
+      - "态度较差"
+      - "沟通困难"
+
+# ============================================================
+# 私信相关展示规范
+# ============================================================
+message_display:
+  layout: chat_bubble
+  self_align: right
+  other_align: left
+  bubble_colors:
+    self_bg: "#FF4D24"
+    self_text: "#FFFFFF"
+    other_bg: "#F0F0F0"
+    other_text: "#262626"
+  meet_request_card:
+    border_color: "#FF4D24"
+    icon: "calendar"
+    show_fields: [meet_time, meet_place]
+  timestamp:
+    show_interval_minutes: 5          # 每隔5分钟显示一次时间戳
+    format: date_format
+
+  unread_badge:
+    max_display: 99
+    over_max_display: "99+"
+    color: "#FF4D24"
+
+# ============================================================
+# 列表页卡片规范
+# ============================================================
+goods_card:
+  list_mode:
+    layout: grid_2_column
+    image_ratio: "1:1"
+    show_fields:
+      - cover_image
+      - title
+      - price
+      - original_price
+      - condition
+      - campus_name
+      - seller_avatar
+      - seller_nickname
+    title_max_lines: 2
+    title_font_size: 14px
+
+  horizontal_mode:
+    layout: horizontal
+    image_size: 80px
+    show_fields:
+      - cover_image
+      - title
+      - price
+      - condition
+      - status
+    title_max_lines: 2
+
+# ============================================================
+# 表单校验展示规范
+# ============================================================
+form_validation:
+  error_color: "#FF4D4F"
+  error_position: below_field
+  required_indicator: "*"
+  required_indicator_color: "#FF4D4F"
+
+  goods_publish_form:
+    title:
+      min_length: 2
+      max_length: 50
+      error_messages:
+        too_short: "标题至少2个字"
+        too_long: "标题不超过50个字"
+    price:
+      min: 0.01
+      max: 99999
+      error_messages:
+        too_low: "价格最低0.01元"
+        too_high: "价格不能超过99999元"
+        required: "请填写价格"
+    images:
+      min_count: 1
+      max_count: 9
+      max_size_mb: 10
+      accepted_types: [image/jpeg, image/png, image/webp]
+      error_messages:
+        required: "至少上传1张图片"
+        too_many: "最多上传9张图片"
+        too_large: "图片大小不超过10MB"
+
+# ============================================================
+# 状态提示展示规范
+# ============================================================
+toast_and_feedback:
+  success:
+    icon: "check-circle"
+    color: "#52C41A"
+    duration_ms: 2000
+  error:
+    icon: "close-circle"
+    color: "#FF4D4F"
+    duration_ms: 3000
+  loading:
+    icon: "loading-spin"
+    color: "#1890FF"
+    text: "加载中..."
+  empty:
+    icon: "inbox-empty"
+    color: "#BFBFBF"
+
+# ============================================================
+# 数字格式化规范
+# ============================================================
+number_format:
+  price:
+    locale: zh-CN
+    currency: CNY
+    style: decimal
+    minimumFractionDigits: 2
+    maximumFractionDigits: 2
+  count_large:
+    threshold: 10000
+    format: "{n/10000:.1f}万"
+  credit_score:
+    display_as: integer               # 整数展示，不显示小数

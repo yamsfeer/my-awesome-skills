@@ -1,0 +1,287 @@
+# 组件-数据映射表 - 拾物（Shiwo）校园二手交易小程序
+# 说明：将 UI 层数据字段与具体组件绑定，指定 Design Token 引用
+
+components:
+
+  # ──────────────── 商品卡片（首页瀑布流）────────────────
+  - name: ItemCard
+    description: "商品列表卡片，瀑布流布局"
+    data_source: "GET /api/v1/items → items[]"
+    token_refs:
+      background: "color.neutral.0"
+      border_radius: "radius.xl"
+      shadow: "shadow.card"
+      padding: "spacing.3"
+    fields:
+      - field: cover_image
+        component: Image
+        style:
+          width: "100%"
+          border_radius: "radius.lg"
+          aspect_ratio: "auto（图片原比例）"
+        fallback: "color.neutral.100 灰色矩形"
+
+      - field: price
+        component: Text
+        style:
+          font_size: "typography.fontSize.lg"
+          font_weight: "typography.fontWeight.bold"
+          color: "color.price"
+          margin_top: "spacing.2"
+
+      - field: original_price
+        component: Text
+        condition: "original_price !== null"
+        style:
+          font_size: "typography.fontSize.xs"
+          color: "color.neutral.400"
+          text_decoration: "line-through"
+
+      - field: title
+        component: Text
+        style:
+          font_size: "typography.fontSize.sm"
+          font_weight: "typography.fontWeight.medium"
+          color: "color.neutral.800"
+          max_lines: 2
+          overflow: "ellipsis"
+          margin_top: "spacing.1"
+
+      - field: seller_avatar
+        component: Avatar
+        style:
+          size: "24px"
+          border_radius: "radius.full"
+        fallback: "首字母默认头像，background: color.primary.100"
+
+      - field: seller_name
+        component: Text
+        style:
+          font_size: "typography.fontSize.xs"
+          color: "color.neutral.500"
+          max_lines: 1
+
+      - field: campus_badge
+        component: Badge
+        style:
+          font_size: "typography.fontSize.xs"
+          color: "color.neutral.500"
+          background: "color.neutral.100"
+          border_radius: "radius.sm"
+          padding: "spacing.0.5 spacing.1.5"
+
+      - field: sold_overlay
+        component: Overlay
+        condition: "status === 'sold'"
+        style:
+          background: "color.sold_overlay"
+          border_radius: "radius.lg"
+          label_text: "已售出"
+          label_color: "color.neutral.0"
+          label_font_size: "typography.fontSize.sm"
+          label_font_weight: "typography.fontWeight.semibold"
+
+
+  # ──────────────── 商品价格展示 ────────────────
+  - name: PriceDisplay
+    description: "商品详情页大号价格展示"
+    data_source: "GET /api/v1/items/:id → price + original_price"
+    fields:
+      - field: price
+        component: Text
+        style:
+          font_size: "typography.fontSize.3xl"
+          font_weight: "typography.fontWeight.bold"
+          color: "color.price"
+
+      - field: original_price
+        component: Text
+        condition: "original_price !== null"
+        style:
+          font_size: "typography.fontSize.sm"
+          color: "color.neutral.400"
+          text_decoration: "line-through"
+          margin_left: "spacing.2"
+
+
+  # ──────────────── 用户头像 + 昵称 ────────────────
+  - name: UserAvatar
+    description: "通用用户头像组件"
+    data_source: "UserProfile.avatar_url + nickname"
+    variants:
+      - size: small   # 私信列表、商品卡片
+        avatar_size: "24px"
+        name_font_size: "typography.fontSize.xs"
+      - size: medium  # 卖家卡片
+        avatar_size: "48px"
+        name_font_size: "typography.fontSize.base"
+      - size: large   # 个人主页
+        avatar_size: "72px"
+        name_font_size: "typography.fontSize.xl"
+    fields:
+      - field: avatar_url
+        component: Image
+        style:
+          border_radius: "radius.full"
+        fallback: "首字母头像，background: color.primary.200，color: color.primary.700"
+
+      - field: nickname
+        component: Text
+        style:
+          font_weight: "typography.fontWeight.medium"
+          color: "color.neutral.800"
+
+
+  # ──────────────── 信用分标签 ────────────────
+  - name: CreditBadge
+    description: "用户信用分状态标签"
+    data_source: "UserProfile.credit_score"
+    fields:
+      - field: credit_score
+        component: Badge
+        style:
+          border_radius: "radius.full"
+          padding: "spacing.0.5 spacing.2"
+          font_size: "typography.fontSize.xs"
+          font_weight: "typography.fontWeight.semibold"
+        mapping:
+          "≥150": { label: "诚信达人", background: "color.semantic.success_bg", color: "color.semantic.success" }
+          "≥100": { label: "信用良好", background: "color.semantic.info_bg",    color: "color.semantic.info" }
+          "≥60":  { label: "待提升",   background: "color.semantic.warning_bg", color: "color.semantic.warning" }
+          "<60":  { label: "信用较差", background: "color.semantic.error_bg",   color: "color.semantic.error" }
+
+
+  # ──────────────── 底部操作栏 ────────────────
+  - name: BottomActionBar
+    description: "商品详情页底部操作栏"
+    data_source: "GET /api/v1/items/:id → is_favored + can_message"
+    token_refs:
+      height: "56px + miniprogram.safeAreaBottom"
+      background: "color.neutral.0"
+      border_top: "1px solid color.neutral.200"
+      padding: "spacing.3 spacing.4"
+    fields:
+      - field: favor_button
+        component: Button
+        variant: secondary
+        style:
+          border_radius: "radius.full"
+          color_active: "color.semantic.error"
+          color_inactive: "color.neutral.400"
+          icon: "heart（实心/空心）"
+
+      - field: message_button
+        component: Button
+        variant: primary
+        style:
+          background: "color.primary.500"
+          color: "color.neutral.0"
+          border_radius: "radius.full"
+          font_size: "typography.fontSize.base"
+          font_weight: "typography.fontWeight.semibold"
+          height: "44px"
+          min_width: "180px"
+
+
+  # ──────────────── 消息气泡 ────────────────
+  - name: MessageBubble
+    description: "私信聊天消息气泡"
+    data_source: "GET /api/v1/conversations/:id/messages → messages[]"
+    token_refs:
+      bubble_radius: "radius.xl"
+      font_size: "typography.fontSize.base"
+      padding: "spacing.3 spacing.4"
+      max_width: "70%"
+    fields:
+      - field: content_self
+        component: Text
+        style:
+          background: "color.primary.500"
+          color: "color.neutral.0"
+          align: "right"
+
+      - field: content_other
+        component: Text
+        style:
+          background: "color.neutral.100"
+          color: "color.neutral.800"
+          align: "left"
+
+
+  # ──────────────── 预约面交卡片 ────────────────
+  - name: AppointmentCard
+    description: "预约面交消息卡片"
+    data_source: "Message.appointment_data"
+    token_refs:
+      background: "color.neutral.0"
+      border: "1px solid color.neutral.200"
+      border_radius: "radius.xl"
+      padding: "spacing.4"
+    fields:
+      - field: title
+        component: Text
+        style:
+          font_size: "typography.fontSize.sm"
+          font_weight: "typography.fontWeight.semibold"
+          color: "color.neutral.700"
+
+      - field: time
+        component: Text
+        style:
+          font_size: "typography.fontSize.base"
+          font_weight: "typography.fontWeight.medium"
+          color: "color.neutral.800"
+
+      - field: location
+        component: Text
+        style:
+          font_size: "typography.fontSize.sm"
+          color: "color.neutral.500"
+
+      - field: status_actions
+        component: ButtonGroup
+        condition: "status === 'pending' AND is_receiver"
+        buttons:
+          - label: "确认"
+            style: { background: "color.primary.500", color: "color.neutral.0" }
+          - label: "拒绝"
+            style: { background: "color.neutral.100", color: "color.neutral.600" }
+
+
+  # ──────────────── 骨架屏 ────────────────
+  - name: SkeletonCard
+    description: "通用骨架屏占位组件"
+    token_refs:
+      background: "color.neutral.100"
+      shimmer_color: "color.neutral.50"
+      border_radius: "radius.md"
+      animation: "shimmer 1.5s infinite"
+
+
+  # ──────────────── 主要操作按钮 ────────────────
+  - name: PrimaryButton
+    description: "主要操作按钮（发布/发送/保存）"
+    token_refs:
+      background: "color.primary.500"
+      background_hover: "color.primary.600"
+      background_disabled: "color.neutral.200"
+      color: "color.neutral.0"
+      color_disabled: "color.neutral.400"
+      border_radius: "radius.full"
+      height: "48px"
+      font_size: "typography.fontSize.base"
+      font_weight: "typography.fontWeight.semibold"
+      transition: "transition.fast"
+
+
+  # ──────────────── 商品状态标签 ────────────────
+  - name: ItemStatusBadge
+    description: "商品状态标签（在售/已售出/已下架）"
+    data_source: "Item.status"
+    fields:
+      - field: status
+        component: Badge
+        mapping:
+          active:     { label: "在售",   background: "color.semantic.success_bg", color: "color.semantic.success" }
+          sold:       { label: "已售出", background: "color.neutral.100",         color: "color.neutral.500" }
+          withdrawn:  { label: "已下架", background: "color.neutral.100",         color: "color.neutral.500" }

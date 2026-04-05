@@ -1,0 +1,27 @@
+{
+  "eval_id": 2,
+  "eval_name": "ai-agent-bare-id",
+  "prompt": "2401.04088\n这个 arxiv ID 对应什么论文？帮我详细解读一下，我对 AI agent 方向感兴趣。",
+  "assertions": [
+    {
+      "name": "parsed_bare_id",
+      "description": "仅凭裸 arxiv ID（无 URL）仍成功生成了完整笔记（note.md 文件存在且非空）"
+    },
+    {
+      "name": "filename_is_chinese",
+      "description": "保存的笔记文件名包含中文字符（非 ASCII）"
+    },
+    {
+      "name": "has_required_sections",
+      "description": "笔记正文包含以下六个标题：一句话概括、问题与动机、核心方法、实验与结果、贡献与局限、讲解内容"
+    },
+    {
+      "name": "explanation_has_depth",
+      "description": "讲解内容章节的文本长度 >= 500 字"
+    },
+    {
+      "name": "correctly_identifies_paper",
+      "description": "笔记正确识别论文为 Mixtral of Experts（混合专家模型），而非 AI Agent 论文；加分项：说明该论文与 AI Agent 方向的关联性"
+    }
+  ]
+}

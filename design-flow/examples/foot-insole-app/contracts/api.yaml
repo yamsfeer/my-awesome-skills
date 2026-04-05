@@ -1,0 +1,271 @@
+# 足迹 APP - API 层数据契约
+# 聚合响应体，过滤敏感字段，定义 RESTful 端点
+
+version: "1.0"
+layer: api
+base_url: /api/v1
+auth: Bearer Token（JWT）
+
+# ────────────────────────────────────
+# 用户模块
+# ────────────────────────────────────
+user_module:
+
+  endpoints:
+    - POST /auth/send-sms
+      summary: 发送短信验证码
+      body: { phone: string }
+      response: { success: true, expire_in: 60 }
+
+    - POST /auth/login
+      summary: 手机号验证码登录/注册（合并）
+      body: { phone: string, code: string }
+      response:
+        token: string
+        is_new_user: boolean
+        user: UserBrief
+
+    - GET /user/profile
+      summary: 获取当前用户信息
+      auth: required
+      response: UserProfile
+
+    - PUT /user/profile
+      summary: 更新用户信息
+      auth: required
+      body: { nickname?, avatar_url?, gender?, age?, weight_kg? }
+      response: UserProfile
+
+    - GET /user/addresses
+      summary: 获取地址列表
+      auth: required
+      response: Address[]
+
+    - POST /user/addresses
+      summary: 新增地址
+      auth: required
+      body: AddressInput
+      response: Address
+
+    - PUT /user/addresses/:id
+      summary: 修改地址
+      auth: required
+      body: AddressInput
+      response: Address
+
+    - DELETE /user/addresses/:id
+      summary: 删除地址
+      auth: required
+      response: { success: true }
+
+    - PUT /user/addresses/:id/default
+      summary: 设为默认地址
+      auth: required
+      response: { success: true }
+
+  response_types:
+
+    UserBrief:
+      id: bigint
+      nickname: string
+      avatar_url: string
+
+    UserProfile:
+      id: bigint
+      phone_masked: string       # 138****8888（脱敏）
+      nickname: string
+      avatar_url: string
+      gender: 0|1|2
+      age: number
+      weight_kg: number
+
+    AddressInput:
+      name: string
+      phone: string
+      province: string
+      city: string
+      district: string
+      detail: string
+      is_default: boolean
+
+    Address:
+      id: bigint
+      name: string
+      phone_masked: string       # 脱敏
+      province: string
+      city: string
+      district: string
+      detail: string
+      is_default: boolean
+
+# ────────────────────────────────────
+# 电商模块
+# ────────────────────────────────────
+ecommerce_module:
+
+  endpoints:
+    - GET /categories
+      summary: 获取分类列表（树形）
+      response: Category[]
+
+    - GET /products
+      summary: 商品列表
+      query: { category_id?, keyword?, arch_type?, page=1, page_size=20 }
+      response: { list: ProductCard[], total: int, has_more: boolean }
+
+    - GET /products/:id
+      summary: 商品详情
+      response: ProductDetail
+
+    - GET /cart
+      summary: 获取购物车
+      auth: required
+      response: CartResponse
+
+    - POST /cart/items
+      summary: 加入购物车
+      auth: required
+      body: { product_id: bigint, quantity: int }
+      response: CartItem
+
+    - PUT /cart/items/:id
+      summary: 修改购物车数量/勾选状态
+      auth: required
+      body: { quantity?: int, selected?: boolean }
+      response: CartItem
+
+    - DELETE /cart/items/:id
+      summary: 删除购物车条目
+      auth: required
+      response: { success: true }
+
+    - POST /orders
+      summary: 创建订单
+      auth: required
+      body: { cart_item_ids: bigint[], address_id: bigint, remark?: string }
+      response: { order_id: bigint, order_no: string, amount: number }
+
+    - GET /orders
+      summary: 订单列表
+      auth: required
+      query: { status?: int, page=1, page_size=20 }
+      response: { list: OrderCard[], total: int }
+
+    - GET /orders/:order_no
+      summary: 订单详情
+      auth: required
+      response: OrderDetail
+
+    - POST /orders/:order_no/cancel
+      summary: 取消订单
+      auth: required
+      response: { success: true }
+
+    - POST /payments/create
+      summary: 发起支付（获取支付参数）
+      auth: required
+      body: { order_no: string, channel: "wechat"|"alipay" }
+      response: { pay_params: object }   # 对应 SDK 唤起支付所需参数
+
+  response_types:
+
+    Category:
+      id: int
+      name: string
+      icon_url: string
+      children: Category[]
+
+    ProductCard:
+      id: bigint
+      name: string
+      cover_image: string
+      price: number           # 元，保留2位小数
+      original_price: number | null
+      sales_count: int
+      arch_types: string[]    # ["flat","normal","high"]
+      tags: string[]
+
+    ProductDetail:
+      extends: ProductCard
+      images: string[]
+      description: string
+      detail_html: string
+
+    CartItem:
+      id: bigint
+      product: ProductCard
+      quantity: int
+      selected: boolean
+      subtotal: number
+
+    CartResponse:
+      items: CartItem[]
+      selected_total: number
+      selected_count: int
+
+    OrderCard:
+      id: bigint
+      order_no: string
+      status: int
+      status_text: string     # "待付款" | "待发货" | ...
+      total_amount: number
+      items_snapshot: [{ name: string, image: string, quantity: int, price: number }]
+      created_at: string      # ISO8601
+
+    OrderDetail:
+      extends: OrderCard
+      address: { name: string, phone_masked: string, full_address: string }
+      payment_channel: string | null
+      paid_at: string | null
+
+# ────────────────────────────────────
+# 视频分析模块
+# ────────────────────────────────────
+video_module:
+
+  endpoints:
+    - POST /videos/upload-token
+      summary: 获取 OSS 上传凭证（前端直传 OSS）
+      auth: required
+      body: { shoot_type: "front_static"|"side_static"|"walking", file_size: int }
+      response: { upload_url: string, file_key: string, video_id: bigint, expire_at: string }
+
+    - POST /videos/:id/confirm-upload
+      summary: 确认上传完成，触发分析任务
+      auth: required
+      response: { video_id: bigint, analyze_status: int }
+
+    - GET /videos/:id/status
+      summary: 查询视频分析状态（轮询或 WebSocket）
+      auth: required
+      response: { analyze_status: int, report_id?: bigint }
+
+    - GET /reports
+      summary: 获取分析报告列表
+      auth: required
+      query: { page=1, page_size=20 }
+      response: { list: ReportCard[], total: int }
+
+    - GET /reports/:id
+      summary: 获取分析报告详情
+      auth: required
+      response: ReportDetail
+
+  response_types:
+
+    ReportCard:
+      id: bigint
+      arch_type: "flat"|"normal"|"high"
+      arch_type_text: string   # "扁平足" | "正常" | "高弓足"
+      risk_level: 0|1|2
+      risk_level_text: string
+      created_at: string
+
+    ReportDetail:
+      extends: ReportCard
+      risk_items:
+        - code: string
+          name: string
+          description: string
+          level: 0|1|2
+      recommended_products: ProductCard[]

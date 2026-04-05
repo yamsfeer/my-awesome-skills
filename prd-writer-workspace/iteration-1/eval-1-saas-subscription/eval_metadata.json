@@ -1,0 +1,31 @@
+{
+  "eval_id": 1,
+  "eval_name": "saas-subscription-management",
+  "prompt": "我想做一个帮助独立开发者管理订阅用户的 SaaS 工具。功能大概是：用户可以在这里管理他的产品订阅，看到哪些用户订阅了、什么时候到期、有没有付款问题。还能发邮件给用户比如发欢迎邮件、续费提醒。帮我写一份 PRD。",
+  "assertions": [
+    {
+      "name": "has-product-vision-section",
+      "description": "文档包含产品愿景或产品定位章节"
+    },
+    {
+      "name": "has-target-user-section",
+      "description": "文档包含目标用户章节，并描述了独立开发者的特征"
+    },
+    {
+      "name": "has-user-story-map",
+      "description": "功能需求部分使用用户故事地图或用户旅程方式组织"
+    },
+    {
+      "name": "has-priority-labels",
+      "description": "功能需求中标注了优先级（P0/P1/P2 或类似方式）"
+    },
+    {
+      "name": "covers-core-features",
+      "description": "涵盖了订阅管理和邮件通知两个核心功能模块"
+    },
+    {
+      "name": "has-non-functional-requirements",
+      "description": "文档包含非功能需求章节"
+    }
+  ]
+}

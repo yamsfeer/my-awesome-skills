@@ -1,0 +1,428 @@
+# FitStreak - 组件-数据映射表
+# 说明：将 API 数据字段与 UI 组件绑定，定义每个组件的数据来源和样式规格
+
+components:
+
+  # ============================================================
+  # 通用组件
+  # ============================================================
+
+  - name: UserAvatar
+    description: "用户头像（圆形）"
+    variants:
+      - size: sm  # 32×32px，用于评论/列表
+        token: spacing.8
+      - size: md  # 40×40px，用于好友列表
+        token: spacing.10
+      - size: lg  # 48×48px，用于导航栏
+        token: spacing.12
+      - size: xl  # 80×80px，用于个人中心
+        token: spacing.20
+    fields:
+      - field: avatar_url
+        component: Image
+        style: "圆形，object-fit: cover"
+        fallback: "用户名首字母，随机色背景（基于 user.id hash）"
+
+  - name: StreakBadge
+    description: "连续打卡天数徽章（首页核心展示）"
+    data_source: "api.UserDetail.streak_count"
+    fields:
+      - field: streak_count
+        component: Text
+        style:
+          font_family: token.component_tokens.streak_number.font_family
+          font_size: token.component_tokens.streak_number.font_size
+          font_weight: token.component_tokens.streak_number.font_weight
+          color: token.component_tokens.streak_number.color
+        animation: "数字增加时有计数器动效（0 → N，500ms）"
+      - field: fire_icon
+        component: Icon
+        icon: "🔥 或 Lucide Flame SVG"
+        color: "token.color.streak_fire.500"
+        condition: "streak_count > 0"
+
+  - name: PremiumBadge
+    description: "高级版标识"
+    data_source: "api.UserDetail.subscription_type"
+    fields:
+      - field: subscription_type
+        component: Badge
+        style: token.component_tokens.badge_premium
+        label: "⭐ 高级版"
+        visibility_condition: "subscription_type === 'premium'"
+
+  - name: PrimaryButton
+    description: "主操作按钮（橙色）"
+    variants:
+      - type: full_width  # 页面主按钮
+      - type: compact     # 卡片内按钮
+    style: token.component_tokens.button_primary
+    states:
+      default: "橙色背景，白色文字"
+      hover: "深橙色背景（primary.600）+ 阴影加深"
+      loading: "按钮居中 spinner，文字隐藏"
+      disabled: "neutral.300 背景，不可点击，无悬停效果"
+
+  - name: SecondaryButton
+    description: "次要操作按钮（描边）"
+    style: token.component_tokens.button_secondary
+
+  - name: BottomTabBar
+    description: "底部导航栏（固定）"
+    data_source: "路由状态"
+    fields:
+      - tab: home
+        icon: "Lucide Home"
+        label: "首页"
+        route: "/home"
+      - tab: leaderboard
+        icon: "Lucide Trophy"
+        label: "排行"
+        route: "/leaderboard"
+      - tab: challenges
+        icon: "Lucide Swords"
+        label: "挑战"
+        route: "/challenges"
+      - tab: profile
+        icon: "Lucide User"
+        label: "我的"
+        route: "/profile"
+    style:
+      active_color: token.component_tokens.bottom_tab.active_color
+      inactive_color: token.component_tokens.bottom_tab.inactive_color
+      bg: token.component_tokens.bottom_tab.bg
+      border_top: "1px solid token.color.neutral.200"
+      height: "56px"
+
+  - name: Toast
+    description: "全局 Toast 提示"
+    variants:
+      - type: success
+        bg: "token.color.semantic.success"
+        icon: "Lucide CheckCircle"
+      - type: error
+        bg: "token.color.semantic.error"
+        icon: "Lucide XCircle"
+      - type: warning
+        bg: "token.color.semantic.warning"
+        icon: "Lucide AlertTriangle"
+      - type: info
+        bg: "token.color.secondary.500"
+        icon: "Lucide Info"
+    style:
+      position: "顶部居中，safe area 下方 8px"
+      radius: token.radius.lg
+      padding: "token.spacing.3 token.spacing.4"
+      duration: "3000ms 自动消失"
+
+
+  # ============================================================
+  # 首页组件
+  # ============================================================
+
+  - name: UserStreakHeader
+    description: "首页顶部：用户信息 + 连续天数"
+    data_source: "GET /api/v1/users/me → UserDetail"
+    fields:
+      - field: avatar_url
+        component: UserAvatar
+        size: lg
+      - field: name
+        component: Text
+        style:
+          font_size: token.typography.fontSize.lg
+          font_weight: token.typography.fontWeight.semibold
+          color: token.color.neutral.800
+        max_lines: 1
+      - field: streak_count
+        component: StreakBadge
+      - field: subscription_type
+        component: PremiumBadge
+
+  - name: CheckinCalendar
+    description: "月历打卡视图"
+    data_source: "GET /api/v1/checkins/calendar → checked_dates[]"
+    fields:
+      - field: checked_dates
+        component: CalendarDot
+        style:
+          checked_dot: "6px 圆点，color: token.color.primary.500"
+          today_ring: "2px 边框，color: token.color.primary.500"
+      - field: navigation
+        component: MonthNavigation
+        style: "← 月份 → 箭头切换"
+
+  - name: QuickCheckinButton
+    description: "首页主打卡按钮"
+    data_source: "api.UserDetail.has_checked_today"
+    states:
+      not_checked:
+        component: PrimaryButton
+        label: "今日打卡 💪"
+        style: "脉冲光晕动效（pulse animation，2s 循环）"
+      checked:
+        component: "禁用按钮"
+        label: "已打卡 ✓"
+        style:
+          bg: "token.color.semantic.success"
+          text: "token.color.neutral.0"
+
+  - name: RecentCheckinList
+    description: "最近打卡记录（首页底部）"
+    data_source: "GET /api/v1/checkins?per_page=5 → WorkoutLogItem[]"
+    max_items: 5
+    fields:
+      - field: workout_type_label
+        component: Text
+        style:
+          font_weight: token.typography.fontWeight.medium
+          color: token.color.neutral.700
+      - field: duration_min
+        component: Text
+        format: "按 ui-schema.yaml duration 格式化规则"
+        style:
+          color: token.color.neutral.500
+      - field: checked_at
+        component: Text
+        format: "M月D日"
+        style:
+          font_size: token.typography.fontSize.sm
+          color: token.color.neutral.400
+
+
+  # ============================================================
+  # 打卡表单组件
+  # ============================================================
+
+  - name: WorkoutTypeSelector
+    description: "运动类型选择宫格"
+    fields:
+      - field: workout_type
+        component: GridSelector
+        grid: "4列 × 2行"
+        items:
+          - value: running,   label: "跑步",   icon: "Lucide PersonRunning"
+          - value: gym,       label: "健身房", icon: "Lucide Dumbbell"
+          - value: swimming,  label: "游泳",   icon: "Lucide Waves"
+          - value: cycling,   label: "骑行",   icon: "Lucide Bike"
+          - value: yoga,      label: "瑜伽",   icon: "Lucide PersonStanding"
+          - value: hiit,      label: "HIIT",  icon: "Lucide Zap"
+          - value: walking,   label: "步行",   icon: "Lucide Footprints"
+          - value: other,     label: "其他",   icon: "Lucide MoreHorizontal"
+        states:
+          default: "白色背景，neutral.200 边框，neutral.500 图标"
+          selected: "primary.50 背景，primary.500 边框，primary.500 图标 + 右上角橙色勾"
+
+  - name: DurationSlider
+    description: "运动时长滑块"
+    fields:
+      - field: duration_min
+        component: Slider
+        range: [5, 480]
+        step: 5
+        style:
+          track_color: "token.color.neutral.200"
+          fill_color: "token.color.primary.500"
+          thumb_color: "token.color.primary.500"
+          thumb_size: "24px"
+        display:
+          component: Text
+          format: "按 duration 格式化规则（如 40分钟，1h 30m）"
+          style:
+            font_size: token.typography.fontSize["2xl"]
+            font_weight: token.typography.fontWeight.bold
+            color: token.color.primary.500
+
+
+  # ============================================================
+  # 排行榜组件
+  # ============================================================
+
+  - name: LeaderboardPodium
+    description: "Top 3 领奖台"
+    data_source: "GET /api/v1/friends/leaderboard → items[0..2]"
+    fields:
+      - field: rank
+        component: MedalIcon
+        mapping:
+          1: "🥇 金色边框"
+          2: "🥈 银色边框"
+          3: "🥉 铜色边框"
+      - field: user.avatar_url
+        component: UserAvatar
+        size: xl
+        style: "按排名对应颜色边框（3px 实线）"
+      - field: user.name
+        component: Text
+        max_chars: 6
+        style:
+          font_weight: token.typography.fontWeight.semibold
+          color: token.color.neutral.800
+      - field: streak_count
+        component: Text
+        format: "连续 N 天"
+        style:
+          font_family: token.typography.fontFamily.display
+          color: token.color.primary.500
+      - field: is_self
+        component: SelfTag
+        label: "你"
+        style:
+          bg: "token.color.primary.500"
+          text: "token.color.neutral.0"
+          font_size: token.typography.fontSize.xs
+          radius: token.radius.full
+        condition: "is_self === true"
+
+  - name: LeaderboardItem
+    description: "普通排行列表项（第4名以后）"
+    data_source: "GET /api/v1/friends/leaderboard → items[3+]"
+    fields:
+      - field: rank
+        component: Text
+        style:
+          font_size: token.typography.fontSize.lg
+          font_weight: token.typography.fontWeight.semibold
+          color: token.color.neutral.500
+          min_width: "32px"
+      - field: user.avatar_url
+        component: UserAvatar
+        size: md
+      - field: user.name
+        component: Text
+        max_lines: 1
+        style:
+          font_weight: token.typography.fontWeight.medium
+      - field: streak_count
+        component: Text
+        format: "🔥 N天"
+        style:
+          color: token.color.primary.500
+          font_family: token.typography.fontFamily.display
+
+
+  # ============================================================
+  # 成就组件
+  # ============================================================
+
+  - name: AchievementBadge
+    description: "成就徽章卡片"
+    data_source: "GET /api/v1/achievements → AchievementItem[]"
+    variants:
+      - state: earned
+        style:
+          opacity: "1"
+          bg: "token.color.gold.bg"
+          border: "2px solid token.color.gold.400"
+          radius: token.radius.xl
+      - state: locked
+        style:
+          opacity: "0.4"
+          filter: "grayscale(100%)"
+          bg: "token.color.neutral.100"
+          overlay_icon: "Lucide Lock, color neutral.400"
+    fields:
+      - field: badge_icon_url
+        component: Image
+        size: "64×64px"
+      - field: badge_label
+        component: Text
+        style:
+          font_size: token.typography.fontSize.xs
+          font_weight: token.typography.fontWeight.medium
+          text_align: "center"
+          max_lines: 2
+      - field: earned_at
+        component: Text
+        format: "获得于 M月D日"
+        style:
+          font_size: token.typography.fontSize.xs
+          color: token.color.neutral.400
+        condition: "已获得"
+
+
+  # ============================================================
+  # 身体数据组件
+  # ============================================================
+
+  - name: BodyTrendChart
+    description: "体重/体脂趋势折线图"
+    data_source: "GET /api/v1/body/records?days=90 → BodyTrendResponse"
+    premium_only_fields: [body_fat_pct]
+    fields:
+      - field: weight_kg
+        component: LineChart
+        series_color: "token.color.primary.500"
+        y_axis_label: "kg"
+        data_source: "records[].weight_kg"
+      - field: body_fat_pct
+        component: LineChart
+        series_color: "token.color.secondary.500"
+        line_style: "dashed"
+        y_axis_label: "%"
+        data_source: "records[].body_fat_pct"
+        premium_required: true
+      - field: recorded_date
+        component: XAxis
+        format: "M/D"
+        data_source: "records[].recorded_date"
+      - field: weight_change_kg
+        component: ChangeSummary
+        format:
+          positive: "↑ +N.N kg（红色）"
+          negative: "↓ -N.N kg（绿色）"
+          zero: "维持不变"
+        data_source: "summary.weight_change_kg"
+    states:
+      empty:
+        ui: "暂无数据插图 + '录入第一条体重记录' 引导按钮"
+      insufficient:
+        ui: "至少需要 2 条记录才能展示趋势图（仅显示单点）"
+        trigger: "records.length < 2"
+
+
+  # ============================================================
+  # 挑战组件
+  # ============================================================
+
+  - name: ChallengeCard
+    description: "挑战列表卡片"
+    data_source: "GET /api/v1/challenges → ChallengeItem[]"
+    fields:
+      - field: title
+        component: Text
+        max_lines: 1
+        style:
+          font_weight: token.typography.fontWeight.semibold
+          font_size: token.typography.fontSize.lg
+      - field: status
+        component: StatusBadge
+        mapping:
+          pending:   { label: "待开始", color: warning }
+          active:    { label: "进行中", color: success }
+          completed: { label: "已结束", color: neutral }
+          cancelled: { label: "已取消", color: error }
+      - field: duration_days
+        component: Text
+        format: "N天挑战"
+        style:
+          font_size: token.typography.fontSize.sm
+          color: token.color.neutral.500
+      - field: participant_count
+        component: Text
+        format: "👥 N人参与"
+      - field: my_current_streak
+        component: Text
+        format: "🔥 我：N天"
+        style:
+          color: token.color.primary.500
+          font_family: token.typography.fontFamily.display
+      - field: progress
+        component: ProgressBar
+        value: "已过天数 / duration_days"
+        style:
+          track_color: "token.color.neutral.200"
+          fill_color: "token.color.primary.500"
+          height: "4px"
+          radius: token.radius.full

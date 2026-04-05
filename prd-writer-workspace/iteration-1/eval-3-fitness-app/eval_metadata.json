@@ -1,0 +1,31 @@
+{
+  "eval_id": 3,
+  "eval_name": "fitness-checkin-app",
+  "prompt": "帮我写一个健身打卡 APP 的 PRD。这个 APP 主要是让用户记录每次健身，可以创建自己的训练计划，打卡以后能看到自己的进步曲线。朋友之间还可以互相打卡鼓励。",
+  "assertions": [
+    {
+      "name": "has-product-vision-section",
+      "description": "文档包含产品愿景/定位章节"
+    },
+    {
+      "name": "has-target-user-section",
+      "description": "文档描述了健身爱好者用户画像"
+    },
+    {
+      "name": "has-user-story-map",
+      "description": "功能需求使用用户故事地图或用户旅程方式组织"
+    },
+    {
+      "name": "has-priority-labels",
+      "description": "功能标注了优先级"
+    },
+    {
+      "name": "covers-core-features",
+      "description": "涵盖了训练计划、打卡记录、进步曲线、社交鼓励四个核心功能"
+    },
+    {
+      "name": "has-non-functional-requirements",
+      "description": "文档包含非功能需求章节"
+    }
+  ]
+}

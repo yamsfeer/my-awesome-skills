@@ -1,0 +1,27 @@
+{
+  "eval_id": 2,
+  "eval_name": "freelancebook-finance-tool",
+  "prompt": "帮我完整规划一个面向自由职业者的发票和收入管理工具，全部阶段自动完成。\n\n背景：\n- 产品名：FreelanceBook\n- 痛点：自由职业者收入来源零散（多个客户），手动记账容易遗漏，年底税务申报很头疼\n- 用户：独立开发者、设计师、咨询顾问，25-45岁，月收入2-5万\n- 核心功能：1.客户管理 2.项目/合同记录 3.收款记录（含开票状态）4.收入统计图表 5.税务预估计算器\n- 平台：Web（桌面优先）\n- 商业模式：¥39/月订阅制，提供30天免费试用\n\n输出目录：freelancebook/\n技术决策参考：金额统一用分（整数）存储；客户可有多个联系人；发票状态：draft/sent/paid/overdue",
+  "assertions": [
+    {
+      "id": "files_created",
+      "name": "核心文件是否创建",
+      "description": "freelancebook/ 目录下存在 product-overview.md, contracts/domain.yaml, design/tokens.json"
+    },
+    {
+      "id": "amount_integer_type",
+      "name": "金额字段是否用整数",
+      "description": "domain.yaml 中金额相关字段应为 integer/int 类型，而非 float/decimal"
+    },
+    {
+      "id": "domain_sensitive_markers",
+      "name": "敏感字段是否标注",
+      "description": "domain.yaml 包含 ⚠️ 禁止暴露 标记"
+    },
+    {
+      "id": "roadmap_versions",
+      "name": "路线图是否有版本分层",
+      "description": "product-roadmap.md 应包含至少两个版本阶段（如 v1.0 和 v1.5/v2.0）"
+    }
+  ]
+}

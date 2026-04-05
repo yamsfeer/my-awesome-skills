@@ -1,0 +1,603 @@
+# FreelanceBook 组件映射表
+# 定义设计组件与代码组件的对应关系、变体、状态和使用场景
+
+version: "1.0.0"
+design_system: "FreelanceBook DS"
+framework: "React + TailwindCSS"
+icon_library: "lucide-react"
+
+# ═══════════════════════════════════════════════════════════
+# 基础组件（Primitives）
+# ═══════════════════════════════════════════════════════════
+primitives:
+
+  Button:
+    component: "components/ui/Button"
+    design_node: "Button"
+    description: 通用按钮组件
+    tokens:
+      - component.button.*
+    variants:
+      - name: primary
+        description: 主要操作，页面中只有一个
+        tokens: "color.semantic.primary"
+        example: "新建发票、保存"
+      - name: secondary
+        description: 次要操作
+        tokens: "color.semantic.neutral"
+        example: "取消、返回"
+      - name: ghost
+        description: 低优先级操作
+        example: "查看详情"
+      - name: danger
+        description: 破坏性操作
+        tokens: "color.semantic.error"
+        example: "删除、归档"
+      - name: link
+        description: 文字链接样式
+        example: "查看全部 →"
+    sizes:
+      - sm: "height: 32px"
+      - md: "height: 40px（默认）"
+      - lg: "height: 48px"
+    states:
+      - default
+      - hover
+      - active
+      - disabled
+      - loading
+    usage:
+      - 主操作按钮用 primary，每个卡片/表单区域只有一个
+      - 操作菜单内的按钮用 ghost
+      - 危险操作（删除/归档）用 danger，且须搭配确认弹窗
+
+  Input:
+    component: "components/ui/Input"
+    design_node: "Input"
+    description: 文本输入框
+    tokens:
+      - component.input.*
+    variants:
+      - text
+      - email
+      - password
+      - search
+    states:
+      - default
+      - focused
+      - filled
+      - error
+      - disabled
+    sub_components:
+      - InputLabel: 标签，显示在输入框上方
+      - InputHelperText: 提示文案，显示在输入框下方
+      - InputErrorText: 错误提示，红色，替换 HelperText
+    usage:
+      - 所有表单输入均使用此组件
+      - 错误状态通过 error prop 触发
+
+  Textarea:
+    component: "components/ui/Textarea"
+    design_node: "Textarea"
+    description: 多行文本输入
+    extends: Input
+    variants:
+      - default: "rows=3"
+      - tall: "rows=6"
+
+  Select:
+    component: "components/ui/Select"
+    design_node: "Select"
+    description: 下拉选择框
+    tokens:
+      - component.input.*
+    variants:
+      - single: 单选
+      - multi: 多选（标签式展示）
+    states:
+      - default
+      - open
+      - selected
+      - error
+      - disabled
+
+  SelectSearch:
+    component: "components/ui/SelectSearch"
+    design_node: "SelectSearch"
+    description: 带搜索的异步下拉框，支持远程 API 搜索
+    extends: Select
+    extra_props:
+      - api_url: 搜索接口地址
+      - debounce: 搜索防抖延迟（ms）
+      - min_chars: 最小触发搜索字符数
+
+  CurrencyInput:
+    component: "components/ui/CurrencyInput"
+    design_node: "CurrencyInput"
+    description: 金额输入框，用户输入元，内部转换为分存储
+    extends: Input
+    behavior:
+      - 用户输入：¥ 前缀，两位小数
+      - 存储值：整数（分）
+      - 显示格式：¥#,##0.00
+    tokens:
+      - typography.font-family.mono
+
+  DatePicker:
+    component: "components/ui/DatePicker"
+    design_node: "DatePicker"
+    description: 日期选择器
+    variants:
+      - single: 单日期
+      - range: 日期范围（start + end）
+    formats:
+      input: "YYYY-MM-DD"
+      display: "YYYY年MM月DD日"
+
+  Checkbox:
+    component: "components/ui/Checkbox"
+    design_node: "Checkbox"
+    states:
+      - unchecked
+      - checked
+      - indeterminate
+      - disabled
+
+  TagInput:
+    component: "components/ui/TagInput"
+    design_node: "TagInput"
+    description: 标签输入，回车确认添加
+    behavior:
+      - 回车/逗号触发添加
+      - 点击 × 删除标签
+      - 重复标签自动去重
+
+# ═══════════════════════════════════════════════════════════
+# 数据展示组件
+# ═══════════════════════════════════════════════════════════
+data_display:
+
+  Table:
+    component: "components/ui/Table"
+    design_node: "Table"
+    description: 数据表格
+    tokens:
+      - component.table.*
+    sub_components:
+      - TableHeader: 表头行
+      - TableRow: 数据行，支持 onClick 跳转
+      - TableCell: 单元格
+      - TableRowActions: 行内操作菜单（hover 显示）
+      - TableEmptyState: 空状态占位
+      - TablePagination: 分页控件
+    features:
+      - 列宽自定义
+      - 列排序（sortable 字段）
+      - 行 hover 高亮
+      - 行 checkbox 批量选择（可选）
+    usage:
+      - 客户列表、发票列表、收款列表均使用此组件
+
+  StatusBadge:
+    component: "components/business/StatusBadge"
+    design_node: "StatusBadge"
+    description: 发票/项目状态徽章
+    tokens:
+      - component.badge.*
+    variants:
+      invoice:
+        draft:
+          label: "草稿"
+          color_token: "color.semantic.neutral"
+          variant: "outline"
+        sent:
+          label: "已发送"
+          color_token: "color.semantic.primary"
+          variant: "soft"
+        paid:
+          label: "已付款"
+          color_token: "color.semantic.success"
+          variant: "solid"
+        overdue:
+          label: "逾期"
+          color_token: "color.semantic.error"
+          variant: "solid"
+          icon: "AlertCircle"
+    sizes:
+      - sm: "12px 字体"
+      - md: "14px 字体（默认）"
+
+  StatCard:
+    component: "components/business/StatCard"
+    design_node: "StatCard"
+    description: 仪表盘统计数字卡片
+    tokens:
+      - component.card.*
+      - typography.scale.amount-display
+    props:
+      - label: string
+      - value: integer (分)
+      - format: "currency | count | percentage"
+      - trend: "number (环比变化百分比)"
+      - color: "primary | success | warning | error | neutral"
+      - icon: "lucide icon name"
+
+  Chart:
+    component: "components/ui/Chart"
+    design_node: "Chart"
+    description: 图表组件，封装 ECharts/Recharts
+    variants:
+      - line: 折线图（收入趋势）
+      - bar: 柱状图（对比）
+      - pie: 饼图（分布）
+    common_props:
+      - data: array
+      - series: array
+      - x_key: string
+      - y_key: string
+      - height: number (px)
+      - loading: boolean
+      - empty_text: string
+
+  InvoiceAmountDisplay:
+    component: "components/business/InvoiceAmountDisplay"
+    design_node: "InvoiceAmountDisplay"
+    description: 发票金额分组展示（税前 + 税额 + 合计）
+    tokens:
+      - typography.font-family.mono
+
+  PaymentMethodBadge:
+    component: "components/business/PaymentMethodBadge"
+    design_node: "PaymentMethodBadge"
+    description: 付款方式图标+文字徽章
+    mapping:
+      bank_transfer: { label: "银行转账", icon: "Building2" }
+      wechat_pay:    { label: "微信支付", icon: "MessageCircle" }
+      alipay:        { label: "支付宝",   icon: "Wallet" }
+      cash:          { label: "现金",     icon: "Banknote" }
+      other:         { label: "其他",     icon: "HelpCircle" }
+
+  TagList:
+    component: "components/ui/TagList"
+    design_node: "TagList"
+    description: 标签列表展示（只读）
+    tokens:
+      - component.badge.*
+    props:
+      - tags: string[]
+      - max_visible: number (超出后显示 +N)
+
+# ═══════════════════════════════════════════════════════════
+# 布局组件
+# ═══════════════════════════════════════════════════════════
+layout:
+
+  AppShell:
+    component: "components/layout/AppShell"
+    design_node: "AppShell"
+    description: 应用主框架（顶栏 + 侧边栏 + 主内容区）
+    sub_components:
+      - TopNav
+      - SideNav
+      - MainContent
+
+  TopNav:
+    component: "components/layout/TopNav"
+    design_node: "TopNav"
+    description: 顶部导航栏
+    tokens:
+      - color.semantic.background.surface
+      - shadow.sm
+    elements:
+      - Logo: 左侧品牌 logo
+      - UserMenu: 右侧用户头像 + 下拉菜单（设置/退出登录）
+      - TrialBanner: 试用剩余天数提示（橙色横条，仅试用用户）
+
+  SideNav:
+    component: "components/layout/SideNav"
+    design_node: "SideNav"
+    description: 左侧导航栏
+    tokens:
+      - component.sidebar.*
+    variants:
+      - expanded: "width: 240px，显示 icon + 文字"
+      - collapsed: "width: 64px，仅显示 icon"
+    nav_items:
+      - { label: "仪表盘",   icon: "LayoutDashboard", route: "/" }
+      - { label: "发票管理", icon: "FileText",          route: "/invoices" }
+      - { label: "收款记录", icon: "Banknote",          route: "/payments" }
+      - { label: "客户管理", icon: "Users",             route: "/clients" }
+      - { label: "收入统计", icon: "BarChart2",         route: "/stats" }
+      - { label: "税务预估", icon: "Calculator",        route: "/tax-calculator" }
+      - divider: true
+      - { label: "设置",     icon: "Settings",          route: "/settings" }
+      - { label: "帮助",     icon: "HelpCircle",        route: "/help" }
+
+  PageHeader:
+    component: "components/layout/PageHeader"
+    design_node: "PageHeader"
+    description: 页面标题区域
+    props:
+      - title: string
+      - description: string (可选)
+      - actions: ReactNode (右侧操作按钮)
+      - breadcrumb: array (面包屑)
+
+  GridLayout:
+    component: "components/layout/GridLayout"
+    design_node: "GridLayout"
+    description: 12列网格布局容器
+    tokens:
+      - spacing.6 (gap)
+
+# ═══════════════════════════════════════════════════════════
+# 反馈组件
+# ═══════════════════════════════════════════════════════════
+feedback:
+
+  Toast:
+    component: "components/ui/Toast"
+    design_node: "Toast"
+    description: 轻量级通知，右上角弹出
+    tokens:
+      - z-index.toast
+    variants:
+      - success: 绿色，操作成功
+      - error: 红色，操作失败
+      - warning: 橙色，警告
+      - info: 蓝色，提示
+    auto_dismiss: "4000ms（默认）"
+
+  Modal:
+    component: "components/ui/Modal"
+    design_node: "Modal"
+    description: 模态框
+    tokens:
+      - component.card.border-radius
+      - color.semantic.background.overlay
+      - z-index.modal
+    sizes:
+      - sm: "max-width: 400px"
+      - md: "max-width: 560px（默认）"
+      - lg: "max-width: 720px"
+    sub_components:
+      - ModalHeader
+      - ModalBody
+      - ModalFooter
+    use_cases:
+      - 确认操作（删除/归档）
+      - 标记已付款（需填写收款日期）
+
+  Drawer:
+    component: "components/ui/Drawer"
+    design_node: "Drawer"
+    description: 右侧抽屉，不离开当前页面查看详情
+    tokens:
+      - shadow.xl
+      - z-index.overlay
+    sizes:
+      - md: "width: 480px"
+      - lg: "width: 640px"
+    use_cases:
+      - 发票详情查看
+      - 收款详情查看
+
+  ConfirmDialog:
+    component: "components/ui/ConfirmDialog"
+    design_node: "ConfirmDialog"
+    description: 封装好的确认操作 Modal
+    extends: Modal
+    props:
+      - title: string
+      - description: string
+      - confirm_label: string (default: "确认")
+      - cancel_label: string (default: "取消")
+      - variant: "danger | warning | default"
+
+  EmptyState:
+    component: "components/ui/EmptyState"
+    design_node: "EmptyState"
+    description: 空状态占位图
+    variants:
+      - no_data: 无数据（带插图）
+      - no_results: 搜索无结果
+      - error: 加载出错
+    props:
+      - illustration: string (svg name)
+      - title: string
+      - description: string
+      - action: { label, onClick }
+
+  LoadingSkeleton:
+    component: "components/ui/LoadingSkeleton"
+    design_node: "LoadingSkeleton"
+    description: 骨架屏加载占位
+    variants:
+      - table-row: 表格行占位
+      - card: 卡片占位
+      - stat-card: 统计卡片占位
+
+  AlertBanner:
+    component: "components/ui/AlertBanner"
+    design_node: "AlertBanner"
+    description: 页面顶部横幅提示
+    variants:
+      - warning: 橙色（逾期提醒）
+      - info: 蓝色（试用到期提醒）
+      - success: 绿色（操作成功后的全局提示）
+
+# ═══════════════════════════════════════════════════════════
+# 业务复合组件
+# ═══════════════════════════════════════════════════════════
+business:
+
+  InvoiceDetailDrawer:
+    component: "components/business/InvoiceDetailDrawer"
+    design_node: "InvoiceDetailDrawer"
+    description: 发票详情抽屉，包含完整发票信息和操作按钮
+    uses:
+      - Drawer
+      - StatusBadge
+      - InvoiceAmountDisplay
+      - Button
+
+  ClientSelector:
+    component: "components/business/ClientSelector"
+    design_node: "ClientSelector"
+    description: 客户选择下拉，含搜索 + 快捷新建入口
+    uses:
+      - SelectSearch
+      - Button (ghost, "+ 新建客户")
+
+  InvoiceItemsTable:
+    component: "components/business/InvoiceItemsTable"
+    design_node: "InvoiceItemsTable"
+    description: 发票明细编辑表格，支持拖拽排序
+    uses:
+      - CurrencyInput
+      - Input
+      - Button
+
+  InvoiceStatusFlow:
+    component: "components/business/InvoiceStatusFlow"
+    design_node: "InvoiceStatusFlow"
+    description: 发票状态流转操作区，根据当前状态展示可用操作按钮
+    uses:
+      - StatusBadge
+      - Button
+      - ConfirmDialog
+      - Modal (标记已付款)
+
+  TaxCalculatorPanel:
+    component: "components/business/TaxCalculatorPanel"
+    design_node: "TaxCalculatorPanel"
+    description: 税务预估计算面板
+    uses:
+      - CurrencyInput
+      - Select
+      - StatCard
+
+  IncomeChart:
+    component: "components/business/IncomeChart"
+    design_node: "IncomeChart"
+    description: 收入趋势图（封装 Chart，含图例和时间选择器）
+    uses:
+      - Chart (line / bar)
+      - Select (时间粒度选择)
+
+  SubscriptionBanner:
+    component: "components/business/SubscriptionBanner"
+    design_node: "SubscriptionBanner"
+    description: 订阅状态横幅（试用剩余天数 / 已过期提醒）
+    uses:
+      - AlertBanner
+      - Button (升级订阅)
+
+# ═══════════════════════════════════════════════════════════
+# 页面级组件
+# ═══════════════════════════════════════════════════════════
+pages:
+  DashboardPage:
+    route: "/"
+    component: "pages/DashboardPage"
+    uses:
+      - AppShell
+      - PageHeader
+      - StatCard (×4)
+      - IncomeChart
+      - Table (recent invoices)
+      - AlertBanner (逾期提醒，条件渲染)
+
+  InvoicesPage:
+    route: "/invoices"
+    component: "pages/InvoicesPage"
+    uses:
+      - AppShell
+      - PageHeader
+      - Input (search)
+      - Select (status filter)
+      - DatePicker (range filter)
+      - Table
+      - InvoiceDetailDrawer
+      - ConfirmDialog
+
+  InvoiceFormPage:
+    route: "/invoices/new | /invoices/:id/edit"
+    component: "pages/InvoiceFormPage"
+    uses:
+      - AppShell
+      - PageHeader
+      - ClientSelector
+      - SelectSearch (project)
+      - Input (invoice number)
+      - DatePicker (×2)
+      - Select (tax rate)
+      - InvoiceItemsTable
+      - InvoiceAmountDisplay
+
+  ClientsPage:
+    route: "/clients"
+    component: "pages/ClientsPage"
+    uses:
+      - AppShell
+      - PageHeader
+      - Input (search)
+      - Select (status filter)
+      - Table
+      - ConfirmDialog (归档确认)
+
+  ClientFormPage:
+    route: "/clients/new | /clients/:id/edit"
+    component: "pages/ClientFormPage"
+    uses:
+      - AppShell
+      - PageHeader
+      - Input (multiple)
+      - Textarea
+      - Select (currency)
+      - TagInput
+      - 子表单：联系人列表（动态添加/删除）
+
+  PaymentsPage:
+    route: "/payments"
+    component: "pages/PaymentsPage"
+    uses:
+      - AppShell
+      - PageHeader
+      - Input (search)
+      - DatePicker (range)
+      - Table
+      - ConfirmDialog (删除确认)
+
+  PaymentFormPage:
+    route: "/payments/new"
+    component: "pages/PaymentFormPage"
+    uses:
+      - AppShell
+      - PageHeader
+      - ClientSelector
+      - SelectSearch (invoice)
+      - CurrencyInput
+      - DatePicker
+      - Select (payment method)
+      - Input (reference number)
+      - Textarea
+
+  StatsPage:
+    route: "/stats"
+    component: "pages/StatsPage"
+    uses:
+      - AppShell
+      - PageHeader
+      - StatCard (×4)
+      - IncomeChart (bar)
+      - Chart (pie, client breakdown)
+      - Button (export CSV/Excel)
+
+  TaxCalculatorPage:
+    route: "/tax-calculator"
+    component: "pages/TaxCalculatorPage"
+    uses:
+      - AppShell
+      - PageHeader
+      - TaxCalculatorPanel

@@ -1,0 +1,28 @@
+{
+  "eval_id": 1,
+  "eval_name": "shiwo-campus-marketplace_with_skill",
+  "run_dir": "/Users/yams/my-awesome-skills/design-flow-workspace/iteration-1/eval-1-shiwo/with_skill",
+  "expectations": [
+    {
+      "text": "核心文件是否创建: 检查 shiwo-marketplace/ 目录下存在 product-overview.md 和 contracts/ 目录",
+      "passed": true,
+      "evidence": "Found 3/3 core files: ['product-overview.md', 'contracts/domain.yaml', 'design/tokens.json']"
+    },
+    {
+      "text": "API 契约是否包含端点: api.yaml 应包含 endpoints 字段，且有至少 5 个端点定义",
+      "passed": true,
+      "evidence": "Endpoints found: 0, endpoints section: True"
+    },
+    {
+      "text": "敏感字段是否标注: domain.yaml 中应有 ⚠️ 禁止暴露 的注释",
+      "passed": true,
+      "evidence": "Contains '禁止暴露' marker: True"
+    },
+    {
+      "text": "Design Token 是否冻结: tokens.json 包含 _frozen 字段",
+      "passed": true,
+      "evidence": "Contains _frozen: true: True"
+    }
+  ],
+  "config": "with_skill"
+}

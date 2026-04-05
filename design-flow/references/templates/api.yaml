@@ -1,0 +1,172 @@
+# API 层数据契约模板
+# 说明：定义前后端契约，聚合响应，过滤敏感字段。
+# 使用方式：复制此模板，替换为实际业务的响应体和端点
+
+version: "1.0"
+base_url: "/api/v1"
+auth: "Bearer Token (JWT)"
+
+# ========== 响应体定义 ==========
+
+responses:
+
+  # 通用结构
+  SuccessResponse:
+    code: 200
+    data: any
+    message: string
+
+  ErrorResponse:
+    code: number    # 400/401/403/404/422/500
+    error: string   # 错误类型标识
+    message: string # 用户可读的错误信息
+
+  PaginationMeta:
+    total: number
+    page: number
+    per_page: number
+    total_pages: number
+
+  # 用户相关
+  UserProfile:
+    id: string
+    name: string
+    avatar_url: string | null
+    created_at: string    # ISO 8601
+
+  UserDetail:
+    id: string
+    name: string
+    avatar_url: string | null
+    email_masked: string  # 脱敏邮箱，如 u***@example.com
+    created_at: string
+
+  # 示例实体相关（替换为实际业务）
+  ExampleItemSummary:    # 列表展示（轻量版）
+    id: string
+    title: string
+    summary: string      # 截取前 100 字符
+    author: UserProfile
+    status: string       # "draft" | "published" | "archived"
+    created_at: string
+
+  ExampleItemDetail:     # 详情页（完整版）
+    id: string
+    title: string
+    content: string
+    author: UserProfile
+    status: string
+    view_count: number
+    created_at: string
+    updated_at: string
+
+  ExampleItemListResponse:
+    items: ExampleItemSummary[]
+    pagination: PaginationMeta
+
+
+# ========== 端点定义 ==========
+
+endpoints:
+
+  auth:
+    - method: POST
+      path: /auth/register
+      description: 注册新用户
+      auth_required: false
+      request_body:
+        name: string, required
+        email: string, required
+        password: string, required, min:8
+      response: UserDetail
+
+    - method: POST
+      path: /auth/login
+      description: 登录
+      auth_required: false
+      request_body:
+        email: string, required
+        password: string, required
+      response:
+        token: string
+        user: UserDetail
+
+    - method: POST
+      path: /auth/logout
+      description: 登出（使 token 失效）
+      auth_required: true
+      response: SuccessResponse
+
+  user:
+    - method: GET
+      path: /users/me
+      description: 获取当前登录用户信息
+      auth_required: true
+      response: UserDetail
+
+    - method: PUT
+      path: /users/me
+      description: 更新个人资料
+      auth_required: true
+      request_body:
+        name: string, optional
+        avatar_url: string, optional
+      response: UserDetail
+
+  # 示例业务端点（替换为实际业务）
+  example:
+    - method: GET
+      path: /items
+      description: 获取内容列表
+      auth_required: false
+      query_params:
+        page: integer, default:1
+        per_page: integer, default:20, max:100
+        status: string, optional  # 过滤状态
+        user_id: string, optional # 过滤特定用户
+      response: ExampleItemListResponse
+
+    - method: GET
+      path: /items/:id
+      description: 获取内容详情
+      auth_required: false
+      response: ExampleItemDetail
+
+    - method: POST
+      path: /items
+      description: 创建内容
+      auth_required: true
+      request_body:
+        title: string, required, max:200
+        content: string, optional
+      response: ExampleItemDetail
+
+    - method: PUT
+      path: /items/:id
+      description: 更新内容（需为作者）
+      auth_required: true
+      ownership_required: true
+      request_body:
+        title: string, optional
+        content: string, optional
+        status: string, optional
+      response: ExampleItemDetail
+
+    - method: DELETE
+      path: /items/:id
+      description: 删除内容（需为作者或管理员）
+      auth_required: true
+      ownership_or_admin: true
+      response: SuccessResponse
+
+
+# ========== 错误码定义 ==========
+
+error_codes:
+  400: "请求参数错误"
+  401: "未登录或 Token 已过期"
+  403: "无权限执行此操作"
+  404: "资源不存在"
+  409: "资源冲突（如邮箱已注册）"
+  422: "业务逻辑错误（如余额不足）"
+  500: "服务器内部错误"

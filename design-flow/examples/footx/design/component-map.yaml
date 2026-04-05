@@ -1,0 +1,282 @@
+# footX - UI 组件-数据映射表
+# 将 API 数据字段与具体 UI 组件绑定，作为前端开发的实现规范
+
+components:
+
+  # ─────────────────────────────────────
+  # 认证组件
+  # ─────────────────────────────────────
+
+  SocialLoginButton:
+    description: Apple/Google 登录按钮
+    props:
+      - provider: enum [apple, google]
+      - onPress: () => void
+    style:
+      height: 52px
+      radius: tokens.radius.full
+      apple: { bg: "#000000", text: "#FFFFFF" }
+      google: { bg: tokens.color.neutral.0, text: tokens.color.neutral.800, border: tokens.color.neutral.300 }
+
+  # ─────────────────────────────────────
+  # 首页组件
+  # ─────────────────────────────────────
+
+  AnalysisCTABanner:
+    description: 首页顶部核心 CTA（开始分析）
+    data_source: 静态内容
+    style:
+      bg: "linear-gradient(135deg, tokens.color.brand.primary, tokens.color.brand.secondary)"
+      radius: tokens.radius.2xl
+      padding: tokens.spacing.6
+      text_color: "#FFFFFF"
+
+  AnalysisSummaryCard:
+    description: 最近分析摘要卡片（首页使用）
+    data_source: AnalysisReportDTO
+    fields:
+      - field: arch_type
+        component: Text + Icon
+        format: ui-schema.formatters.arch_type
+      - field: gait_pattern
+        component: Text
+        format: ui-schema.formatters.gait_pattern
+      - field: posture_score
+        component: Text
+        format: "ui-schema.formatters.posture_score（等级标签 + 颜色）"
+      - field: created_at
+        component: Text
+        format: ui-schema.formatters.date
+        style: tokens.typography.scale.caption + tokens.color.neutral.500
+    style:
+      bg: tokens.color.background.card
+      shadow: tokens.shadow.card
+      radius: tokens.radius.xl
+      padding: tokens.spacing.4
+
+  # ─────────────────────────────────────
+  # 分析流程组件
+  # ─────────────────────────────────────
+
+  ShoeTypeOption:
+    description: 鞋类选择选项卡片
+    props:
+      - shoe_type: enum
+      - selected: boolean
+      - onSelect: () => void
+    style:
+      default: { border: "2px solid tokens.color.neutral.200", bg: tokens.color.neutral.0 }
+      selected: { border: "2px solid tokens.color.brand.primary", bg: tokens.color.brand.primary-light }
+      height: 56px
+      radius: tokens.radius.lg
+
+  UploadProgressBar:
+    description: 视频上传进度条
+    props:
+      - progress: number (0-100)
+    style:
+      track_color: tokens.color.neutral.200
+      fill_color: tokens.color.brand.primary
+      height: 8px
+      radius: tokens.radius.full
+      animation: tokens.animation.duration.normal
+
+  AnalysisStepIndicator:
+    description: AI 分析步骤列表（处理中状态）
+    props:
+      - steps: array<{ label: string, status: enum [pending, active, done] }>
+    style:
+      done_icon_color: tokens.color.semantic.success
+      active_icon_color: tokens.color.brand.primary
+      pending_icon_color: tokens.color.neutral.400
+
+  # ─────────────────────────────────────
+  # 报告展示组件
+  # ─────────────────────────────────────
+
+  PostureScoreRing:
+    description: 体态评分环形图（报告页核心组件）
+    data_source: AnalysisReportDTO.posture_score
+    props:
+      - score: integer (0-100)
+    computed:
+      - grade: ui-schema.formatters.posture_score.grades（根据分数取等级）
+      - color: grade.color
+    style:
+      ring_size: 120px
+      ring_thickness: 10px
+      center_font: tokens.typography.scale.heading-md
+      label_font: tokens.typography.scale.label
+      animation: "stroke-dashoffset 600ms tokens.animation.easing.ease-out"
+
+  ArchTypeCard:
+    description: 足弓类型展示卡片
+    data_source: AnalysisReportDTO.arch_type
+    fields:
+      - field: arch_type
+        icon: ui-schema.formatters.arch_type.icons
+        label: ui-schema.formatters.arch_type.labels
+    style:
+      size: 80px × 80px
+      bg: tokens.color.neutral.50
+      radius: tokens.radius.lg
+      icon_size: 32px
+
+  ForwardHeadAlert:
+    description: 头前倾警告提示（条件渲染）
+    data_source: AnalysisReportDTO.forward_head
+    render_condition: forward_head === true
+    style:
+      bg: tokens.color.semantic.warning-light
+      border_color: tokens.color.semantic.warning
+      text_color: tokens.color.neutral.800
+      radius: tokens.radius.md
+      padding: tokens.spacing.3
+
+  RecommendedProductCard:
+    description: 推荐商品卡片（报告页使用）
+    data_source: ProductSummaryDTO
+    fields:
+      - field: images[0]
+        component: Image
+        aspect_ratio: "1:1"
+        size: 64px
+      - field: name
+        component: Text
+        style: tokens.typography.scale.body + weight 600
+        max_lines: 2
+      - field: price_cents
+        component: Text
+        format: ui-schema.formatters.price
+        style: tokens.typography.scale.body + tokens.color.brand.accent
+      - field: match_score
+        component: Badge
+        format: "Math.round(score * 100) + '% Match'"
+        style: { bg: tokens.color.brand.primary-light, text: tokens.color.brand.primary }
+      - field: in_stock
+        component: Badge (条件渲染)
+        render_condition: in_stock === false
+        text: "Out of Stock"
+        style: { bg: tokens.color.semantic.error-light, text: tokens.color.semantic.error }
+    style:
+      radius: tokens.radius.xl
+      shadow: tokens.shadow.card
+      padding: tokens.spacing.4
+
+  # ─────────────────────────────────────
+  # 购买流程组件
+  # ─────────────────────────────────────
+
+  CartItemRow:
+    description: 购物车商品行
+    data_source: CartItemDTO
+    fields:
+      - field: product.images[0], component: Image, size: 64px
+      - field: product.name, style: tokens.typography.scale.body + weight 600
+      - field: product.price_cents, format: ui-schema.formatters.price
+      - field: quantity, component: QuantityStepper
+      - field: subtotal_cents, format: ui-schema.formatters.price
+    interactions:
+      - tap_minus: quantity > 1 时减少，quantity === 1 时禁用
+      - tap_plus: 增加数量
+      - tap_delete: 删除确认（底部 ActionSheet）
+
+  AddressCard:
+    description: 地址卡片
+    data_source: AddressDTO
+    fields:
+      - field: full_name, style: tokens.typography.scale.body + weight 600
+      - field: address_line1 + address_line2 (可选)
+      - field: city + state + postal_code, format: "{city}, {state} {postal_code}"
+      - field: country
+      - field: is_default, component: Badge (条件渲染), text: "Default"
+        style: { bg: tokens.color.brand.primary-light, text: tokens.color.brand.primary }
+    style:
+      border: "1px solid tokens.color.neutral.200"
+      radius: tokens.radius.xl
+      padding: tokens.spacing.4
+
+  OrderStatusBadge:
+    description: 订单状态徽章
+    data_source: OrderDTO.status
+    format: ui-schema.formatters.order_status
+    style:
+      padding: "4px 10px"
+      radius: tokens.radius.full
+      font: tokens.typography.scale.label
+      color_map: ui-schema.formatters.order_status.colors (bg 用 10% 透明度版本)
+
+  # ─────────────────────────────────────
+  # 通用组件
+  # ─────────────────────────────────────
+
+  PrimaryButton:
+    description: 主要操作按钮
+    props:
+      - label: string
+      - loading: boolean
+      - disabled: boolean
+      - onPress: () => void
+    style:
+      bg: tokens.color.brand.primary
+      bg_hover: tokens.color.brand.primary-hover
+      bg_disabled: tokens.color.neutral.200
+      text: tokens.color.neutral.0
+      height: 52px
+      radius: tokens.radius.full
+      font: tokens.typography.scale.title
+      animation: tokens.animation.duration.fast
+
+  SecondaryButton:
+    description: 次要操作按钮（线框样式）
+    style:
+      bg: transparent
+      border: "2px solid tokens.color.brand.primary"
+      text: tokens.color.brand.primary
+      height: 52px
+      radius: tokens.radius.full
+
+  BottomTabBar:
+    description: 底部导航栏
+    tabs:
+      - { icon: home, label: "Home",    route: /home }
+      - { icon: scan, label: "Analyze", route: /analysis, is_cta: true }
+      - { icon: shopping-cart, label: "Cart", route: /cart, badge: cart_item_count }
+      - { icon: user, label: "Profile", route: /profile }
+    style:
+      height: 64px (+ safe_area_bottom)
+      bg: tokens.color.neutral.0
+      border_top: "1px solid tokens.color.neutral.200"
+      active_color: tokens.color.brand.primary
+      inactive_color: tokens.color.neutral.400
+      cta_tab:
+        bg: tokens.color.brand.accent
+        icon_color: "#FFFFFF"
+        radius: tokens.radius.full
+        size: 56px
+
+  SkeletonLoader:
+    description: 通用骨架屏占位
+    style:
+      base_color: tokens.color.neutral.100
+      shimmer_color: tokens.color.neutral.200
+      animation: "shimmer 1.5s ease-in-out infinite"
+      radius: tokens.radius.md
+
+  ErrorState:
+    description: 通用错误状态（插图 + 重试）
+    props:
+      - message: string
+      - onRetry: () => void
+    style:
+      illustration_size: 160px
+      text_style: tokens.typography.scale.body + tokens.color.neutral.500
+
+  EmptyState:
+    description: 通用空状态（插图 + 描述 + CTA）
+    props:
+      - illustration: string
+      - title: string
+      - description: string
+      - ctaLabel: string
+      - onCta: () => void

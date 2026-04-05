@@ -1,0 +1,435 @@
+# API 层数据契约 - 拾物（Shiwo）校园二手交易小程序
+# 说明：定义前后端契约，聚合响应，过滤敏感字段。
+# 金额单位：分（整数），前端负责格式化为元
+
+version: "1.0"
+base_url: "/api/v1"
+auth: "微信 code 换取 JWT Token"
+
+# ========== 响应体定义 ==========
+
+responses:
+
+  SuccessResponse:
+    code: 200
+    data: any
+    message: string
+
+  ErrorResponse:
+    code: number
+    error: string
+    message: string
+
+  PaginationMeta:
+    total: number
+    page: number
+    per_page: number
+    total_pages: number
+
+  # ---------- 用户相关 ----------
+  UserProfile:
+    id: string
+    nickname: string
+    avatar_url: string | null
+    school_name: string | null
+    campus_name: string | null
+    credit_score: number
+    student_verified: boolean
+    created_at: string
+
+  UserPublicDetail:
+    id: string
+    nickname: string
+    avatar_url: string | null
+    school_name: string | null
+    campus_name: string | null
+    credit_score: number
+    student_verified: boolean
+    item_count: number          # 在售商品数量
+    avg_rating: number | null   # 平均评分（null 表示暂无评价）
+    review_count: number
+    created_at: string
+
+  UserSelf:
+    id: string
+    nickname: string
+    avatar_url: string | null
+    school_id: string | null
+    school_name: string | null
+    campus_id: string | null
+    campus_name: string | null
+    credit_score: number
+    student_verified: boolean
+    created_at: string
+
+  # ---------- 学校/校区 ----------
+  SchoolSummary:
+    id: string
+    name: string
+    short_name: string
+    city: string
+
+  CampusSummary:
+    id: string
+    school_id: string
+    name: string
+    address: string | null
+
+  # ---------- 分类 ----------
+  CategoryItem:
+    id: string
+    name: string
+    icon: string | null
+    sort_order: number
+    children: CategoryItem[]    # 二级分类，最多一层嵌套
+
+  # ---------- 商品相关 ----------
+  ItemSummary:
+    id: string
+    title: string
+    price: number               # 分（整数）
+    original_price: number | null
+    images: string[]            # 图片 URL 数组，最多 6 个
+    cover_image: string | null  # 封面图（images[0]）
+    status: string              # "active" | "sold" | "withdrawn"
+    category_name: string
+    campus_name: string
+    seller: UserProfile
+    view_count: number
+    favor_count: number
+    is_favored: boolean         # 当前登录用户是否已收藏（未登录为 false）
+    created_at: string
+
+  ItemDetail:
+    id: string
+    title: string
+    description: string | null
+    price: number
+    original_price: number | null
+    images: string[]
+    status: string
+    category_id: string
+    category_name: string
+    campus_id: string
+    campus_name: string
+    seller: UserPublicDetail
+    view_count: number
+    favor_count: number
+    is_favored: boolean
+    can_message: boolean        # 是否可发私信（登录 + 非自己的商品）
+    created_at: string
+    updated_at: string
+    sold_at: string | null
+
+  ItemListResponse:
+    items: ItemSummary[]
+    pagination: PaginationMeta
+
+  # ---------- 私信相关 ----------
+  ConversationSummary:
+    id: string
+    item:
+      id: string
+      title: string
+      cover_image: string | null
+      price: number
+      status: string
+    other_user: UserProfile      # 对方用户信息
+    last_message: string | null
+    last_message_at: string | null
+    unread_count: number
+
+  MessageItem:
+    id: string
+    conversation_id: string
+    sender_id: string
+    content: string
+    type: string                 # "text" | "appointment"
+    appointment_data:
+      time: string | null
+      location: string | null
+      status: string | null      # "pending" | "confirmed" | "cancelled"
+    is_mine: boolean             # 是否为当前用户发送
+    created_at: string
+
+  ConversationDetail:
+    conversation: ConversationSummary
+    messages: MessageItem[]
+    pagination: PaginationMeta
+
+  # ---------- 评价相关 ----------
+  ReviewItem:
+    id: string
+    item_id: string
+    item_title: string
+    reviewer: UserProfile
+    rating: number
+    comment: string | null
+    reviewer_role: string        # "buyer" | "seller"（评价者在此交易中的角色）
+    created_at: string
+
+  ReviewListResponse:
+    items: ReviewItem[]
+    avg_rating: number | null
+    pagination: PaginationMeta
+
+
+# ========== 端点定义 ==========
+
+endpoints:
+
+  auth:
+    - method: POST
+      path: /auth/wx-login
+      description: 微信小程序登录（code 换 token）
+      auth_required: false
+      request_body:
+        code: string, required    # 微信 wx.login() 返回的 code
+      response:
+        token: string
+        user: UserSelf
+        is_new_user: boolean
+
+    - method: POST
+      path: /auth/refresh
+      description: 刷新 JWT Token
+      auth_required: true
+      response:
+        token: string
+
+  user:
+    - method: GET
+      path: /users/me
+      description: 获取当前登录用户信息
+      auth_required: true
+      response: UserSelf
+
+    - method: PUT
+      path: /users/me
+      description: 更新个人资料
+      auth_required: true
+      request_body:
+        nickname: string, optional, max:30
+        avatar_url: string, optional
+        campus_id: string, optional
+      response: UserSelf
+
+    - method: GET
+      path: /users/:id
+      description: 获取其他用户公开信息
+      auth_required: false
+      response: UserPublicDetail
+
+    - method: GET
+      path: /users/:id/items
+      description: 获取用户发布的商品列表
+      auth_required: false
+      query_params:
+        status: string, optional    # "active" | "sold"
+        page: integer, default:1
+        per_page: integer, default:20
+      response: ItemListResponse
+
+    - method: GET
+      path: /users/:id/reviews
+      description: 获取用户收到的评价列表
+      auth_required: false
+      query_params:
+        page: integer, default:1
+        per_page: integer, default:20
+      response: ReviewListResponse
+
+  school:
+    - method: GET
+      path: /schools
+      description: 获取学校列表（用于注册时选择）
+      auth_required: false
+      query_params:
+        keyword: string, optional
+        city: string, optional
+      response:
+        items: SchoolSummary[]
+
+    - method: GET
+      path: /schools/:id/campuses
+      description: 获取学校下的校区列表
+      auth_required: false
+      response:
+        items: CampusSummary[]
+
+  category:
+    - method: GET
+      path: /categories
+      description: 获取分类树（含二级分类）
+      auth_required: false
+      response:
+        items: CategoryItem[]
+
+  item:
+    - method: GET
+      path: /items
+      description: 获取商品列表（支持多维度筛选）
+      auth_required: false
+      query_params:
+        campus_id: string, optional       # 按校区过滤（核心筛选）
+        category_id: string, optional
+        keyword: string, optional         # 关键词搜索（标题+描述）
+        min_price: integer, optional      # 最低价，单位：分
+        max_price: integer, optional      # 最高价，单位：分
+        sort: string, optional            # "newest" | "price_asc" | "price_desc" | "popular"
+        page: integer, default:1
+        per_page: integer, default:20, max:50
+      response: ItemListResponse
+
+    - method: GET
+      path: /items/:id
+      description: 获取商品详情
+      auth_required: false
+      response: ItemDetail
+
+    - method: POST
+      path: /items
+      description: 发布新商品
+      auth_required: true
+      request_body:
+        title: string, required, max:60
+        description: string, optional, max:1000
+        price: integer, required, min:1
+        original_price: integer, optional, min:1
+        category_id: string, required
+        campus_id: string, required
+        images: string[], required, min:1, max:6
+      response: ItemDetail
+
+    - method: PUT
+      path: /items/:id
+      description: 更新商品（需为卖家本人）
+      auth_required: true
+      ownership_required: true
+      request_body:
+        title: string, optional
+        description: string, optional
+        price: integer, optional
+        images: string[], optional
+        status: string, optional    # 只允许修改为 "withdrawn"（下架）或 "active"（重新上架）
+      response: ItemDetail
+
+    - method: POST
+      path: /items/:id/sold
+      description: 标记商品已售出（需为卖家本人）
+      auth_required: true
+      ownership_required: true
+      response: ItemDetail
+
+    - method: DELETE
+      path: /items/:id
+      description: 删除商品（需为卖家本人）
+      auth_required: true
+      ownership_required: true
+      response: SuccessResponse
+
+    - method: POST
+      path: /items/:id/favorite
+      description: 收藏商品
+      auth_required: true
+      response:
+        is_favored: true
+        favor_count: number
+
+    - method: DELETE
+      path: /items/:id/favorite
+      description: 取消收藏
+      auth_required: true
+      response:
+        is_favored: false
+        favor_count: number
+
+    - method: GET
+      path: /items/favorites
+      description: 获取当前用户收藏的商品列表
+      auth_required: true
+      query_params:
+        page: integer, default:1
+        per_page: integer, default:20
+      response: ItemListResponse
+
+  upload:
+    - method: POST
+      path: /upload/image
+      description: 上传图片（返回 CDN URL）
+      auth_required: true
+      request_body: multipart/form-data, file field
+      response:
+        url: string
+
+  conversation:
+    - method: GET
+      path: /conversations
+      description: 获取当前用户的会话列表
+      auth_required: true
+      query_params:
+        page: integer, default:1
+        per_page: integer, default:20
+      response:
+        items: ConversationSummary[]
+        pagination: PaginationMeta
+
+    - method: POST
+      path: /conversations
+      description: 发起新会话（针对某个商品）
+      auth_required: true
+      request_body:
+        item_id: string, required
+        first_message: string, required, max:500
+      response:
+        conversation: ConversationSummary
+        message: MessageItem
+
+    - method: GET
+      path: /conversations/:id/messages
+      description: 获取会话消息列表
+      auth_required: true
+      query_params:
+        page: integer, default:1
+        per_page: integer, default:30
+        before_id: string, optional    # 翻页：获取此消息 ID 之前的消息
+      response: ConversationDetail
+
+    - method: POST
+      path: /conversations/:id/messages
+      description: 发送消息
+      auth_required: true
+      request_body:
+        content: string, required, max:500
+        type: string, default:"text"   # "text" | "appointment"
+        appointment_data: object, optional
+      response: MessageItem
+
+    - method: POST
+      path: /conversations/:id/read
+      description: 标记会话消息已读
+      auth_required: true
+      response: SuccessResponse
+
+  review:
+    - method: POST
+      path: /reviews
+      description: 提交交易评价
+      auth_required: true
+      request_body:
+        item_id: string, required
+        rating: integer, required, min:1, max:5
+        comment: string, optional, max:200
+      response: ReviewItem
+
+
+# ========== 错误码定义 ==========
+
+error_codes:
+  400: "请求参数错误"
+  401: "未登录或 Token 已过期"
+  403: "无权限执行此操作（非商品所有者）"
+  404: "资源不存在"
+  409: "资源冲突（如已收藏、已评价）"
+  422: "业务逻辑错误（如商品已售出无法发起会话）"
+  500: "服务器内部错误"

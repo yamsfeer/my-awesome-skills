@@ -1,0 +1,605 @@
+# FitStreak 数据实体定义
+# version: 1.0.0
+# updated: 2026-03-22
+
+entities:
+
+  # ─────────────────────────────────────────
+  # 用户实体
+  # ─────────────────────────────────────────
+  User:
+    description: 应用注册用户
+    table: users
+    fields:
+      id:
+        type: uuid
+        primary: true
+        description: 用户唯一标识
+      phone:
+        type: string(20)
+        unique: true
+        nullable: true
+        description: 手机号（国内格式，+86前缀）
+      email:
+        type: string(255)
+        unique: true
+        nullable: true
+        description: 邮箱地址
+      nickname:
+        type: string(50)
+        nullable: false
+        description: 用户昵称，默认为"用户XXXXXX"
+      avatar_url:
+        type: string(500)
+        nullable: true
+        description: 头像图片 URL（OSS 地址）
+      gender:
+        type: enum
+        values: [male, female, unknown]
+        default: unknown
+        description: 性别
+      birth_date:
+        type: date
+        nullable: true
+        description: 出生日期，用于计算年龄
+      height_cm:
+        type: float
+        nullable: true
+        description: 身高（厘米），用于 BMI 计算
+      fitness_goal:
+        type: enum
+        values: [lose_weight, gain_muscle, keep_fit, improve_endurance, other]
+        nullable: true
+        description: 健身目标
+      fitness_level:
+        type: enum
+        values: [beginner, intermediate, advanced]
+        default: beginner
+        description: 健身水平
+      is_premium:
+        type: boolean
+        default: false
+        description: 是否为付费用户（冗余字段，方便快速判断）
+      premium_expires_at:
+        type: datetime
+        nullable: true
+        description: Premium 到期时间，null 表示非 Premium
+      current_streak:
+        type: integer
+        default: 0
+        description: 当前连续打卡天数
+      longest_streak:
+        type: integer
+        default: 0
+        description: 历史最长连续打卡天数
+      total_checkins:
+        type: integer
+        default: 0
+        description: 累计打卡次数
+      timezone:
+        type: string(50)
+        default: "Asia/Shanghai"
+        description: 用户时区
+      notification_enabled:
+        type: boolean
+        default: true
+        description: 是否开启推送通知
+      reminder_time:
+        type: time
+        nullable: true
+        description: 每日提醒时间（HH:MM格式）
+      created_at:
+        type: datetime
+        auto: true
+        description: 注册时间
+      updated_at:
+        type: datetime
+        auto: true
+        description: 最后更新时间
+      deleted_at:
+        type: datetime
+        nullable: true
+        description: 软删除时间
+
+  # ─────────────────────────────────────────
+  # 打卡记录实体
+  # ─────────────────────────────────────────
+  Checkin:
+    description: 用户每次运动打卡记录
+    table: checkins
+    fields:
+      id:
+        type: uuid
+        primary: true
+      user_id:
+        type: uuid
+        foreign_key: User.id
+        index: true
+        description: 所属用户
+      exercise_type_id:
+        type: uuid
+        foreign_key: ExerciseType.id
+        description: 运动类型
+      duration_minutes:
+        type: integer
+        nullable: false
+        description: 运动时长（分钟）
+      calories_burned:
+        type: integer
+        nullable: true
+        description: 消耗卡路里（估算，可选填）
+      note:
+        type: text
+        nullable: true
+        description: 打卡备注（最多 200 字）
+      photo_url:
+        type: string(500)
+        nullable: true
+        description: 打卡配图 URL
+      location_name:
+        type: string(100)
+        nullable: true
+        description: 运动地点名称（如"健身房"、"操场"）
+      latitude:
+        type: float
+        nullable: true
+        description: GPS 纬度
+      longitude:
+        type: float
+        nullable: true
+        description: GPS 经度
+      checkin_date:
+        type: date
+        nullable: false
+        index: true
+        description: 打卡日期（YYYY-MM-DD，按用户时区）
+      streak_day:
+        type: integer
+        nullable: false
+        description: 本次打卡时的连续天数
+      source:
+        type: enum
+        values: [manual, healthkit, google_fit, watch]
+        default: manual
+        description: 数据来源
+      plan_id:
+        type: uuid
+        foreign_key: WorkoutPlan.id
+        nullable: true
+        description: 关联的运动计划（如果是按计划打卡）
+      created_at:
+        type: datetime
+        auto: true
+      updated_at:
+        type: datetime
+        auto: true
+    indexes:
+      - fields: [user_id, checkin_date]
+        unique: true
+        description: 每个用户每天只允许一条打卡记录（主打卡）
+      - fields: [user_id, created_at]
+
+  # ─────────────────────────────────────────
+  # 运动类型实体
+  # ─────────────────────────────────────────
+  ExerciseType:
+    description: 系统支持的运动类型字典
+    table: exercise_types
+    fields:
+      id:
+        type: uuid
+        primary: true
+      name:
+        type: string(50)
+        nullable: false
+        description: 运动名称（如"跑步"）
+      name_en:
+        type: string(50)
+        description: 英文名（如"Running"）
+      category:
+        type: enum
+        values: [cardio, strength, flexibility, sports, other]
+        description: 运动分类
+      icon_key:
+        type: string(50)
+        description: 图标键名，对应设计资源
+      met_value:
+        type: float
+        description: MET 代谢当量，用于卡路里估算
+      is_active:
+        type: boolean
+        default: true
+        description: 是否在运动选择器中展示
+      sort_order:
+        type: integer
+        default: 0
+        description: 排序权重
+      created_at:
+        type: datetime
+        auto: true
+    seed_data:
+      - {name: "跑步", category: cardio, met_value: 8.0}
+      - {name: "骑行", category: cardio, met_value: 6.8}
+      - {name: "游泳", category: cardio, met_value: 8.3}
+      - {name: "力量训练", category: strength, met_value: 5.0}
+      - {name: "瑜伽", category: flexibility, met_value: 3.0}
+      - {name: "HIIT", category: cardio, met_value: 8.0}
+      - {name: "篮球", category: sports, met_value: 6.5}
+      - {name: "羽毛球", category: sports, met_value: 5.5}
+      - {name: "跳绳", category: cardio, met_value: 10.0}
+      - {name: "健步走", category: cardio, met_value: 3.5}
+
+  # ─────────────────────────────────────────
+  # 体征数据实体（Premium）
+  # ─────────────────────────────────────────
+  BodyMetric:
+    description: 用户体征数据记录（Premium 功能）
+    table: body_metrics
+    fields:
+      id:
+        type: uuid
+        primary: true
+      user_id:
+        type: uuid
+        foreign_key: User.id
+        index: true
+      record_date:
+        type: date
+        nullable: false
+        description: 记录日期
+      weight_kg:
+        type: float
+        nullable: true
+        description: 体重（千克）
+      body_fat_percent:
+        type: float
+        nullable: true
+        description: 体脂率（百分比，0-100）
+      muscle_mass_kg:
+        type: float
+        nullable: true
+        description: 肌肉量（千克）
+      bmi:
+        type: float
+        nullable: true
+        description: BMI 指数（自动计算）
+      note:
+        type: string(200)
+        nullable: true
+      created_at:
+        type: datetime
+        auto: true
+    indexes:
+      - fields: [user_id, record_date]
+        unique: true
+
+  # ─────────────────────────────────────────
+  # 运动计划实体
+  # ─────────────────────────────────────────
+  WorkoutPlan:
+    description: 运动计划（系统模板 + 用户自定义）
+    table: workout_plans
+    fields:
+      id:
+        type: uuid
+        primary: true
+      title:
+        type: string(100)
+        nullable: false
+      description:
+        type: text
+        nullable: true
+      creator_id:
+        type: uuid
+        foreign_key: User.id
+        nullable: true
+        description: 创建者（null 表示系统模板）
+      is_template:
+        type: boolean
+        default: false
+        description: 是否为公开模板
+      is_premium:
+        type: boolean
+        default: false
+        description: 是否为 Premium 计划
+      difficulty:
+        type: enum
+        values: [easy, medium, hard]
+      duration_weeks:
+        type: integer
+        description: 计划周期（周数）
+      days_per_week:
+        type: integer
+        description: 每周训练天数
+      target_goal:
+        type: enum
+        values: [lose_weight, gain_muscle, keep_fit, improve_endurance]
+        nullable: true
+      cover_image_url:
+        type: string(500)
+        nullable: true
+      subscriber_count:
+        type: integer
+        default: 0
+        description: 订阅/使用人数（冗余计数）
+      created_at:
+        type: datetime
+        auto: true
+      updated_at:
+        type: datetime
+        auto: true
+
+  # ─────────────────────────────────────────
+  # 计划订阅实体（用户订阅了哪个计划）
+  # ─────────────────────────────────────────
+  UserPlanSubscription:
+    description: 用户订阅运动计划的记录
+    table: user_plan_subscriptions
+    fields:
+      id:
+        type: uuid
+        primary: true
+      user_id:
+        type: uuid
+        foreign_key: User.id
+      plan_id:
+        type: uuid
+        foreign_key: WorkoutPlan.id
+      started_at:
+        type: datetime
+      ended_at:
+        type: datetime
+        nullable: true
+      is_active:
+        type: boolean
+        default: true
+      current_week:
+        type: integer
+        default: 1
+      progress_percent:
+        type: float
+        default: 0
+      created_at:
+        type: datetime
+        auto: true
+
+  # ─────────────────────────────────────────
+  # 成就/徽章实体
+  # ─────────────────────────────────────────
+  Achievement:
+    description: 系统成就定义
+    table: achievements
+    fields:
+      id:
+        type: uuid
+        primary: true
+      key:
+        type: string(100)
+        unique: true
+        description: 成就唯一键（如 streak_7, streak_30）
+      title:
+        type: string(100)
+      description:
+        type: text
+        description: 解锁条件说明
+      icon_url:
+        type: string(500)
+      badge_color:
+        type: string(20)
+        description: 徽章颜色主题
+      category:
+        type: enum
+        values: [streak, total_checkins, challenge, special]
+      condition_type:
+        type: enum
+        values: [streak_days, total_checkins, challenge_win, manual]
+      condition_value:
+        type: integer
+        nullable: true
+        description: 触发条件数值（如 streak_days = 7）
+      is_premium:
+        type: boolean
+        default: false
+        description: 是否为 Premium 专属徽章
+      xp_reward:
+        type: integer
+        default: 0
+        description: 解锁奖励经验值
+      created_at:
+        type: datetime
+        auto: true
+    seed_data:
+      - {key: "streak_7", title: "坚持一周", condition_type: streak_days, condition_value: 7}
+      - {key: "streak_30", title: "坚持一月", condition_type: streak_days, condition_value: 30}
+      - {key: "streak_100", title: "百日坚持", condition_type: streak_days, condition_value: 100}
+      - {key: "checkin_10", title: "初出茅庐", condition_type: total_checkins, condition_value: 10}
+      - {key: "checkin_50", title: "运动达人", condition_type: total_checkins, condition_value: 50}
+      - {key: "checkin_100", title: "健身先锋", condition_type: total_checkins, condition_value: 100}
+
+  # ─────────────────────────────────────────
+  # 用户成就解锁记录
+  # ─────────────────────────────────────────
+  UserAchievement:
+    description: 用户已解锁的成就
+    table: user_achievements
+    fields:
+      id:
+        type: uuid
+        primary: true
+      user_id:
+        type: uuid
+        foreign_key: User.id
+        index: true
+      achievement_id:
+        type: uuid
+        foreign_key: Achievement.id
+      unlocked_at:
+        type: datetime
+        auto: true
+    indexes:
+      - fields: [user_id, achievement_id]
+        unique: true
+
+  # ─────────────────────────────────────────
+  # 好友关系实体
+  # ─────────────────────────────────────────
+  Friendship:
+    description: 用户好友关系
+    table: friendships
+    fields:
+      id:
+        type: uuid
+        primary: true
+      requester_id:
+        type: uuid
+        foreign_key: User.id
+        description: 发起方用户 ID
+      addressee_id:
+        type: uuid
+        foreign_key: User.id
+        description: 接受方用户 ID
+      status:
+        type: enum
+        values: [pending, accepted, blocked]
+        default: pending
+      created_at:
+        type: datetime
+        auto: true
+      updated_at:
+        type: datetime
+        auto: true
+    indexes:
+      - fields: [requester_id, addressee_id]
+        unique: true
+
+  # ─────────────────────────────────────────
+  # 挑战赛实体（Premium）
+  # ─────────────────────────────────────────
+  Challenge:
+    description: 好友挑战赛
+    table: challenges
+    fields:
+      id:
+        type: uuid
+        primary: true
+      title:
+        type: string(100)
+      creator_id:
+        type: uuid
+        foreign_key: User.id
+      challenge_type:
+        type: enum
+        values: [checkin_streak, total_checkins, total_duration]
+        description: 挑战类型
+      duration_days:
+        type: integer
+        values: [7, 14, 30]
+        description: 挑战持续天数
+      start_date:
+        type: date
+      end_date:
+        type: date
+      status:
+        type: enum
+        values: [pending, active, completed, cancelled]
+        default: pending
+      max_participants:
+        type: integer
+        default: 10
+      created_at:
+        type: datetime
+        auto: true
+
+  # ─────────────────────────────────────────
+  # 挑战参与记录
+  # ─────────────────────────────────────────
+  ChallengeParticipant:
+    description: 用户参与挑战赛的记录与进度
+    table: challenge_participants
+    fields:
+      id:
+        type: uuid
+        primary: true
+      challenge_id:
+        type: uuid
+        foreign_key: Challenge.id
+        index: true
+      user_id:
+        type: uuid
+        foreign_key: User.id
+      status:
+        type: enum
+        values: [invited, joined, withdrew, completed]
+        default: invited
+      progress_value:
+        type: integer
+        default: 0
+        description: 当前进度值（根据挑战类型不同含义不同）
+      rank:
+        type: integer
+        nullable: true
+        description: 最终排名（完赛后计算）
+      joined_at:
+        type: datetime
+        nullable: true
+      created_at:
+        type: datetime
+        auto: true
+
+  # ─────────────────────────────────────────
+  # 订阅订单实体
+  # ─────────────────────────────────────────
+  SubscriptionOrder:
+    description: Premium 订阅订单记录
+    table: subscription_orders
+    fields:
+      id:
+        type: uuid
+        primary: true
+      user_id:
+        type: uuid
+        foreign_key: User.id
+        index: true
+      plan_type:
+        type: enum
+        values: [monthly, yearly, family_yearly]
+        description: 订阅套餐类型
+      amount_cents:
+        type: integer
+        description: 支付金额（分），月付=1800, 年付=12800
+      currency:
+        type: string(3)
+        default: CNY
+      payment_channel:
+        type: enum
+        values: [apple_iap, google_play, wechat_pay, alipay]
+      transaction_id:
+        type: string(200)
+        description: 第三方支付流水号
+      status:
+        type: enum
+        values: [pending, paid, refunded, failed]
+        default: pending
+      period_start:
+        type: date
+        description: 订阅有效期开始日
+      period_end:
+        type: date
+        description: 订阅有效期结束日
+      created_at:
+        type: datetime
+        auto: true
+
+# ─────────────────────────────────────────
+# 实体关系图（文字描述）
+# ─────────────────────────────────────────
+relationships:
+  - "User (1) ──< Checkin (N)：一个用户有多条打卡记录"
+  - "User (1) ──< BodyMetric (N)：一个用户有多条体征记录"
+  - "User (M) ──> Achievement (N) via UserAchievement：多对多成就解锁"
+  - "User (M) ──> User (N) via Friendship：用户之间的好友关系"
+  - "User (1) ──< Challenge (N)：一个用户可创建多个挑战"
+  - "User (M) ──> Challenge (N) via ChallengeParticipant：用户参与挑战"
+  - "WorkoutPlan (1) ──< UserPlanSubscription (N)：计划被多人订阅"
+  - "Checkin (N) ──> ExerciseType (1)：每次打卡对应一种运动"
+  - "User (1) ──< SubscriptionOrder (N)：一个用户有多个订单"

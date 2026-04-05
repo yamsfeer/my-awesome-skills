@@ -1,0 +1,489 @@
+# 拾物 —— 数据实体定义 (Domain Model)
+# 版本: v1.0 | 创建日期: 2026-03-22
+# 说明: 敏感字段使用 sensitive: true 标注，禁止在前端接口中直接暴露
+
+entities:
+
+  # ============================================================
+  # 用户实体
+  # ============================================================
+  User:
+    description: 平台注册用户（在校大学生）
+    table: users
+    fields:
+      id:
+        type: string (uuid)
+        description: 用户唯一标识
+        sensitive: false
+      open_id:
+        type: string
+        description: 微信 openId
+        sensitive: true    # 禁止暴露：微信用户唯一标识，属于平台核心隐私字段
+      union_id:
+        type: string
+        description: 微信 unionId（跨小程序识别）
+        sensitive: true    # 禁止暴露
+      real_name:
+        type: string
+        description: 真实姓名（学号实名认证后录入）
+        sensitive: true    # 禁止暴露：实名信息
+      student_id:
+        type: string
+        description: 学号
+        sensitive: true    # 禁止暴露：学号属于学生隐私信息
+      id_card_no:
+        type: string
+        description: 身份证号（Phase 2 学信网认证使用）
+        sensitive: true    # 禁止暴露：最高级别隐私字段
+      phone:
+        type: string
+        description: 手机号（微信授权或手动填写）
+        sensitive: true    # 禁止暴露：联系方式隐私
+      email:
+        type: string
+        description: 校园邮箱（用于学校身份验证）
+        sensitive: true    # 禁止暴露
+      nickname:
+        type: string
+        description: 昵称（展示用）
+        sensitive: false
+      avatar_url:
+        type: string (url)
+        description: 头像 CDN 地址
+        sensitive: false
+      school_id:
+        type: string (uuid, FK -> School.id)
+        description: 所属学校
+        sensitive: false
+      campus_id:
+        type: string (uuid, FK -> Campus.id)
+        description: 常用校区
+        sensitive: false
+      credit_score:
+        type: integer
+        description: 诚信评分（0-100，初始值 60）
+        sensitive: false
+      completed_trades:
+        type: integer
+        description: 累计完成交易笔数
+        sensitive: false
+      status:
+        type: enum
+        values: [active, banned, pending_verify]
+        description: 账号状态
+        sensitive: false
+      is_verified:
+        type: boolean
+        description: 是否完成实名认证
+        sensitive: false
+      created_at:
+        type: datetime
+        sensitive: false
+      updated_at:
+        type: datetime
+        sensitive: false
+    exposed_fields:
+      # 对外接口仅允许返回这些字段
+      - id
+      - nickname
+      - avatar_url
+      - school_id
+      - campus_id
+      - credit_score
+      - completed_trades
+      - is_verified
+      - status
+      - created_at
+
+  # ============================================================
+  # 学校实体
+  # ============================================================
+  School:
+    description: 学校信息
+    table: schools
+    fields:
+      id:
+        type: string (uuid)
+        sensitive: false
+      name:
+        type: string
+        description: 学校全称（如：北京大学）
+        sensitive: false
+      short_name:
+        type: string
+        description: 学校简称（如：北大）
+        sensitive: false
+      city:
+        type: string
+        description: 所在城市
+        sensitive: false
+      logo_url:
+        type: string (url)
+        description: 学校 Logo
+        sensitive: false
+      verify_domain:
+        type: string
+        description: 校园邮箱验证域名（如 pku.edu.cn）
+        sensitive: false
+      is_active:
+        type: boolean
+        description: 是否已开通
+        sensitive: false
+
+  # ============================================================
+  # 校区实体
+  # ============================================================
+  Campus:
+    description: 校区信息（一所学校可以有多个校区）
+    table: campuses
+    fields:
+      id:
+        type: string (uuid)
+        sensitive: false
+      school_id:
+        type: string (uuid, FK -> School.id)
+        sensitive: false
+      name:
+        type: string
+        description: 校区名称（如：本部校区、南校区）
+        sensitive: false
+      address:
+        type: string
+        description: 校区地址
+        sensitive: false
+      latitude:
+        type: float
+        description: 纬度
+        sensitive: false
+      longitude:
+        type: float
+        description: 经度
+        sensitive: false
+
+  # ============================================================
+  # 商品分类
+  # ============================================================
+  Category:
+    description: 商品分类
+    table: categories
+    fields:
+      id:
+        type: string (uuid)
+        sensitive: false
+      name:
+        type: string
+        description: 分类名称（如：教材书籍、数码电子、生活用品、服饰鞋包、其他）
+        sensitive: false
+      icon_url:
+        type: string (url)
+        description: 分类图标
+        sensitive: false
+      sort_order:
+        type: integer
+        description: 排序权重
+        sensitive: false
+      parent_id:
+        type: string (uuid, nullable)
+        description: 父分类 ID（支持二级分类）
+        sensitive: false
+
+  # ============================================================
+  # 商品实体
+  # ============================================================
+  Goods:
+    description: 用户发布的闲置商品
+    table: goods
+    fields:
+      id:
+        type: string (uuid)
+        sensitive: false
+      seller_id:
+        type: string (uuid, FK -> User.id)
+        description: 卖家用户 ID
+        sensitive: false
+      title:
+        type: string (max 50)
+        description: 商品标题
+        sensitive: false
+      description:
+        type: string (max 1000)
+        description: 商品详情描述
+        sensitive: false
+      price:
+        type: decimal (10,2)
+        description: 售价（元），最小 0.01
+        sensitive: false
+      original_price:
+        type: decimal (10,2, nullable)
+        description: 原价（可选，用于展示折扣）
+        sensitive: false
+      category_id:
+        type: string (uuid, FK -> Category.id)
+        sensitive: false
+      campus_id:
+        type: string (uuid, FK -> Campus.id)
+        description: 商品所在校区
+        sensitive: false
+      meet_location:
+        type: string (max 100)
+        description: 面交地点描述（如：图书馆门口）
+        sensitive: false
+      images:
+        type: array<string (url)>
+        description: 商品图片列表（最多 9 张）
+        sensitive: false
+      condition:
+        type: enum
+        values: [new, like_new, good, fair, poor]
+        description: 成色（全新/几乎全新/较好/一般/较差）
+        sensitive: false
+      status:
+        type: enum
+        values: [published, sold, withdrawn, expired]
+        description: 商品状态（上架/已售/已下架/已过期）
+        sensitive: false
+      view_count:
+        type: integer
+        description: 浏览次数
+        sensitive: false
+      favorite_count:
+        type: integer
+        description: 收藏次数
+        sensitive: false
+      published_at:
+        type: datetime
+        sensitive: false
+      sold_at:
+        type: datetime (nullable)
+        sensitive: false
+      expired_at:
+        type: datetime (nullable)
+        description: 自动过期时间（发布后 30 天）
+        sensitive: false
+      created_at:
+        type: datetime
+        sensitive: false
+      updated_at:
+        type: datetime
+        sensitive: false
+
+  # ============================================================
+  # 收藏实体
+  # ============================================================
+  Favorite:
+    description: 用户收藏的商品
+    table: favorites
+    fields:
+      id:
+        type: string (uuid)
+        sensitive: false
+      user_id:
+        type: string (uuid, FK -> User.id)
+        sensitive: false
+      goods_id:
+        type: string (uuid, FK -> Goods.id)
+        sensitive: false
+      created_at:
+        type: datetime
+        sensitive: false
+
+  # ============================================================
+  # 会话（私信）实体
+  # ============================================================
+  Conversation:
+    description: 买卖双方的私信会话
+    table: conversations
+    fields:
+      id:
+        type: string (uuid)
+        sensitive: false
+      goods_id:
+        type: string (uuid, FK -> Goods.id)
+        description: 关联商品
+        sensitive: false
+      buyer_id:
+        type: string (uuid, FK -> User.id)
+        sensitive: false
+      seller_id:
+        type: string (uuid, FK -> User.id)
+        sensitive: false
+      last_message_at:
+        type: datetime
+        sensitive: false
+      buyer_unread_count:
+        type: integer
+        sensitive: false
+      seller_unread_count:
+        type: integer
+        sensitive: false
+      created_at:
+        type: datetime
+        sensitive: false
+
+  # ============================================================
+  # 消息实体
+  # ============================================================
+  Message:
+    description: 私信消息
+    table: messages
+    fields:
+      id:
+        type: string (uuid)
+        sensitive: false
+      conversation_id:
+        type: string (uuid, FK -> Conversation.id)
+        sensitive: false
+      sender_id:
+        type: string (uuid, FK -> User.id)
+        sensitive: false
+      type:
+        type: enum
+        values: [text, image, meet_request, system]
+        description: 消息类型
+        sensitive: false
+      content:
+        type: string
+        description: 文字内容（type=text 时有效）
+        sensitive: false
+      image_url:
+        type: string (url, nullable)
+        description: 图片地址（type=image 时有效）
+        sensitive: false
+      meet_time:
+        type: datetime (nullable)
+        description: 面交时间（type=meet_request 时有效）
+        sensitive: false
+      meet_place:
+        type: string (nullable)
+        description: 面交地点（type=meet_request 时有效）
+        sensitive: false
+      is_read:
+        type: boolean
+        sensitive: false
+      created_at:
+        type: datetime
+        sensitive: false
+
+  # ============================================================
+  # 交易记录
+  # ============================================================
+  Trade:
+    description: 已完成的交易记录
+    table: trades
+    fields:
+      id:
+        type: string (uuid)
+        sensitive: false
+      goods_id:
+        type: string (uuid, FK -> Goods.id)
+        sensitive: false
+      buyer_id:
+        type: string (uuid, FK -> User.id)
+        sensitive: false
+      seller_id:
+        type: string (uuid, FK -> User.id)
+        sensitive: false
+      final_price:
+        type: decimal (10,2)
+        description: 实际成交价格
+        sensitive: false
+      trade_type:
+        type: enum
+        values: [offline_meet]
+        description: 交易方式（当前只支持线下面交）
+        sensitive: false
+      confirmed_by_buyer:
+        type: boolean
+        description: 买家确认收货
+        sensitive: false
+      confirmed_by_seller:
+        type: boolean
+        description: 卖家确认交货
+        sensitive: false
+      status:
+        type: enum
+        values: [pending, completed, disputed, cancelled]
+        sensitive: false
+      completed_at:
+        type: datetime (nullable)
+        sensitive: false
+      created_at:
+        type: datetime
+        sensitive: false
+
+  # ============================================================
+  # 评价实体
+  # ============================================================
+  Review:
+    description: 交易完成后的双向评价
+    table: reviews
+    fields:
+      id:
+        type: string (uuid)
+        sensitive: false
+      trade_id:
+        type: string (uuid, FK -> Trade.id)
+        sensitive: false
+      reviewer_id:
+        type: string (uuid, FK -> User.id)
+        description: 评价人
+        sensitive: false
+      reviewee_id:
+        type: string (uuid, FK -> User.id)
+        description: 被评价人
+        sensitive: false
+      role:
+        type: enum
+        values: [buyer_to_seller, seller_to_buyer]
+        sensitive: false
+      score:
+        type: integer
+        description: 评分 1-5 分
+        sensitive: false
+      comment:
+        type: string (max 500, nullable)
+        description: 评价文字
+        sensitive: false
+      tags:
+        type: array<string>
+        description: 评价标签（如：物品描述准确、准时面交、态度友好）
+        sensitive: false
+      created_at:
+        type: datetime
+        sensitive: false
+
+  # ============================================================
+  # 举报实体
+  # ============================================================
+  Report:
+    description: 用户举报记录
+    table: reports
+    fields:
+      id:
+        type: string (uuid)
+        sensitive: false
+      reporter_id:
+        type: string (uuid, FK -> User.id)
+        sensitive: true    # 禁止暴露：保护举报人隐私
+      target_type:
+        type: enum
+        values: [user, goods, message]
+        sensitive: false
+      target_id:
+        type: string (uuid)
+        description: 被举报对象 ID
+        sensitive: false
+      reason:
+        type: enum
+        values: [fake_goods, fraud, inappropriate, spam, other]
+        sensitive: false
+      description:
+        type: string (max 500, nullable)
+        sensitive: false
+      status:
+        type: enum
+        values: [pending, processing, resolved, dismissed]
+        sensitive: false
+      created_at:
+        type: datetime
+        sensitive: false

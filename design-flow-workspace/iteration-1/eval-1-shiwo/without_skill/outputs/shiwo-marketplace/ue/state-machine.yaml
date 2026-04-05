@@ -1,0 +1,544 @@
+# 拾物 —— 页面状态机定义
+# 版本: v1.0 | 创建日期: 2026-03-22
+# 说明: 定义各核心页面的状态流转逻辑
+
+# ============================================================
+# 全局认证状态机
+# ============================================================
+auth_state_machine:
+  id: auth
+  description: 用户认证状态全局守卫
+  initial_state: checking
+  states:
+    checking:
+      description: 检查本地 token 是否有效
+      on:
+        TOKEN_VALID: logged_in
+        TOKEN_INVALID: not_logged_in
+        TOKEN_MISSING: not_logged_in
+
+    not_logged_in:
+      description: 未登录态，展示登录引导
+      on:
+        WX_LOGIN_SUCCESS: verifying_student
+        WX_LOGIN_FAIL: not_logged_in
+
+    verifying_student:
+      description: 已登录微信，但未完成学生认证（新用户）
+      on:
+        SKIP_FOR_NOW: logged_in_unverified      # 允许先浏览，但发布/私信需要认证
+        SUBMIT_EMAIL: email_code_sent
+        SUBMIT_STUDENT_ID: student_id_verifying
+
+    email_code_sent:
+      description: 校园邮箱验证码已发送
+      on:
+        CODE_CORRECT: logged_in
+        CODE_WRONG: email_code_sent
+        CODE_EXPIRED: verifying_student
+        RESEND: email_code_sent
+
+    student_id_verifying:
+      description: 学号验证中
+      on:
+        VERIFY_SUCCESS: logged_in
+        VERIFY_FAIL: verifying_student
+
+    logged_in_unverified:
+      description: 已登录但未实名认证，部分功能受限
+      on:
+        TRIGGER_RESTRICTED_ACTION: verifying_student   # 触发需要认证的功能时跳转认证
+        LOGOUT: not_logged_in
+
+    logged_in:
+      description: 已登录且已认证，完整功能可用
+      on:
+        LOGOUT: not_logged_in
+        TOKEN_EXPIRED: not_logged_in
+
+# ============================================================
+# 首页（商品发现页）状态机
+# ============================================================
+home_page_state_machine:
+  id: home
+  description: 首页商品流展示状态
+  initial_state: loading
+  states:
+    loading:
+      description: 初始加载商品列表
+      on:
+        LOAD_SUCCESS: idle
+        LOAD_FAIL: error
+
+    idle:
+      description: 正常展示商品列表
+      actions_available:
+        - 切换分类 Tab
+        - 点击搜索框
+        - 点击校区筛选
+        - 点击商品卡片
+        - 下拉刷新
+        - 上滑加载更多
+      on:
+        SWITCH_CATEGORY: loading_category
+        CLICK_SEARCH: go_to_search_page
+        CLICK_FILTER: show_filter_panel
+        CLICK_GOODS_CARD: go_to_goods_detail
+        PULL_TO_REFRESH: refreshing
+        LOAD_MORE: loading_more
+
+    loading_category:
+      description: 切换分类后加载中
+      on:
+        LOAD_SUCCESS: idle
+        LOAD_FAIL: error
+
+    refreshing:
+      description: 下拉刷新中
+      on:
+        REFRESH_SUCCESS: idle
+        REFRESH_FAIL: idle             # 刷新失败不影响现有内容展示
+
+    loading_more:
+      description: 加载更多中
+      on:
+        LOAD_MORE_SUCCESS: idle
+        NO_MORE_DATA: all_loaded
+        LOAD_MORE_FAIL: idle
+
+    all_loaded:
+      description: 所有数据已加载完毕
+      on:
+        PULL_TO_REFRESH: refreshing
+
+    show_filter_panel:
+      description: 底部筛选面板展开
+      on:
+        APPLY_FILTER: loading
+        RESET_FILTER: loading
+        DISMISS: idle
+
+    error:
+      description: 加载失败
+      on:
+        RETRY: loading
+
+    go_to_search_page:
+      description: 跳转搜索页（路由跳转，退出当前状态机）
+      type: navigation
+
+    go_to_goods_detail:
+      description: 跳转商品详情页
+      type: navigation
+
+# ============================================================
+# 搜索页状态机
+# ============================================================
+search_page_state_machine:
+  id: search
+  description: 搜索页状态
+  initial_state: idle_empty
+  states:
+    idle_empty:
+      description: 未输入关键词，展示搜索历史 + 热门推荐
+      on:
+        INPUT_KEYWORD: inputting
+        CLICK_HISTORY_ITEM: searching
+
+    inputting:
+      description: 正在输入关键词，实时展示搜索建议
+      on:
+        INPUT_CHANGE: inputting
+        SUBMIT_SEARCH: searching
+        CLEAR_INPUT: idle_empty
+        CLICK_SUGGESTION: searching
+
+    searching:
+      description: 搜索结果加载中
+      on:
+        SEARCH_SUCCESS: show_results
+        SEARCH_EMPTY: no_results
+        SEARCH_FAIL: error
+
+    show_results:
+      description: 展示搜索结果列表
+      on:
+        CHANGE_SORT: searching
+        APPLY_FILTER: searching
+        LOAD_MORE: loading_more
+        CLICK_GOODS: go_to_goods_detail
+        INPUT_CHANGE: inputting
+
+    loading_more:
+      on:
+        LOAD_MORE_SUCCESS: show_results
+        NO_MORE_DATA: all_loaded
+        LOAD_MORE_FAIL: show_results
+
+    all_loaded:
+      description: 搜索结果加载完毕
+
+    no_results:
+      description: 无搜索结果，展示空状态 + 推荐其他商品
+      on:
+        INPUT_CHANGE: inputting
+
+    error:
+      on:
+        RETRY: searching
+
+    go_to_goods_detail:
+      type: navigation
+
+# ============================================================
+# 商品详情页状态机
+# ============================================================
+goods_detail_state_machine:
+  id: goods_detail
+  description: 商品详情页状态
+  initial_state: loading
+  states:
+    loading:
+      description: 加载商品详情
+      on:
+        LOAD_SUCCESS: viewing
+        LOAD_FAIL: error
+        GOODS_NOT_FOUND: not_found
+
+    viewing:
+      description: 正常查看商品详情（商品上架中）
+      sub_states:
+        - 图片轮播浏览
+        - 查看卖家信息
+        - 查看评价
+      actions_available:
+        - 收藏/取消收藏
+        - 点击"我想要"（发起私信）
+        - 点击卖家头像（进入卖家主页）
+        - 举报商品
+      on:
+        CLICK_FAVORITE: toggling_favorite
+        CLICK_CONTACT_SELLER: go_to_conversation
+        CLICK_SELLER_AVATAR: go_to_seller_profile
+        CLICK_REPORT: show_report_dialog
+        GOODS_SOLD: viewing_sold        # 实时推送商品状态变化
+
+    viewing_sold:
+      description: 商品已被购买，展示已售出状态
+      actions_available:
+        - 查看相似商品
+      on:
+        CLICK_SIMILAR: go_to_search
+
+    toggling_favorite:
+      description: 收藏/取消收藏操作中
+      on:
+        SUCCESS: viewing
+        FAIL: viewing
+        NOT_LOGGED_IN: go_to_login
+
+    show_report_dialog:
+      description: 举报对话框
+      on:
+        SUBMIT_REPORT: submitting_report
+        CANCEL: viewing
+
+    submitting_report:
+      on:
+        SUCCESS: viewing
+        FAIL: show_report_dialog
+
+    # 卖家视角（查看自己发布的商品）
+    viewing_as_seller:
+      description: 卖家查看自己的商品
+      actions_available:
+        - 编辑商品
+        - 下架商品
+        - 删除商品
+        - 标记已售出
+      on:
+        CLICK_EDIT: go_to_edit_goods
+        CLICK_WITHDRAW: confirm_withdraw
+        CLICK_DELETE: confirm_delete
+        CLICK_MARK_SOLD: confirm_mark_sold
+
+    confirm_withdraw:
+      description: 确认下架对话框
+      on:
+        CONFIRM: withdrawing
+        CANCEL: viewing_as_seller
+
+    withdrawing:
+      on:
+        SUCCESS: goods_withdrawn
+        FAIL: viewing_as_seller
+
+    goods_withdrawn:
+      description: 商品已下架状态展示
+
+    confirm_delete:
+      on:
+        CONFIRM: deleting
+        CANCEL: viewing_as_seller
+
+    deleting:
+      on:
+        SUCCESS: go_back
+        FAIL: viewing_as_seller
+
+    confirm_mark_sold:
+      on:
+        CONFIRM: marking_sold
+        CANCEL: viewing_as_seller
+
+    marking_sold:
+      on:
+        SUCCESS: go_to_create_trade
+        FAIL: viewing_as_seller
+
+    error:
+      on:
+        RETRY: loading
+
+    not_found:
+      description: 商品不存在（可能已被删除）
+
+    go_to_conversation:
+      type: navigation
+    go_to_seller_profile:
+      type: navigation
+    go_to_edit_goods:
+      type: navigation
+    go_to_create_trade:
+      type: navigation
+    go_to_search:
+      type: navigation
+    go_to_login:
+      type: navigation
+    go_back:
+      type: navigation
+
+# ============================================================
+# 发布商品页状态机
+# ============================================================
+publish_goods_state_machine:
+  id: publish_goods
+  description: 发布/编辑商品状态
+  initial_state: idle
+  guard:
+    require_auth: true               # 需要登录且认证
+  states:
+    idle:
+      description: 表单填写中（初始空白）
+      on:
+        UPLOAD_IMAGE: uploading_image
+        FILL_TITLE: idle
+        FILL_PRICE: idle
+        SELECT_CATEGORY: idle
+        SELECT_CAMPUS: idle
+        SELECT_CONDITION: idle
+        CLICK_PUBLISH: validating
+
+    uploading_image:
+      description: 图片上传中
+      on:
+        UPLOAD_SUCCESS: idle
+        UPLOAD_FAIL: upload_error
+        CANCEL: idle
+
+    upload_error:
+      description: 图片上传失败
+      on:
+        RETRY: uploading_image
+        DISMISS: idle
+
+    validating:
+      description: 提交前本地表单校验
+      on:
+        VALIDATION_PASS: submitting
+        VALIDATION_FAIL: idle          # 展示错误提示，停留在表单页
+
+    submitting:
+      description: 提交发布请求中
+      on:
+        SUBMIT_SUCCESS: publish_success
+        SUBMIT_FAIL: idle
+
+    publish_success:
+      description: 发布成功，展示成功提示
+      on:
+        GO_TO_DETAIL: go_to_goods_detail
+        GO_HOME: go_home
+
+    go_to_goods_detail:
+      type: navigation
+    go_home:
+      type: navigation
+
+# ============================================================
+# 私信会话页状态机
+# ============================================================
+conversation_state_machine:
+  id: conversation
+  description: 私信会话页
+  initial_state: loading
+  guard:
+    require_auth: true
+  states:
+    loading:
+      description: 加载历史消息
+      on:
+        LOAD_SUCCESS: idle
+        LOAD_FAIL: error
+
+    idle:
+      description: 正常聊天状态
+      actions_available:
+        - 发送文字消息
+        - 发送图片
+        - 发起面交预约
+        - 查看关联商品
+        - 举报对方
+      on:
+        SEND_TEXT: sending_message
+        SEND_IMAGE: sending_image
+        CLICK_MEET_REQUEST: show_meet_request_form
+        LOAD_MORE_HISTORY: loading_history
+        CLICK_GOODS_CARD: go_to_goods_detail
+        NEW_MESSAGE_RECEIVED: idle      # WebSocket 推送新消息，更新列表
+
+    sending_message:
+      description: 消息发送中
+      on:
+        SEND_SUCCESS: idle
+        SEND_FAIL: message_send_fail
+
+    message_send_fail:
+      description: 消息发送失败（展示重试按钮）
+      on:
+        RETRY: sending_message
+        DISMISS: idle
+
+    sending_image:
+      on:
+        UPLOAD_SUCCESS: sending_message
+        UPLOAD_FAIL: idle
+
+    show_meet_request_form:
+      description: 面交预约表单弹出层
+      on:
+        SUBMIT: sending_message
+        CANCEL: idle
+
+    loading_history:
+      on:
+        LOAD_SUCCESS: idle
+        NO_MORE_HISTORY: idle
+        LOAD_FAIL: idle
+
+    error:
+      on:
+        RETRY: loading
+
+    go_to_goods_detail:
+      type: navigation
+
+# ============================================================
+# 交易确认 & 评价流程状态机
+# ============================================================
+trade_review_state_machine:
+  id: trade_review
+  description: 面交完成后的交易确认与评价流程
+  initial_state: pending_confirm
+  states:
+    pending_confirm:
+      description: 等待双方确认交易完成
+      sub_states:
+        buyer_confirmed: false
+        seller_confirmed: false
+      on:
+        BUYER_CONFIRM: pending_seller_confirm
+        SELLER_CONFIRM: pending_buyer_confirm
+
+    pending_buyer_confirm:
+      description: 等待买家确认
+      on:
+        BUYER_CONFIRM: trade_completed
+
+    pending_seller_confirm:
+      description: 等待卖家确认
+      on:
+        SELLER_CONFIRM: trade_completed
+
+    trade_completed:
+      description: 交易完成，进入评价环节
+      on:
+        GO_TO_REVIEW: reviewing
+
+    reviewing:
+      description: 填写评价表单
+      on:
+        SUBMIT_REVIEW: submitting_review
+        SKIP: review_done              # 允许跳过评价
+
+    submitting_review:
+      on:
+        SUCCESS: review_done
+        FAIL: reviewing
+
+    review_done:
+      description: 评价完成，展示感谢页
+      on:
+        GO_HOME: go_home
+        VIEW_PROFILE: go_to_user_profile
+
+    go_home:
+      type: navigation
+    go_to_user_profile:
+      type: navigation
+
+# ============================================================
+# 个人中心页状态机
+# ============================================================
+profile_page_state_machine:
+  id: profile
+  description: 个人中心（我的主页）
+  initial_state: loading
+  states:
+    loading:
+      on:
+        LOAD_SUCCESS: idle
+        LOAD_FAIL: error
+
+    idle:
+      description: 展示个人信息和各功能入口
+      tabs:
+        - id: published
+          label: "发布中"
+        - id: sold
+          label: "已出售"
+        - id: bought
+          label: "已买到"
+        - id: favorites
+          label: "我的收藏"
+      on:
+        SWITCH_TAB: loading_tab
+        CLICK_EDIT_PROFILE: go_to_edit_profile
+        CLICK_SETTINGS: go_to_settings
+        CLICK_GOODS: go_to_goods_detail
+
+    loading_tab:
+      on:
+        LOAD_SUCCESS: idle
+        LOAD_FAIL: idle
+
+    error:
+      on:
+        RETRY: loading
+
+    go_to_edit_profile:
+      type: navigation
+    go_to_settings:
+      type: navigation
+    go_to_goods_detail:
+      type: navigation

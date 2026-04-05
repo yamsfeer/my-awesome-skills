@@ -1,0 +1,526 @@
+# UE 状态机 - 拾物（Shiwo）校园二手交易小程序
+# 核心页面：首页 / 商品详情 / 发布商品 / 私信列表 / 私信详情 / 个人主页
+
+pages:
+
+  # ========== 首页（商品列表） ==========
+  HomePage:
+    page_name: HomePage
+    route: "/pages/home/home"
+    description: "校园商品浏览首页，支持校区过滤和分类筛选"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        description: "页面尚未加载"
+        ui: "空白"
+        transitions:
+          - event: page_mount
+            target: loading
+            condition: "页面组件挂载完成"
+
+      loading:
+        description: "加载商品列表（含分类数据）"
+        ui: "骨架屏：顶部分类标签条 + 3 个瀑布流卡片灰色占位"
+        transitions:
+          - event: fetch_success
+            target: success
+            condition: "API 返回 200 且 items.length > 0"
+          - event: fetch_empty
+            target: empty
+            condition: "API 返回 200 且 items.length === 0"
+          - event: fetch_error
+            target: error
+            condition: "API 返回 4xx/5xx 或网络超时"
+
+      success:
+        description: "商品列表正常展示"
+        ui: "分类标签行 + 瀑布流商品卡片"
+        transitions:
+          - event: scroll_to_bottom
+            target: loading_more
+            condition: "current_page < total_pages"
+          - event: pull_to_refresh
+            target: loading
+          - event: item_tap
+            target: ItemDetailPage.loading
+          - event: category_tab_tap
+            target: loading
+            condition: "切换分类"
+          - event: campus_filter_tap
+            target: loading
+            condition: "切换校区"
+          - event: search_tap
+            target: SearchPage.idle
+
+      loading_more:
+        description: "加载下一页商品"
+        ui: "列表末尾 loading 动画"
+        transitions:
+          - event: load_more_success
+            target: success
+            action: "将新数据追加到列表末尾"
+          - event: load_more_error
+            target: success
+            action: "Toast 提示'加载失败'"
+          - event: no_more_data
+            target: success_all_loaded
+
+      success_all_loaded:
+        description: "全部商品已加载"
+        ui: "列表末尾显示'已经到底了'"
+
+      empty:
+        description: "该筛选条件下无商品"
+        ui: "空状态插画 + '该校区暂无商品，快来发布第一件吧' + [去发布] 按钮"
+        transitions:
+          - event: publish_tap
+            target: PublishItemPage.idle
+
+      error:
+        description: "加载失败"
+        ui: "错误图标 + '加载失败' + [重试] 按钮"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "网络断开"
+        handling: "Toast '网络异常'，保留上次加载的内容（如有缓存）"
+      - scenario: "Token 过期"
+        handling: "静默刷新 Token，失败则跳转微信授权页"
+      - scenario: "服务器 500"
+        handling: "显示错误页 + [重试] 按钮"
+
+
+  # ========== 商品详情页 ==========
+  ItemDetailPage:
+    page_name: ItemDetailPage
+    route: "/pages/item-detail/item-detail"
+    description: "展示商品完整信息，支持收藏和发起私信"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        transitions:
+          - event: page_mount
+            target: loading
+
+      loading:
+        description: "加载商品详情"
+        ui: "骨架屏：图片区域灰色矩形 + 标题/价格/卖家信息占位"
+        transitions:
+          - event: fetch_success
+            target: success
+          - event: fetch_not_found
+            target: not_found
+            condition: "API 返回 404"
+          - event: fetch_error
+            target: error
+
+      success:
+        description: "商品详情正常展示"
+        ui: "图片轮播 + 价格 + 标题 + 描述 + 卖家卡片 + 底部操作栏"
+        transitions:
+          - event: favor_tap
+            target: favoring
+            condition: "用户已登录 + is_favored=false"
+          - event: unfavor_tap
+            target: unfavoring
+            condition: "用户已登录 + is_favored=true"
+          - event: message_tap
+            target: MessageDetailPage.loading
+            condition: "用户已登录 + 非自己商品 + status=active"
+          - event: seller_tap
+            target: ProfilePage.loading
+          - event: image_tap
+            target: image_preview
+          - event: back_tap
+            target: HomePage.success
+
+      image_preview:
+        description: "全屏预览商品图片"
+        ui: "全屏图片 + 上下滑动翻页 + 右上角关闭"
+        transitions:
+          - event: close_tap
+            target: success
+
+      favoring:
+        description: "收藏请求进行中"
+        ui: "收藏按钮 loading 动画"
+        transitions:
+          - event: favor_success
+            target: success
+            action: "更新 is_favored=true，favor_count+1"
+          - event: favor_error
+            target: success
+            action: "Toast '收藏失败，请重试'"
+
+      unfavoring:
+        description: "取消收藏请求进行中"
+        ui: "收藏按钮 loading 动画"
+        transitions:
+          - event: unfavor_success
+            target: success
+            action: "更新 is_favored=false，favor_count-1"
+          - event: unfavor_error
+            target: success
+            action: "Toast '操作失败'"
+
+      not_found:
+        description: "商品不存在或已删除"
+        ui: "'商品不存在或已删除' + [返回首页] 按钮"
+        transitions:
+          - event: go_home_tap
+            target: HomePage.success
+
+      error:
+        description: "加载失败"
+        ui: "错误提示 + [重试] 按钮"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "未登录点击收藏/私信"
+        handling: "弹出引导登录弹窗，点击确认跳转微信授权"
+      - scenario: "商品已售出点击私信"
+        handling: "Toast '该商品已售出'"
+      - scenario: "点击自己发布的商品"
+        handling: "底部只显示[编辑][下架]，不显示私信和收藏"
+
+
+  # ========== 发布商品页 ==========
+  PublishItemPage:
+    page_name: PublishItemPage
+    route: "/pages/publish/publish"
+    description: "发布新闲置商品表单页"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        description: "空白表单待填写"
+        ui: "图片上传区 + 标题输入框 + 分类选择 + 价格输入 + 校区选择 + 描述输入"
+        transitions:
+          - event: image_select
+            target: uploading_image
+          - event: submit_tap
+            target: validating
+
+      uploading_image:
+        description: "图片上传进行中"
+        ui: "图片位置显示上传进度圈"
+        transitions:
+          - event: upload_success
+            target: idle
+            action: "图片缩略图显示，可继续填写表单"
+          - event: upload_error
+            target: idle
+            action: "Toast '图片上传失败，请重试'，移除失败图片"
+
+      validating:
+        description: "本地表单校验"
+        ui: "（无 UI 变化，瞬间完成）"
+        transitions:
+          - event: validate_pass
+            target: submitting
+          - event: validate_fail
+            target: validation_error
+
+      validation_error:
+        description: "表单校验失败"
+        ui: "必填字段标红 + 错误提示文字"
+        transitions:
+          - event: field_fix
+            target: idle
+            condition: "用户修改字段内容后"
+
+      submitting:
+        description: "提交发布请求"
+        ui: "发布按钮 loading，表单禁用"
+        transitions:
+          - event: submit_success
+            target: publish_success
+          - event: submit_error
+            target: submit_error_state
+
+      publish_success:
+        description: "发布成功"
+        ui: "成功 Toast '发布成功！' + 自动跳转商品详情页（2秒后）"
+        transitions:
+          - event: auto_redirect
+            target: ItemDetailPage.success
+
+      submit_error_state:
+        description: "发布失败"
+        ui: "错误 Toast（显示具体原因）"
+        transitions:
+          - event: toast_dismiss
+            target: idle
+
+    error_paths:
+      - scenario: "未登录访问"
+        handling: "🔴 拦截跳转，弹出微信授权弹窗"
+      - scenario: "图片超过 6 张"
+        handling: "本地拦截，Toast '最多上传6张图片'"
+      - scenario: "图片格式不支持"
+        handling: "Toast '仅支持 JPG/PNG 格式'"
+      - scenario: "网络中断提交"
+        handling: "Toast '网络异常，请检查网络后重试'，保留表单内容"
+
+
+  # ========== 私信列表页 ==========
+  MessageListPage:
+    page_name: MessageListPage
+    route: "/pages/messages/messages"
+    description: "当前用户所有私信会话列表"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        transitions:
+          - event: page_mount
+            target: loading
+            condition: "用户已登录"
+          - event: page_mount_unauth
+            target: auth_required
+            condition: "用户未登录"
+
+      auth_required:
+        description: "未登录状态"
+        ui: "引导登录插画 + '登录后查看消息' + [微信一键登录] 按钮"
+        transitions:
+          - event: login_tap
+            target: loading
+            condition: "授权成功后"
+
+      loading:
+        description: "加载会话列表"
+        ui: "骨架屏：3 个会话列表项占位"
+        transitions:
+          - event: fetch_success
+            target: success
+            condition: "conversations.length > 0"
+          - event: fetch_empty
+            target: empty
+            condition: "conversations.length === 0"
+          - event: fetch_error
+            target: error
+
+      success:
+        description: "会话列表展示"
+        ui: "会话列表（最新消息时间降序），未读消息红色角标"
+        transitions:
+          - event: conversation_tap
+            target: MessageDetailPage.loading
+          - event: pull_to_refresh
+            target: loading
+
+      empty:
+        description: "暂无消息"
+        ui: "空状态 + '还没有消息，去逛逛吧' + [去逛逛] 按钮"
+        transitions:
+          - event: browse_tap
+            target: HomePage.success
+
+      error:
+        description: "加载失败"
+        ui: "错误提示 + [重试]"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "未登录"
+        handling: "显示引导登录页，不允许直接访问消息列表"
+
+
+  # ========== 私信详情页 ==========
+  MessageDetailPage:
+    page_name: MessageDetailPage
+    route: "/pages/message-detail/message-detail"
+    description: "买卖双方针对某个商品的私信对话页"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        transitions:
+          - event: page_mount
+            target: loading
+
+      loading:
+        description: "加载历史消息"
+        ui: "加载动画（居中），顶部商品上下文卡片"
+        transitions:
+          - event: fetch_success
+            target: success
+          - event: fetch_error
+            target: error
+
+      success:
+        description: "消息正常展示"
+        ui: "顶部商品卡片 + 消息气泡列表 + 底部输入框"
+        transitions:
+          - event: send_message_tap
+            target: sending
+            condition: "输入框不为空"
+          - event: appointment_tap
+            target: appointment_picker
+          - event: load_older_messages
+            target: loading_history
+            condition: "上拉查看更多历史消息"
+
+      sending:
+        description: "发送消息进行中"
+        ui: "输入框清空，消息以'发送中'状态气泡展示"
+        transitions:
+          - event: send_success
+            target: success
+            action: "更新消息气泡为正常状态"
+          - event: send_error
+            target: success
+            action: "消息气泡显示红色感叹号，支持重发"
+
+      loading_history:
+        description: "加载更早的历史消息"
+        ui: "顶部 loading 动画"
+        transitions:
+          - event: load_success
+            target: success
+            action: "将更早的消息插入到列表顶部"
+          - event: load_error
+            target: success
+            action: "Toast '加载失败'"
+          - event: no_more_history
+            target: success
+            action: "顶部显示'已加载全部消息'"
+
+      appointment_picker:
+        description: "预约面交时间地点选择"
+        ui: "底部弹出面板：时间选择器 + 地点输入/选择 + [确认发送]"
+        transitions:
+          - event: confirm_appointment
+            target: sending
+            action: "发送预约面交卡片消息"
+          - event: cancel_appointment
+            target: success
+
+      error:
+        description: "加载失败"
+        ui: "错误提示 + [重试]"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "发送消息失败"
+        handling: "消息气泡显示红色感叹号，点击可重发"
+      - scenario: "商品已售出"
+        handling: "顶部商品卡片显示'已售出'标签，输入框保持可用"
+      - scenario: "会话被关闭"
+        handling: "提示'该会话已关闭'，输入框禁用"
+
+
+  # ========== 个人主页 ==========
+  ProfilePage:
+    page_name: ProfilePage
+    route: "/pages/profile/profile"
+    description: "用户个人主页，本人展示更多信息和管理功能"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        transitions:
+          - event: page_mount
+            target: loading
+
+      loading:
+        description: "加载用户信息"
+        ui: "骨架屏：头像圆形占位 + 昵称/学校/信用分条形占位"
+        transitions:
+          - event: fetch_success_self
+            target: success_self
+            condition: "当前页面是自己的主页"
+          - event: fetch_success_other
+            target: success_other
+            condition: "当前页面是他人主页"
+          - event: fetch_error
+            target: error
+
+      success_self:
+        description: "自己的主页"
+        ui: "头像 + 昵称 + 学校校区 + 信用分 + [编辑资料] + Tab：在售/已售/收藏/评价"
+        transitions:
+          - event: edit_profile_tap
+            target: edit_profile
+          - event: item_tap
+            target: ItemDetailPage.loading
+          - event: tab_switch
+            target: success_self
+            action: "切换 Tab，加载对应数据"
+          - event: logout_tap
+            target: confirm_logout
+
+      success_other:
+        description: "他人的主页"
+        ui: "头像 + 昵称 + 学校校区 + 信用分 + 评价列表 + Tab：在售/评价"
+        transitions:
+          - event: item_tap
+            target: ItemDetailPage.loading
+          - event: back_tap
+            target: HomePage.success
+
+      edit_profile:
+        description: "编辑个人资料"
+        ui: "头像（可更换） + 昵称输入框 + 校区选择 + [保存]"
+        transitions:
+          - event: save_tap
+            target: saving_profile
+          - event: cancel_tap
+            target: success_self
+
+      saving_profile:
+        description: "保存资料进行中"
+        ui: "保存按钮 loading"
+        transitions:
+          - event: save_success
+            target: success_self
+            action: "Toast '保存成功'，更新页面信息"
+          - event: save_error
+            target: edit_profile
+            action: "Toast '保存失败，请重试'"
+
+      confirm_logout:
+        description: "退出登录确认弹窗"
+        ui: "弹窗 '确认退出登录？' [取消] [确认退出]"
+        transitions:
+          - event: cancel_tap
+            target: success_self
+          - event: confirm_tap
+            target: HomePage.loading
+            action: "清除 Token，返回未登录状态"
+
+      error:
+        description: "加载失败"
+        ui: "错误提示 + [重试]"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "未登录访问自己的主页"
+        handling: "显示引导登录页"
+      - scenario: "访问不存在的用户"
+        handling: "提示'用户不存在'，返回按钮"

@@ -1,0 +1,786 @@
+# FreelanceBook UI Schema
+# 定义页面布局、字段展示规则、表单验证、表格列配置
+
+version: "1.0.0"
+
+# ═══════════════════════════════════════════════════════════
+# 全局配置
+# ═══════════════════════════════════════════════════════════
+global:
+  currency:
+    display_format: "¥#,##0.00"
+    input_format: "元"  # 用户输入元，后端存储分
+  date_format: "YYYY-MM-DD"
+  datetime_format: "YYYY-MM-DD HH:mm"
+  pagination:
+    default_page_size: 20
+    page_size_options: [10, 20, 50, 100]
+
+# ═══════════════════════════════════════════════════════════
+# 页面定义
+# ═══════════════════════════════════════════════════════════
+pages:
+
+  # ─────────────────────────────────────────────────────────
+  # 仪表盘 / 首页
+  # ─────────────────────────────────────────────────────────
+  dashboard:
+    route: "/"
+    title: "仪表盘"
+    layout:
+      type: "grid"
+      columns: 12
+      gap: "24px"
+    sections:
+      # 统计卡片行
+      - id: "stats-overview"
+        type: "stats-row"
+        span: 12
+        cards:
+          - label: "本月收入"
+            data_key: "current_month_paid"
+            format: "currency"
+            trend: "month_over_month"  # 环比
+            color: "success"
+          - label: "待收款项"
+            data_key: "total_pending"
+            format: "currency"
+            color: "warning"
+          - label: "逾期未收"
+            data_key: "total_overdue"
+            format: "currency"
+            color: "error"
+          - label: "本月开票"
+            data_key: "current_month_invoiced"
+            format: "currency"
+            color: "primary"
+
+      # 收入趋势图
+      - id: "income-chart"
+        type: "chart"
+        chart_type: "line"
+        title: "近6个月收入趋势"
+        span: 8
+        data_key: "income_trend"
+        config:
+          x_axis: "month"
+          y_axis: "amount"
+          series:
+            - name: "已收款"
+              key: "paid"
+              color: "success"
+            - name: "开票总额"
+              key: "invoiced"
+              color: "primary"
+
+      # 快捷操作
+      - id: "quick-actions"
+        type: "action-list"
+        title: "快捷操作"
+        span: 4
+        actions:
+          - label: "新建发票"
+            icon: "FilePlus"
+            action: "navigate"
+            target: "/invoices/new"
+          - label: "登记收款"
+            icon: "Banknote"
+            action: "navigate"
+            target: "/payments/new"
+          - label: "添加客户"
+            icon: "UserPlus"
+            action: "navigate"
+            target: "/clients/new"
+
+      # 最近发票列表
+      - id: "recent-invoices"
+        type: "table"
+        title: "最近发票"
+        span: 12
+        data_key: "recent_invoices"
+        columns:
+          - key: "invoice_number"
+            label: "发票号"
+            width: "120px"
+          - key: "client_name"
+            label: "客户"
+            width: "180px"
+          - key: "total_amount"
+            label: "金额"
+            format: "currency"
+            align: "right"
+            width: "120px"
+          - key: "status"
+            label: "状态"
+            component: "status-badge"
+            width: "100px"
+          - key: "due_date"
+            label: "到期日"
+            format: "date"
+            width: "120px"
+        max_rows: 5
+        actions:
+          - label: "查看全部"
+            action: "navigate"
+            target: "/invoices"
+
+  # ─────────────────────────────────────────────────────────
+  # 客户列表页
+  # ─────────────────────────────────────────────────────────
+  clients_list:
+    route: "/clients"
+    title: "客户管理"
+    layout:
+      type: "list-page"
+    toolbar:
+      - type: "search"
+        placeholder: "搜索客户名称..."
+        search_key: "q"
+      - type: "filter"
+        label: "状态"
+        key: "is_archived"
+        options:
+          - label: "全部"
+            value: ""
+          - label: "活跃"
+            value: "false"
+          - label: "已归档"
+            value: "true"
+      - type: "button"
+        label: "新建客户"
+        variant: "primary"
+        action: "navigate"
+        target: "/clients/new"
+    table:
+      data_key: "clients"
+      row_key: "id"
+      columns:
+        - key: "name"
+          label: "客户名称"
+          width: "200px"
+          sortable: true
+        - key: "company_name"
+          label: "公司名"
+          width: "200px"
+          sortable: true
+        - key: "tags"
+          label: "标签"
+          component: "tag-list"
+          width: "150px"
+        - key: "total_invoiced"
+          label: "累计开票"
+          format: "currency"
+          align: "right"
+          width: "140px"
+        - key: "total_paid"
+          label: "累计收款"
+          format: "currency"
+          align: "right"
+          width: "140px"
+        - key: "contacts_count"
+          label: "联系人"
+          width: "100px"
+          align: "center"
+      row_actions:
+        - label: "编辑"
+          action: "navigate"
+          target: "/clients/{id}/edit"
+        - label: "归档"
+          action: "confirm"
+          confirm_text: "确定归档该客户？"
+          api: "DELETE /clients/{id}"
+
+  # ─────────────────────────────────────────────────────────
+  # 客户新建/编辑页
+  # ─────────────────────────────────────────────────────────
+  clients_form:
+    route: "/clients/new"
+    edit_route: "/clients/{id}/edit"
+    title: "新建客户"
+    edit_title: "编辑客户"
+    layout:
+      type: "form-page"
+      sections:
+        - id: "basic-info"
+          title: "基本信息"
+          fields:
+            - key: "name"
+              label: "客户名称"
+              type: "text"
+              required: true
+              placeholder: "如：张三 或 ABC科技有限公司"
+              validation:
+                max_length: 200
+            - key: "company_name"
+              label: "公司全称"
+              type: "text"
+              required: false
+              placeholder: "用于发票抬头"
+              validation:
+                max_length: 200
+            - key: "tax_number"
+              label: "统一社会信用代码"
+              type: "text"
+              required: false
+              placeholder: "开票所需"
+              validation:
+                pattern: "^[A-Z0-9]{15,20}$"
+            - key: "address"
+              label: "注册地址"
+              type: "textarea"
+              required: false
+              rows: 2
+            - key: "bank_account"
+              label: "银行账号"
+              type: "text"
+              required: false
+              placeholder: "用于核对电汇"
+            - key: "currency"
+              label: "默认币种"
+              type: "select"
+              required: true
+              default: "CNY"
+              options:
+                - label: "人民币 (CNY)"
+                  value: "CNY"
+                - label: "美元 (USD)"
+                  value: "USD"
+                - label: "港币 (HKD)"
+                  value: "HKD"
+            - key: "tags"
+              label: "标签"
+              type: "tag-input"
+              required: false
+              placeholder: "输入后回车添加"
+            - key: "notes"
+              label: "备注"
+              type: "textarea"
+              required: false
+              rows: 3
+
+        - id: "contacts"
+          title: "联系人"
+          type: "sub-form-list"
+          add_button_label: "添加联系人"
+          fields:
+            - key: "name"
+              label: "姓名"
+              type: "text"
+              required: true
+              width: "25%"
+            - key: "email"
+              label: "邮箱"
+              type: "email"
+              required: false
+              width: "25%"
+            - key: "phone"
+              label: "电话"
+              type: "text"
+              required: false
+              width: "20%"
+            - key: "role"
+              label: "职位"
+              type: "text"
+              required: false
+              placeholder: "如：财务负责人"
+              width: "20%"
+            - key: "is_primary"
+              label: "主要"
+              type: "checkbox"
+              width: "10%"
+
+  # ─────────────────────────────────────────────────────────
+  # 发票列表页
+  # ─────────────────────────────────────────────────────────
+  invoices_list:
+    route: "/invoices"
+    title: "发票管理"
+    layout:
+      type: "list-page"
+    toolbar:
+      - type: "search"
+        placeholder: "搜索发票号或客户..."
+        search_key: "q"
+      - type: "filter"
+        label: "状态"
+        key: "status"
+        options:
+          - label: "全部"
+            value: ""
+          - label: "草稿"
+            value: "draft"
+          - label: "已发送"
+            value: "sent"
+          - label: "已付款"
+            value: "paid"
+          - label: "逾期"
+            value: "overdue"
+      - type: "date-range"
+        label: "日期范围"
+        start_key: "date_from"
+        end_key: "date_to"
+      - type: "button"
+        label: "新建发票"
+        variant: "primary"
+        action: "navigate"
+        target: "/invoices/new"
+    table:
+      data_key: "invoices"
+      row_key: "id"
+      columns:
+        - key: "invoice_number"
+          label: "发票号"
+          width: "130px"
+          sortable: true
+        - key: "client_name"
+          label: "客户"
+          width: "160px"
+        - key: "project_name"
+          label: "项目"
+          width: "160px"
+        - key: "total_amount"
+          label: "金额"
+          format: "currency"
+          align: "right"
+          width: "120px"
+          sortable: true
+        - key: "status"
+          label: "状态"
+          component: "status-badge"
+          width: "100px"
+          sortable: true
+        - key: "issue_date"
+          label: "开票日"
+          format: "date"
+          width: "110px"
+          sortable: true
+        - key: "due_date"
+          label: "到期日"
+          format: "date"
+          width: "110px"
+      row_actions:
+        - label: "查看"
+          action: "drawer"
+          target: "invoice-detail"
+        - label: "编辑"
+          action: "navigate"
+          target: "/invoices/{id}/edit"
+          condition: "status == 'draft'"
+        - label: "标记已付款"
+          action: "modal"
+          modal: "mark-paid"
+          condition: "status in ['sent', 'overdue']"
+        - label: "下载PDF"
+          action: "api"
+          api: "POST /invoices/{id}/pdf"
+          condition: "status != 'draft'"
+
+  # ─────────────────────────────────────────────────────────
+  # 发票新建/编辑页
+  # ─────────────────────────────────────────────────────────
+  invoices_form:
+    route: "/invoices/new"
+    edit_route: "/invoices/{id}/edit"
+    title: "新建发票"
+    edit_title: "编辑发票"
+    layout:
+      type: "form-page"
+      sections:
+        - id: "invoice-info"
+          title: "发票信息"
+          fields:
+            - key: "client_id"
+              label: "客户"
+              type: "select-search"
+              required: true
+              placeholder: "搜索选择客户..."
+              api: "GET /clients?q={keyword}"
+              option_label: "name"
+              option_value: "id"
+            - key: "project_id"
+              label: "关联项目"
+              type: "select-search"
+              required: false
+              placeholder: "可选"
+              api: "GET /projects?client_id={client_id}"
+              depends_on: "client_id"
+              option_label: "name"
+              option_value: "id"
+            - key: "invoice_number"
+              label: "发票编号"
+              type: "text"
+              required: false
+              placeholder: "留空自动生成"
+              disabled_on_edit: true
+            - key: "issue_date"
+              label: "开票日期"
+              type: "date"
+              required: true
+              default: "today"
+            - key: "due_date"
+              label: "付款截止日期"
+              type: "date"
+              required: false
+            - key: "tax_rate"
+              label: "税率"
+              type: "select"
+              required: true
+              default: 0
+              options:
+                - label: "免税 (0%)"
+                  value: 0
+                - label: "1%"
+                  value: 0.01
+                - label: "3%"
+                  value: 0.03
+                - label: "6%"
+                  value: 0.06
+            - key: "notes"
+              label: "备注"
+              type: "textarea"
+              required: false
+              rows: 3
+
+        - id: "items"
+          title: "明细项目"
+          type: "editable-table"
+          add_button_label: "添加明细"
+          columns:
+            - key: "description"
+              label: "服务描述"
+              type: "text"
+              required: true
+              width: "40%"
+            - key: "quantity"
+              label: "数量"
+              type: "number"
+              required: true
+              default: 1
+              min: 0.01
+              step: 0.1
+              width: "15%"
+            - key: "unit_price"
+              label: "单价"
+              type: "currency-input"
+              required: true
+              width: "20%"
+            - key: "amount"
+              label: "小计"
+              type: "computed"
+              formula: "quantity * unit_price"
+              format: "currency"
+              width: "15%"
+            - key: "actions"
+              label: ""
+              type: "row-actions"
+              width: "10%"
+          summary:
+            - label: "税前金额"
+              key: "subtotal"
+              formula: "sum(items.amount)"
+            - label: "税额"
+              key: "tax_amount"
+              formula: "subtotal * tax_rate"
+            - label: "合计"
+              key: "total_amount"
+              formula: "subtotal + tax_amount"
+              highlight: true
+
+  # ─────────────────────────────────────────────────────────
+  # 收款记录页
+  # ─────────────────────────────────────────────────────────
+  payments_list:
+    route: "/payments"
+    title: "收款记录"
+    layout:
+      type: "list-page"
+    toolbar:
+      - type: "search"
+        placeholder: "搜索客户..."
+        search_key: "q"
+      - type: "date-range"
+        label: "收款日期"
+        start_key: "date_from"
+        end_key: "date_to"
+      - type: "button"
+        label: "登记收款"
+        variant: "primary"
+        action: "navigate"
+        target: "/payments/new"
+    table:
+      data_key: "payments"
+      row_key: "id"
+      columns:
+        - key: "client_name"
+          label: "客户"
+          width: "180px"
+        - key: "amount"
+          label: "收款金额"
+          format: "currency"
+          align: "right"
+          width: "130px"
+        - key: "payment_date"
+          label: "收款日期"
+          format: "date"
+          width: "120px"
+        - key: "payment_method"
+          label: "付款方式"
+          width: "120px"
+          component: "payment-method-badge"
+        - key: "invoice_id"
+          label: "关联发票"
+          width: "150px"
+          component: "invoice-link"
+      row_actions:
+        - label: "删除"
+          action: "confirm"
+          confirm_text: "确定删除该收款记录？"
+          api: "DELETE /payments/{id}"
+
+  # ─────────────────────────────────────────────────────────
+  # 登记收款页
+  # ─────────────────────────────────────────────────────────
+  payments_form:
+    route: "/payments/new"
+    title: "登记收款"
+    layout:
+      type: "form-page"
+      sections:
+        - id: "payment-info"
+          title: "收款信息"
+          fields:
+            - key: "client_id"
+              label: "客户"
+              type: "select-search"
+              required: true
+              placeholder: "搜索选择客户..."
+              api: "GET /clients?q={keyword}"
+              option_label: "name"
+              option_value: "id"
+            - key: "invoice_id"
+              label: "关联发票"
+              type: "select-search"
+              required: false
+              placeholder: "选择未付款发票（可选）"
+              api: "GET /invoices?client_id={client_id}&status=sent"
+              depends_on: "client_id"
+              option_label: "invoice_number"
+              option_value: "id"
+            - key: "amount"
+              label: "收款金额"
+              type: "currency-input"
+              required: true
+            - key: "payment_date"
+              label: "收款日期"
+              type: "date"
+              required: true
+              default: "today"
+            - key: "payment_method"
+              label: "付款方式"
+              type: "select"
+              required: false
+              options:
+                - label: "银行转账"
+                  value: "bank_transfer"
+                - label: "微信支付"
+                  value: "wechat_pay"
+                - label: "支付宝"
+                  value: "alipay"
+                - label: "现金"
+                  value: "cash"
+                - label: "其他"
+                  value: "other"
+            - key: "reference_number"
+              label: "交易参考号"
+              type: "text"
+              required: false
+              placeholder: "银行流水号等"
+            - key: "notes"
+              label: "备注"
+              type: "textarea"
+              required: false
+              rows: 3
+
+  # ─────────────────────────────────────────────────────────
+  # 统计报表页
+  # ─────────────────────────────────────────────────────────
+  stats:
+    route: "/stats"
+    title: "收入统计"
+    layout:
+      type: "grid"
+      columns: 12
+      gap: "24px"
+    sections:
+      - id: "period-selector"
+        type: "toolbar"
+        span: 12
+        controls:
+          - type: "segmented"
+            key: "granularity"
+            default: "month"
+            options:
+              - label: "按月"
+                value: "month"
+              - label: "按季"
+                value: "quarter"
+              - label: "按年"
+                value: "year"
+          - type: "year-picker"
+            key: "year"
+            default: "current"
+
+      - id: "summary-cards"
+        type: "stats-row"
+        span: 12
+        cards:
+          - label: "开票总额"
+            data_key: "total_invoiced"
+            format: "currency"
+          - label: "已收款"
+            data_key: "total_paid"
+            format: "currency"
+          - label: "待收款"
+            data_key: "total_pending"
+            format: "currency"
+          - label: "逾期"
+            data_key: "total_overdue"
+            format: "currency"
+            color: "error"
+
+      - id: "income-chart"
+        type: "chart"
+        chart_type: "bar"
+        title: "收入趋势"
+        span: 8
+        data_key: "income_by_period"
+        config:
+          x_axis: "period"
+          y_axis: "amount"
+          series:
+            - name: "已收款"
+              key: "paid"
+              color: "success"
+            - name: "开票未收"
+              key: "pending"
+              color: "warning"
+
+      - id: "client-pie"
+        type: "chart"
+        chart_type: "pie"
+        title: "客户收入占比"
+        span: 4
+        data_key: "client_breakdown"
+        config:
+          label_key: "client_name"
+          value_key: "total_paid"
+
+      - id: "export-actions"
+        type: "action-list"
+        title: "导出数据"
+        span: 12
+        actions:
+          - label: "导出 CSV"
+            icon: "Download"
+            action: "api"
+            api: "GET /stats/export?format=csv"
+          - label: "导出 Excel"
+            icon: "FileSpreadsheet"
+            action: "api"
+            api: "GET /stats/export?format=excel"
+
+  # ─────────────────────────────────────────────────────────
+  # 税务预估页
+  # ─────────────────────────────────────────────────────────
+  tax_calculator:
+    route: "/tax-calculator"
+    title: "税务预估"
+    layout:
+      type: "form-page"
+    sections:
+      - id: "tax-input"
+        title: "收入与扣除"
+        fields:
+          - key: "annual_income"
+            label: "年度预计总收入"
+            type: "currency-input"
+            required: true
+            help_text: "预估全年从所有客户获得的收入"
+          - key: "deductions"
+            label: "扣除项总额"
+            type: "currency-input"
+            required: false
+            default: 0
+            help_text: "包括社保、专项附加扣除等"
+          - key: "tax_type"
+            label: "纳税类型"
+            type: "select"
+            required: true
+            default: "individual"
+            options:
+              - label: "个人所得税（劳务报酬）"
+                value: "individual"
+              - label: "增值税小规模纳税人"
+                value: "vat_small"
+              - label: "增值税一般纳税人"
+                value: "vat_general"
+
+      - id: "tax-result"
+        title: "预估结果"
+        type: "computed-panel"
+        display_conditions:
+          - key: "annual_income"
+            operator: ">"
+            value: 0
+        fields:
+          - key: "taxable_income"
+            label: "应纳税所得额"
+            format: "currency"
+          - key: "estimated_tax"
+            label: "预估应缴税额"
+            format: "currency"
+            highlight: true
+          - key: "effective_rate"
+            label: "实际税率"
+            format: "percentage"
+            precision: 2
+
+# ═══════════════════════════════════════════════════════════
+# 组件配置
+# ═══════════════════════════════════════════════════════════
+components:
+  status-badge:
+    invoice:
+      draft:
+        label: "草稿"
+        color: "neutral"
+        variant: "subtle"
+      sent:
+        label: "已发送"
+        color: "primary"
+        variant: "soft"
+      paid:
+        label: "已付款"
+        color: "success"
+        variant: "solid"
+      overdue:
+        label: "逾期"
+        color: "error"
+        variant: "solid"
+
+  payment-method-badge:
+    bank_transfer:
+      label: "银行转账"
+      icon: "Building2"
+    wechat_pay:
+      label: "微信支付"
+      icon: "MessageCircle"
+    alipay:
+      label: "支付宝"
+      icon: "Wallet"
+    cash:
+      label: "现金"
+      icon: "Banknote"
+    other:
+      label: "其他"
+      icon: "HelpCircle"

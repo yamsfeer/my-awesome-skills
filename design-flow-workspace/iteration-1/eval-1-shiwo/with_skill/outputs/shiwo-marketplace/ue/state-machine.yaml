@@ -1,0 +1,595 @@
+# UE 状态机 - 拾物（shiwo-marketplace）
+# 说明：定义每个核心页面的状态、转换条件和异常路径
+# 平台：微信小程序
+
+pages:
+
+  # ========== 首页（商品列表） ==========
+  HomePage:
+    page_name: HomePage
+    route: "/pages/home/index"
+    description: "商品浏览首页，瀑布流展示同校区在售商品"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        description: "页面尚未加载"
+        ui: 空白
+        transitions:
+          - event: page_mount
+            target: loading
+            condition: "页面组件挂载完成"
+
+      loading:
+        description: "正在加载商品列表第一页"
+        ui: "顶部搜索栏 + 分类 Tab 骨架 + 4 个商品卡片骨架屏"
+        transitions:
+          - event: fetch_success
+            target: success
+            condition: "API 返回 200 且 items.length > 0"
+          - event: fetch_empty
+            target: empty
+            condition: "API 返回 200 且 items.length === 0"
+          - event: fetch_error
+            target: error
+            condition: "API 返回 4xx/5xx 或网络超时"
+
+      success:
+        description: "商品列表加载成功"
+        ui: "双列瀑布流商品卡片列表"
+        transitions:
+          - event: scroll_to_bottom
+            target: loading_more
+            condition: "has_more === true"
+          - event: pull_to_refresh
+            target: loading
+            condition: "用户下拉刷新"
+          - event: product_tap
+            target: ProductDetailPage.loading
+            action: "跳转商品详情页"
+          - event: category_change
+            target: loading
+            condition: "用户切换分类 Tab"
+          - event: search_submit
+            target: SearchResultPage.loading
+            action: "跳转搜索结果页"
+          - event: favorite_tap
+            target: success
+            action: "调用收藏 API，卡片心形图标变色"
+            condition: "用户已登录"
+
+      loading_more:
+        description: "正在加载更多商品"
+        ui: "列表底部显示加载动画"
+        transitions:
+          - event: load_more_success
+            target: success
+            action: "将新数据追加到列表末尾"
+          - event: load_more_error
+            target: success
+            action: "Toast 提示'加载失败'，保持现有列表"
+          - event: no_more_data
+            target: success_all_loaded
+            action: "显示'没有更多了'"
+
+      success_all_loaded:
+        description: "已加载全部商品"
+        ui: "列表末尾显示'没有更多了'灰色文字"
+        transitions:
+          - event: pull_to_refresh
+            target: loading
+
+      empty:
+        description: "当前条件下无商品"
+        ui: "空状态插画 + '该校区暂无在售商品' + [去发布] 按钮"
+        transitions:
+          - event: publish_tap
+            target: PublishPage.idle
+            condition: "用户已登录"
+          - event: refresh_tap
+            target: loading
+
+      error:
+        description: "加载失败"
+        ui: "错误图标 + '加载失败，请重试' + [重试] 按钮"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "网络断开"
+        handling: "Toast 提示'网络异常，请检查网络连接'，保持上次加载的内容"
+      - scenario: "Token 过期"
+        handling: "跳转登录页（微信自动登录），成功后回跳首页"
+      - scenario: "服务器 500"
+        handling: "显示'服务繁忙，请稍后再试' + [重试] 按钮"
+
+
+  # ========== 商品详情页 ==========
+  ProductDetailPage:
+    page_name: ProductDetailPage
+    route: "/pages/product/detail"
+    description: "展示商品完整信息，支持联系卖家、收藏、分享"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        transitions:
+          - event: page_mount
+            target: loading
+
+      loading:
+        description: "正在加载商品详情"
+        ui: "图片轮播骨架 + 价格/标题骨架 + 卖家信息骨架"
+        transitions:
+          - event: fetch_success
+            target: success
+          - event: fetch_not_found
+            target: not_found
+            condition: "API 返回 404 或商品已下架"
+          - event: fetch_error
+            target: error
+
+      success:
+        description: "商品详情加载成功"
+        ui: "完整详情：图片轮播 + 价格 + 标题 + 描述 + 卖家卡片 + 底部操作栏"
+        transitions:
+          - event: back_tap
+            target: HomePage.success
+            action: "返回上一页"
+          - event: image_tap
+            target: image_preview
+            action: "打开图片预览"
+          - event: seller_tap
+            target: UserProfilePage.loading
+            action: "跳转卖家个人主页"
+          - event: contact_tap
+            target: ChatPage.loading
+            condition: "status === 'on_sale' && seller.id !== current_user.id"
+            action: "跳转私信页，自动创建/获取会话"
+          - event: favorite_tap
+            target: success
+            action: "调用收藏/取消收藏 API，更新按钮状态"
+          - event: share_tap
+            target: success
+            action: "调用微信分享 API"
+          - event: edit_tap
+            target: PublishPage.idle
+            condition: "seller.id === current_user.id"
+            action: "跳转编辑页面"
+          - event: remove_tap
+            target: confirm_dialog
+            condition: "seller.id === current_user.id"
+
+      confirm_dialog:
+        description: "确认下架弹窗"
+        ui: "弹窗：确认下架该商品？[取消] [确认下架]"
+        transitions:
+          - event: cancel_tap
+            target: success
+          - event: confirm_remove_tap
+            target: removing
+
+      removing:
+        description: "正在下架商品"
+        ui: "按钮 loading 状态"
+        transitions:
+          - event: remove_success
+            target: HomePage.loading
+            action: "Toast 提示'已下架'，返回首页"
+          - event: remove_error
+            target: success
+            action: "Toast 提示'下架失败，请重试'"
+
+      image_preview:
+        description: "图片全屏预览"
+        ui: "微信原生图片预览组件"
+        transitions:
+          - event: close_tap
+            target: success
+
+      not_found:
+        description: "商品不存在或已下架"
+        ui: "'商品不存在或已下架' + [返回首页] 按钮"
+        transitions:
+          - event: back_home_tap
+            target: HomePage.loading
+
+      error:
+        description: "加载失败"
+        ui: "错误图标 + 错误信息 + [重试] 按钮"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "商品被卖家删除"
+        handling: "提示'商品已被下架'，自动返回上一页"
+      - scenario: "网络断开"
+        handling: "Toast 提示'网络异常'，保留当前页面状态"
+
+
+  # ========== 发布商品页 ==========
+  PublishPage:
+    page_name: PublishPage
+    route: "/pages/publish/index"
+    description: "发布新商品或编辑已有商品"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        description: "空表单或编辑时预填充数据"
+        ui: "图片上传区 + 表单字段（标题/分类/成色/价格/描述）+ 发布按钮"
+        transitions:
+          - event: page_mount_with_edit
+            target: loading_edit
+            condition: "URL 携带 product_id 参数（编辑模式）"
+          - event: image_select
+            target: uploading_image
+            condition: "用户选择图片"
+          - event: form_change
+            target: idle
+            action: "更新表单状态，实时校验"
+          - event: submit_tap
+            target: validating
+            condition: "用户点击发布按钮"
+
+      loading_edit:
+        description: "编辑模式：加载商品数据"
+        ui: "页面 loading 状态"
+        transitions:
+          - event: fetch_success
+            target: idle
+            action: "预填充表单"
+          - event: fetch_error
+            target: error
+
+      uploading_image:
+        description: "正在上传图片"
+        ui: "上传进度条，最多 9 张"
+        transitions:
+          - event: upload_success
+            target: idle
+            action: "图片添加到上传列表"
+          - event: upload_error
+            target: idle
+            action: "Toast 提示'上传失败'，保留已上传图片"
+
+      validating:
+        description: "表单校验中"
+        ui: "按钮 loading"
+        transitions:
+          - event: validation_pass
+            target: submitting
+          - event: validation_fail
+            target: idle
+            action: "高亮错误字段，Toast 提示具体错误"
+
+      submitting:
+        description: "正在提交表单"
+        ui: "发布按钮 loading，防重复点击"
+        transitions:
+          - event: submit_success
+            target: success
+          - event: submit_error
+            target: idle
+            action: "Toast 提示错误原因"
+
+      success:
+        description: "发布成功"
+        ui: "Toast '发布成功！'"
+        transitions:
+          - event: toast_complete
+            target: ProductDetailPage.loading
+            action: "跳转至新发布的商品详情页"
+
+      error:
+        description: "加载失败（编辑模式）"
+        ui: "错误提示 + [重试] 按钮"
+        transitions:
+          - event: retry_tap
+            target: loading_edit
+
+    error_paths:
+      - scenario: "图片上传失败"
+        handling: "Toast 提示'第 X 张图片上传失败'，保留已上传的图片，允许重新上传失败图片"
+      - scenario: "表单校验失败"
+        handling: "滚动到第一个错误字段，高亮显示，Toast 提示具体错误信息"
+      - scenario: "发布时商品已被删除（编辑模式）"
+        handling: "Toast 提示'该商品已被删除'，跳转首页"
+
+
+  # ========== 私信会话列表页 ==========
+  ConversationListPage:
+    page_name: ConversationListPage
+    route: "/pages/message/list"
+    description: "展示所有私信会话列表"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        transitions:
+          - event: page_mount
+            target: loading
+
+      loading:
+        description: "正在加载会话列表"
+        ui: "3 个会话行骨架屏"
+        transitions:
+          - event: fetch_success
+            target: success
+            condition: "items.length > 0"
+          - event: fetch_empty
+            target: empty
+            condition: "items.length === 0"
+          - event: fetch_error
+            target: error
+
+      success:
+        description: "会话列表加载成功"
+        ui: "会话行列表，每条显示商品图+对方头像+昵称+最后消息+时间+未读数"
+        transitions:
+          - event: conversation_tap
+            target: ChatPage.loading
+            action: "跳转聊天页"
+          - event: pull_to_refresh
+            target: loading
+          - event: new_message
+            target: success
+            action: "实时更新列表（WebSocket 或轮询）"
+
+      empty:
+        description: "暂无会话"
+        ui: "空状态插画 + '还没有消息，去逛逛吧' + [去浏览] 按钮"
+        transitions:
+          - event: browse_tap
+            target: HomePage.loading
+
+      error:
+        description: "加载失败"
+        ui: "错误提示 + [重试] 按钮"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "未登录访问"
+        handling: "跳转登录页，登录后回跳"
+
+
+  # ========== 聊天页 ==========
+  ChatPage:
+    page_name: ChatPage
+    route: "/pages/message/chat"
+    description: "与卖家/买家的私信对话页面"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        transitions:
+          - event: page_mount
+            target: loading
+
+      loading:
+        description: "正在加载历史消息"
+        ui: "消息列表骨架屏（交替左右两侧气泡占位）"
+        transitions:
+          - event: fetch_success
+            target: success
+          - event: fetch_error
+            target: error
+
+      success:
+        description: "消息加载成功"
+        ui: "消息气泡列表（自己右侧主色，对方左侧白色）+ 底部输入栏"
+        transitions:
+          - event: back_tap
+            target: ConversationListPage.loading
+          - event: message_send
+            target: sending
+            condition: "用户点击发送"
+          - event: appointment_tap
+            target: appointment_form
+            condition: "用户点击预约面交按钮"
+          - event: product_tap
+            target: ProductDetailPage.loading
+            action: "跳转商品详情"
+          - event: new_message_receive
+            target: success
+            action: "接收新消息，滚动到底部"
+          - event: scroll_to_top
+            target: loading_history
+            condition: "用户上拉加载更多历史消息"
+
+      sending:
+        description: "正在发送消息"
+        ui: "消息气泡显示发送中状态（转圈或灰色）"
+        transitions:
+          - event: send_success
+            target: success
+            action: "消息气泡变为正常状态"
+          - event: send_error
+            target: success
+            action: "消息气泡显示红色感叹号，点击可重发"
+
+      loading_history:
+        description: "加载更早的历史消息"
+        ui: "顶部显示加载动画"
+        transitions:
+          - event: load_success
+            target: success
+            action: "将历史消息插入列表顶部"
+          - event: no_more_history
+            target: success
+            action: "Toast 提示'没有更多消息了'"
+
+      appointment_form:
+        description: "预约面交表单弹窗"
+        ui: "弹窗：选择时间 + 选择地点 + [确认预约]"
+        transitions:
+          - event: cancel_tap
+            target: success
+          - event: confirm_tap
+            target: sending
+            action: "发送 appointment_card 类型消息"
+
+      error:
+        description: "加载失败"
+        ui: "错误提示 + [重试] 按钮"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "消息发送失败"
+        handling: "消息气泡显示红色感叹号，点击重发"
+      - scenario: "对方已下架商品"
+        handling: "顶部商品条显示'该商品已下架'，禁用预约面交按钮"
+
+
+  # ========== 个人中心页 ==========
+  ProfilePage:
+    page_name: ProfilePage
+    route: "/pages/profile/index"
+    description: "用户个人中心，展示个人信息和快捷入口"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        transitions:
+          - event: page_mount
+            target: loading
+
+      loading:
+        description: "正在加载用户信息"
+        ui: "头部骨架屏 + 数据卡片骨架"
+        transitions:
+          - event: fetch_success
+            target: success
+          - event: fetch_error
+            target: error
+
+      success:
+        description: "用户信息加载成功"
+        ui: "头像/昵称/校区/评分/交易数 + 快捷菜单列表"
+        transitions:
+          - event: my_products_tap
+            target: MyProductsPage.loading
+          - event: my_trades_tap
+            target: MyTradesPage.loading
+          - event: my_favorites_tap
+            target: MyFavoritesPage.loading
+          - event: my_reviews_tap
+            target: MyReviewsPage.loading
+          - event: settings_tap
+            target: SettingsPage.loading
+          - event: avatar_tap
+            target: avatar_picker
+          - event: nickname_tap
+            target: nickname_edit
+
+      avatar_picker:
+        description: "选择新头像"
+        ui: "微信头像选择器"
+        transitions:
+          - event: select_success
+            target: updating_profile
+          - event: cancel_tap
+            target: success
+
+      nickname_edit:
+        description: "编辑昵称"
+        ui: "输入框弹窗，最多 30 字"
+        transitions:
+          - event: save_tap
+            target: updating_profile
+          - event: cancel_tap
+            target: success
+
+      updating_profile:
+        description: "正在更新资料"
+        ui: "按钮 loading"
+        transitions:
+          - event: update_success
+            target: success
+            action: "Toast 提示'更新成功'，刷新页面"
+          - event: update_error
+            target: success
+            action: "Toast 提示'更新失败'"
+
+      error:
+        description: "加载失败"
+        ui: "错误提示 + [重试] 按钮"
+        transitions:
+          - event: retry_tap
+            target: loading
+
+    error_paths:
+      - scenario: "未登录访问"
+        handling: "跳转登录页"
+
+
+  # ========== 搜索结果页 ==========
+  SearchResultPage:
+    page_name: SearchResultPage
+    route: "/pages/search/result"
+    description: "关键词搜索结果展示"
+
+    initial_state: idle
+
+    states:
+
+      idle:
+        transitions:
+          - event: page_mount
+            target: loading
+
+      loading:
+        description: "正在搜索"
+        ui: "搜索框 + 骨架屏列表"
+        transitions:
+          - event: fetch_success
+            target: success
+            condition: "items.length > 0"
+          - event: fetch_empty
+            target: empty
+            condition: "items.length === 0"
+          - event: fetch_error
+            target: error
+
+      success:
+        description: "搜索结果"
+        ui: "商品列表 + 筛选条件栏"
+        transitions:
+          - event: product_tap
+            target: ProductDetailPage.loading
+          - event: filter_change
+            target: loading
+          - event: keyword_change
+            target: loading
+
+      empty:
+        description: "无搜索结果"
+        ui: "'没有找到相关商品' + 推荐关键词/分类"
+        transitions:
+          - event: clear_search_tap
+            target: HomePage.loading
+
+      error:
+        description: "搜索失败"
+        ui: "错误提示 + [重试] 按钮"
+        transitions:
+          - event: retry_tap
+            target: loading

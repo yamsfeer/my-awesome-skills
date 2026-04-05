@@ -1,0 +1,1042 @@
+openapi: "3.1.0"
+info:
+  title: FreelanceBook API
+  version: "1.0.0"
+  description: |
+    FreelanceBook 后端 REST API。
+    - 所有金额字段单位为「分（整数）」，前端负责除以 100 展示
+    - 所有时间字段为 ISO 8601 格式（UTC）
+    - 认证方式：Bearer JWT Token，通过 /auth/login 获取
+    - 敏感字段（标注 sensitive）在响应中不返回或脱敏处理
+
+servers:
+  - url: https://api.freelancebook.app/v1
+    description: 生产环境
+  - url: https://api-staging.freelancebook.app/v1
+    description: 预发布环境
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # ── 通用 ──────────────────────────────────
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 20
+        total:
+          type: integer
+        total_pages:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+        details:
+          type: object
+          nullable: true
+
+    # ── 用户 ──────────────────────────────────
+    UserProfile:
+      type: object
+      description: 当前登录用户信息（敏感字段已脱敏）
+      properties:
+        id:
+          type: string
+          format: uuid
+        display_name:
+          type: string
+        avatar_url:
+          type: string
+          nullable: true
+        email_masked:
+          type: string
+          description: 脱敏邮箱，如 zh***@gmail.com（不返回完整邮箱）
+        subscription_status:
+          type: string
+          enum: [trial, active, expired, cancelled]
+        trial_ends_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    # ── 客户 ──────────────────────────────────
+    ClientBase:
+      type: object
+      properties:
+        name:
+          type: string
+        company_name:
+          type: string
+          nullable: true
+        currency:
+          type: string
+          default: CNY
+        tags:
+          type: array
+          items:
+            type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+
+    ClientResponse:
+      allOf:
+        - $ref: '#/components/schemas/ClientBase'
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            is_archived:
+              type: boolean
+            total_invoiced:
+              type: integer
+              description: 该客户累计开票金额（分）
+            total_paid:
+              type: integer
+              description: 该客户累计已收款（分）
+            contacts_count:
+              type: integer
+            created_at:
+              type: string
+              format: date-time
+          # 注意：tax_number / address / bank_account 不在响应中返回
+
+    ClientCreateRequest:
+      allOf:
+        - $ref: '#/components/schemas/ClientBase'
+        - type: object
+          required: [name]
+          properties:
+            tax_number:
+              type: string
+              nullable: true
+              description: 客户税号（仅写入，不返回）
+            address:
+              type: string
+              nullable: true
+            bank_account:
+              type: string
+              nullable: true
+
+    # ── 联系人 ──────────────────────────────────
+    ContactResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        client_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email_masked:
+          type: string
+          nullable: true
+          description: 脱敏邮箱
+        phone_masked:
+          type: string
+          nullable: true
+          description: 脱敏手机号，如 138****8888
+        role:
+          type: string
+          nullable: true
+        is_primary:
+          type: boolean
+
+    ContactCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        role:
+          type: string
+          nullable: true
+        is_primary:
+          type: boolean
+          default: false
+
+    # ── 发票 ──────────────────────────────────
+    InvoiceStatus:
+      type: string
+      enum: [draft, sent, paid, overdue]
+
+    InvoiceItemRequest:
+      type: object
+      required: [description, quantity, unit_price]
+      properties:
+        description:
+          type: string
+        quantity:
+          type: number
+        unit_price:
+          type: integer
+          description: 单价（分）
+        sort_order:
+          type: integer
+          default: 0
+
+    InvoiceItemResponse:
+      allOf:
+        - $ref: '#/components/schemas/InvoiceItemRequest'
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            amount:
+              type: integer
+              description: 小计（分）
+
+    InvoiceCreateRequest:
+      type: object
+      required: [client_id, issue_date, items]
+      properties:
+        client_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+          nullable: true
+        invoice_number:
+          type: string
+          nullable: true
+          description: 不填则自动生成
+        issue_date:
+          type: string
+          format: date
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        tax_rate:
+          type: number
+          description: 税率（小数），如 0.06 表示 6%，默认 0
+          default: 0
+        notes:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceItemRequest'
+          minItems: 1
+
+    InvoiceResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        invoice_number:
+          type: string
+        status:
+          $ref: '#/components/schemas/InvoiceStatus'
+        client_id:
+          type: string
+          format: uuid
+        client_name:
+          type: string
+        project_id:
+          type: string
+          format: uuid
+          nullable: true
+        project_name:
+          type: string
+          nullable: true
+        amount:
+          type: integer
+          description: 税前金额（分）
+        tax_amount:
+          type: integer
+          description: 税额（分）
+        total_amount:
+          type: integer
+          description: 含税合计（分）
+        currency:
+          type: string
+        issue_date:
+          type: string
+          format: date
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        paid_date:
+          type: string
+          format: date
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        pdf_url:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceItemResponse'
+        created_at:
+          type: string
+          format: date-time
+
+    # ── 收款 ──────────────────────────────────
+    PaymentCreateRequest:
+      type: object
+      required: [client_id, amount, payment_date]
+      properties:
+        invoice_id:
+          type: string
+          format: uuid
+          nullable: true
+        client_id:
+          type: string
+          format: uuid
+        amount:
+          type: integer
+          description: 实收金额（分）
+        payment_date:
+          type: string
+          format: date
+        payment_method:
+          type: string
+          enum: [bank_transfer, wechat_pay, alipay, cash, other]
+          nullable: true
+        reference_number:
+          type: string
+          nullable: true
+          description: 银行流水号（写入后不返回）
+        notes:
+          type: string
+          nullable: true
+
+    PaymentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        invoice_id:
+          type: string
+          format: uuid
+          nullable: true
+        client_id:
+          type: string
+          format: uuid
+        client_name:
+          type: string
+        amount:
+          type: integer
+        currency:
+          type: string
+        payment_date:
+          type: string
+          format: date
+        payment_method:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        # reference_number 不在响应中返回（sensitive）
+
+    # ── 统计 ──────────────────────────────────
+    IncomeSummary:
+      type: object
+      properties:
+        period:
+          type: string
+          example: "2026-05"
+        total_invoiced:
+          type: integer
+          description: 开票总额（分）
+        total_paid:
+          type: integer
+          description: 已收款总额（分）
+        total_pending:
+          type: integer
+          description: 待收款总额（分）
+        total_overdue:
+          type: integer
+          description: 逾期未收总额（分）
+        invoice_count:
+          type: integer
+        paid_count:
+          type: integer
+
+    TaxEstimateRequest:
+      type: object
+      required: [annual_income]
+      properties:
+        annual_income:
+          type: integer
+          description: 年度预计总收入（分）
+        deductions:
+          type: integer
+          default: 0
+          description: 已知扣除项（分），如社保、专项附加扣除
+        tax_type:
+          type: string
+          enum: [individual, vat_small, vat_general]
+          default: individual
+
+    TaxEstimateResponse:
+      type: object
+      properties:
+        annual_income:
+          type: integer
+        taxable_income:
+          type: integer
+        estimated_tax:
+          type: integer
+          description: 预估应缴税额（分）
+        effective_rate:
+          type: number
+          description: 实际税率（小数）
+        breakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              bracket:
+                type: string
+              rate:
+                type: number
+              tax:
+                type: integer
+
+paths:
+  # ════════════════════════════════════════
+  # 认证
+  # ════════════════════════════════════════
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: 用户注册
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, display_name]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                display_name:
+                  type: string
+      responses:
+        "201":
+          description: 注册成功，自动激活 30 天试用
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/UserProfile'
+        "409":
+          description: 邮箱已被注册
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: 登录
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/UserProfile'
+        "401":
+          description: 邮箱或密码错误
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: 获取当前用户信息
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+
+  # ════════════════════════════════════════
+  # 客户管理
+  # ════════════════════════════════════════
+  /clients:
+    get:
+      tags: [Clients]
+      summary: 获取客户列表
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: 按名称搜索
+        - name: is_archived
+          in: query
+          schema:
+            type: boolean
+          description: 是否归档，默认 false
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ClientResponse'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+    post:
+      tags: [Clients]
+      summary: 创建客户
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientCreateRequest'
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientResponse'
+
+  /clients/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Clients]
+      summary: 获取客户详情
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientResponse'
+        "404":
+          description: 客户不存在
+    patch:
+      tags: [Clients]
+      summary: 更新客户信息
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientCreateRequest'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientResponse'
+    delete:
+      tags: [Clients]
+      summary: 归档客户（软删除）
+      responses:
+        "204":
+          description: 已归档
+
+  /clients/{id}/contacts:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Clients]
+      summary: 获取客户联系人列表
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ContactResponse'
+    post:
+      tags: [Clients]
+      summary: 添加联系人
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactCreateRequest'
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactResponse'
+
+  /clients/{id}/contacts/{contact_id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: contact_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags: [Clients]
+      summary: 更新联系人
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactCreateRequest'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactResponse'
+    delete:
+      tags: [Clients]
+      summary: 删除联系人
+      responses:
+        "204":
+          description: 已删除
+
+  # ════════════════════════════════════════
+  # 发票管理
+  # ════════════════════════════════════════
+  /invoices:
+    get:
+      tags: [Invoices]
+      summary: 获取发票列表
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/InvoiceStatus'
+        - name: client_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/InvoiceResponse'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+    post:
+      tags: [Invoices]
+      summary: 创建发票
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceCreateRequest'
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceResponse'
+
+  /invoices/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Invoices]
+      summary: 获取发票详情
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceResponse'
+    patch:
+      tags: [Invoices]
+      summary: 更新发票（仅 draft 状态可编辑）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceCreateRequest'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceResponse'
+        "422":
+          description: 非 draft 状态不可编辑
+    delete:
+      tags: [Invoices]
+      summary: 删除发票（仅 draft 状态）
+      responses:
+        "204":
+          description: 已删除
+
+  /invoices/{id}/status:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags: [Invoices]
+      summary: 更新发票状态
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  $ref: '#/components/schemas/InvoiceStatus'
+                paid_date:
+                  type: string
+                  format: date
+                  nullable: true
+                  description: 标记 paid 时必填
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceResponse'
+        "422":
+          description: 状态流转不合法
+
+  /invoices/{id}/pdf:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [Invoices]
+      summary: 生成发票 PDF
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pdf_url:
+                    type: string
+
+  # ════════════════════════════════════════
+  # 收款记录
+  # ════════════════════════════════════════
+  /payments:
+    get:
+      tags: [Payments]
+      summary: 获取收款记录列表
+      parameters:
+        - name: client_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PaymentResponse'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+    post:
+      tags: [Payments]
+      summary: 登记收款
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentCreateRequest'
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+
+  /payments/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags: [Payments]
+      summary: 删除收款记录
+      responses:
+        "204":
+          description: 已删除
+
+  # ════════════════════════════════════════
+  # 统计与报表
+  # ════════════════════════════════════════
+  /stats/income-summary:
+    get:
+      tags: [Stats]
+      summary: 收入汇总（支持按月/季/年）
+      parameters:
+        - name: granularity
+          in: query
+          schema:
+            type: string
+            enum: [month, quarter, year]
+            default: month
+        - name: year
+          in: query
+          schema:
+            type: integer
+            example: 2026
+        - name: client_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: 按客户筛选
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/IncomeSummary'
+
+  /stats/client-breakdown:
+    get:
+      tags: [Stats]
+      summary: 按客户分布的收入占比
+      parameters:
+        - name: year
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    client_id:
+                      type: string
+                      format: uuid
+                    client_name:
+                      type: string
+                    total_paid:
+                      type: integer
+                    percentage:
+                      type: number
+
+  /stats/tax-estimate:
+    post:
+      tags: [Stats]
+      summary: 税务预估计算
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaxEstimateRequest'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxEstimateResponse'
+
+  /stats/export:
+    get:
+      tags: [Stats]
+      summary: 导出收入数据（CSV）
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, excel]
+            default: csv
+      responses:
+        "200":
+          description: 文件下载
+          content:
+            text/csv:
+              schema:
+                type: string
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary

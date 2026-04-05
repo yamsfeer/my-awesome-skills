@@ -1,0 +1,27 @@
+{
+  "eval_id": 1,
+  "eval_name": "gaussian-splatting-full-url",
+  "prompt": "帮我精读这篇论文：https://arxiv.org/abs/2312.03818\n这是 Gaussian Splatting 相关的，我想深入理解它的方法和原理。",
+  "assertions": [
+    {
+      "name": "note_saved_to_papers_dir",
+      "description": "~/papers/ 目录下存在至少一个新建的 .md 文件"
+    },
+    {
+      "name": "filename_is_chinese",
+      "description": "保存的笔记文件名包含中文字符（非 ASCII）"
+    },
+    {
+      "name": "has_required_sections",
+      "description": "笔记正文包含以下六个标题：一句话概括、问题与动机、核心方法、实验与结果、贡献与局限、讲解内容"
+    },
+    {
+      "name": "explanation_has_depth",
+      "description": "讲解内容章节的文本长度 >= 500 字"
+    },
+    {
+      "name": "paper_identity_correct",
+      "description": "笔记正确识别了 2312.03818 实际对应的论文（Alpha-CLIP），而非盲目相信用户说的「Gaussian Splatting」；加分项：提醒用户论文 ID 可能有误"
+    }
+  ]
+}

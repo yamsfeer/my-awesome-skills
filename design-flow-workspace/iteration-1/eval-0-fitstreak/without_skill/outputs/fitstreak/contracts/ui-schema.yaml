@@ -1,0 +1,539 @@
+# FitStreak UI Schema（UI 展示规范）
+# version: 1.0.0
+# updated: 2026-03-22
+# 描述：定义各页面/模块的 UI 展示数据结构和渲染规则
+
+# ─────────────────────────────────────────
+# 全局约定
+# ─────────────────────────────────────────
+global:
+  date_format: "YYYY-MM-DD"
+  time_format: "HH:mm"
+  datetime_format: "YYYY-MM-DD HH:mm"
+  display_date_format: "M月D日"
+  display_datetime_format: "M月D日 HH:mm"
+  number_format:
+    integer: "无千分位"
+    decimal: "保留1位小数"
+    percentage: "百分号，保留1位小数"
+  empty_state_text: "暂无数据"
+  loading_placeholder: "骨架屏（Skeleton）"
+
+# ─────────────────────────────────────────
+# 页面：首页（Home Screen）
+# ─────────────────────────────────────────
+screens:
+
+  HomeScreen:
+    route: /home
+    tab_icon: home
+    tab_label: "首页"
+    sections:
+      - id: greeting_banner
+        type: banner
+        description: 顶部问候语 + 用户头像
+        fields:
+          greeting:
+            rule: "根据当前时间：0-11点='早上好'，12-17点='下午好'，18-23点='晚上好'"
+            suffix: "，{nickname}"
+          avatar:
+            source: user.avatar_url
+            fallback: "用户昵称首字，深色背景"
+            size: 40px
+          streak_badge:
+            display: "🔥 {current_streak} 天"
+            condition: "current_streak > 0"
+            color: tokens.colors.warning
+
+      - id: checkin_card
+        type: card
+        description: 今日打卡状态卡片（核心入口）
+        states:
+          not_checked_in:
+            title: "今天还没打卡"
+            subtitle: "坚持运动，每天进步一点"
+            cta_label: "立即打卡"
+            cta_style: primary_button
+            background: "渐变：tokens.colors.primary → tokens.colors.primary_dark"
+          checked_in:
+            title: "今日已打卡 ✓"
+            subtitle: "已运动 {duration_minutes} 分钟·{exercise_name}"
+            cta_label: "查看详情"
+            cta_style: ghost_button
+            background: "渐变：tokens.colors.success_light → white"
+            show_streak: true
+        fields:
+          streak_display:
+            format: "连续第 {n} 天"
+            animation: "数字滚动动画（打卡成功时）"
+
+      - id: streak_calendar
+        type: calendar_heatmap
+        description: 最近30天打卡热力图
+        display:
+          rows: 1
+          columns: 30
+          cell_size: 10px
+          cell_gap: 2px
+        color_rules:
+          not_checked: tokens.colors.neutral_100
+          checked: tokens.colors.primary
+          today_not_checked: "tokens.colors.neutral_100 + 虚线边框"
+          today_checked: tokens.colors.primary + "实线边框"
+        legend:
+          position: right
+          labels: ["未打卡", "已打卡"]
+
+      - id: stats_row
+        type: stat_cards_row
+        description: 本周统计数据横向排列
+        cards:
+          - label: "本周次数"
+            value: "{week_checkins}次"
+            icon: calendar
+          - label: "总时长"
+            value: "{week_duration}分钟"
+            icon: clock
+          - label: "最长连续"
+            value: "{longest_streak}天"
+            icon: fire
+
+      - id: friend_feed_preview
+        type: list_preview
+        description: 好友最近动态（最多3条）
+        item_fields:
+          avatar: friend.avatar_url
+          nickname: friend.nickname
+          action: "打卡了 {exercise_name} {duration_minutes}分钟"
+          time: "X小时前 / X分钟前"
+          streak: "🔥{streak}天"
+        empty_state:
+          text: "还没有好友动态，邀请好友一起健身吧"
+          cta: "邀请好友"
+        more_link: "查看全部"
+
+  # ─────────────────────────────────────────
+  # 页面：打卡页（Checkin Screen）
+  # ─────────────────────────────────────────
+  CheckinScreen:
+    route: /checkin
+    presentation: modal_bottom_sheet
+    steps:
+      - step: 1
+        id: exercise_selector
+        title: "选择运动类型"
+        type: grid_selector
+        columns: 3
+        items:
+          source: exercise_types
+          display:
+            icon: exercise_type.icon_key
+            label: exercise_type.name
+          selected_style:
+            background: tokens.colors.primary_light
+            border: "2px solid tokens.colors.primary"
+          search:
+            enabled: true
+            placeholder: "搜索运动..."
+
+      - step: 2
+        id: duration_input
+        title: "运动了多久？"
+        type: number_wheel_picker
+        field: duration_minutes
+        range:
+          min: 5
+          max: 480
+          step: 5
+        display:
+          unit: "分钟"
+          quick_options: [15, 30, 45, 60, 90]
+        timer:
+          enabled: true
+          label: "使用计时器"
+          style: secondary_button
+
+      - step: 3
+        id: note_input
+        title: "记录一下（可选）"
+        type: form
+        fields:
+          note:
+            component: textarea
+            placeholder: "今天感觉怎么样？记录下来..."
+            maxLength: 200
+            show_count: true
+          location:
+            component: text_input
+            placeholder: "在哪里运动的？"
+            icon: location_pin
+            optional: true
+        skip_label: "跳过，直接打卡"
+
+    submit:
+      label: "完成打卡 🎉"
+      loading_label: "打卡中..."
+      success_animation: "confetti + 成就弹窗"
+
+    success_popup:
+      title: "打卡成功！"
+      fields:
+        streak: "连续第 {n} 天 🔥"
+        duration: "运动 {n} 分钟"
+        calories: "消耗约 {n} 千卡"
+      achievement_notification:
+        condition: "newly_unlocked_achievements.length > 0"
+        style: "底部弹出卡片，展示徽章图标和名称"
+      share_cta:
+        label: "分享打卡卡片"
+        style: secondary_button
+
+  # ─────────────────────────────────────────
+  # 页面：个人主页（Profile Screen）
+  # ─────────────────────────────────────────
+  ProfileScreen:
+    route: /profile
+    tab_icon: person
+    tab_label: "我的"
+    sections:
+      - id: user_header
+        type: profile_header
+        fields:
+          avatar:
+            size: 80px
+            editable: true
+          nickname:
+            style: heading_2
+            editable: true
+          stats_row:
+            items:
+              - label: "累计打卡"
+                value: "{total_checkins}次"
+              - label: "最长连续"
+                value: "{longest_streak}天"
+              - label: "运动时长"
+                value: "{total_duration_hours}小时"
+          premium_badge:
+            condition: user.is_premium
+            display: "Premium ✨"
+            color: tokens.colors.gold
+
+      - id: achievement_showcase
+        type: horizontal_scroll_list
+        title: "我的成就"
+        description: "展示最近解锁的3个徽章"
+        item:
+          size: 60px
+          show_label: true
+          locked_style: "灰色滤镜 + 锁图标"
+        more_link: "查看全部 ({total_unlocked}/{total})"
+
+      - id: body_stats_card
+        type: card
+        title: "体征数据"
+        premium_required: true
+        content:
+          chart_type: line_chart
+          metrics:
+            - weight_kg
+            - body_fat_percent
+          time_range_selector: [1month, 3months, 6months]
+          empty_state:
+            text: "记录第一次体征数据"
+            cta: "立即记录"
+
+      - id: settings_list
+        type: list
+        items:
+          - label: "个人资料"
+            icon: edit
+            route: /profile/edit
+          - label: "健身目标"
+            icon: target
+            route: /profile/goal
+          - label: "提醒设置"
+            icon: bell
+            route: /settings/notification
+          - label: "升级 Premium"
+            icon: crown
+            route: /subscription
+            badge: "¥18/月"
+            condition: "!user.is_premium"
+          - label: "我的订阅"
+            icon: crown
+            route: /subscription
+            condition: "user.is_premium"
+          - label: "帮助与反馈"
+            icon: help
+            route: /help
+          - label: "退出登录"
+            icon: logout
+            style: destructive
+
+  # ─────────────────────────────────────────
+  # 页面：社交/排行榜（Social Screen）
+  # ─────────────────────────────────────────
+  SocialScreen:
+    route: /social
+    tab_icon: people
+    tab_label: "社交"
+    tabs:
+      - id: leaderboard
+        label: "排行榜"
+        sections:
+          - id: period_selector
+            type: segmented_control
+            options: ["本周", "本月", "总榜"]
+          - id: my_rank_banner
+            type: banner
+            fields:
+              rank: "第 {rank} 名"
+              value: "{checkin_count} 次打卡"
+            style: "高亮背景，与列表区分"
+          - id: rank_list
+            type: list
+            item:
+              left:
+                rank_number:
+                  style:
+                    "1": "金色 + 奖杯图标"
+                    "2": "银色"
+                    "3": "铜色"
+                    default: "灰色数字"
+              center:
+                avatar:
+                  size: 36px
+                nickname: string
+                streak_badge:
+                  format: "🔥{n}天"
+                  show_condition: "streak > 3"
+              right:
+                value: "{checkin_count}次"
+                highlight_self: true
+
+      - id: friends
+        label: "好友"
+        sections:
+          - id: add_friend_search
+            type: search_bar
+            placeholder: "搜索用户 ID 或昵称"
+          - id: friend_list
+            type: list
+            item:
+              avatar: size 40px
+              nickname: string
+              today_status:
+                checked: "今日已打卡 ✓"
+                not_checked: "今日未打卡"
+                style:
+                  checked: tokens.colors.success
+                  not_checked: tokens.colors.neutral_400
+              streak: "🔥{n}天"
+
+      - id: challenges
+        label: "挑战"
+        premium_required: true
+        sections:
+          - id: active_challenges
+            title: "进行中"
+            type: card_list
+            item:
+              title: challenge.title
+              progress_bar:
+                value: participant.progress_value
+                max: challenge.target_value
+              participants_avatars:
+                max_display: 4
+                overlap: true
+              days_remaining: "还剩 {n} 天"
+              my_rank: "我的排名：第 {rank} 名"
+          - id: create_challenge_cta
+            type: button
+            label: "发起挑战"
+            style: primary_button
+            icon: plus
+
+  # ─────────────────────────────────────────
+  # 页面：运动计划（Plans Screen）
+  # ─────────────────────────────────────────
+  PlansScreen:
+    route: /plans
+    tab_icon: clipboard_list
+    tab_label: "计划"
+    sections:
+      - id: my_active_plan
+        title: "当前计划"
+        type: card
+        condition: "user.has_active_plan"
+        fields:
+          plan_title: string
+          progress:
+            type: linear_progress
+            format: "第 {week} 周 / 共 {total_weeks} 周"
+          today_workout:
+            title: "今日训练"
+            exercise_list:
+              - name
+              - duration_minutes
+              - sets_reps
+          complete_button:
+            label: "开始今日训练"
+            style: primary_button
+
+      - id: explore_plans
+        title: "探索计划"
+        type: filter_card_list
+        filters:
+          - field: target_goal
+            options: ["减脂", "增肌", "塑形", "提升耐力"]
+          - field: difficulty
+            options: ["入门", "进阶", "高强度"]
+          - field: days_per_week
+            options: ["3天/周", "4天/周", "5天/周"]
+        card:
+          cover_image: plan.cover_image_url
+          title: plan.title
+          meta: "{difficulty} · {days_per_week}天/周 · {duration_weeks}周"
+          subscriber_count: "{n}人在用"
+          premium_lock:
+            condition: "plan.is_premium && !user.is_premium"
+            icon: crown
+            color: tokens.colors.gold
+
+  # ─────────────────────────────────────────
+  # 页面：成就墙（Achievements Screen）
+  # ─────────────────────────────────────────
+  AchievementsScreen:
+    route: /achievements
+    sections:
+      - id: progress_summary
+        type: banner
+        fields:
+          unlocked_count: "{n} / {total}"
+          xp_total: "{total_xp} XP"
+          progress_bar:
+            type: linear
+            value: unlocked_count / total
+
+      - id: achievement_grid
+        type: grid
+        columns: 3
+        categories:
+          - id: streak
+            title: "坚持系列"
+          - id: total_checkins
+            title: "里程碑系列"
+          - id: challenge
+            title: "挑战系列"
+          - id: special
+            title: "特别成就"
+        item:
+          icon: 80px
+          title: string
+          unlocked_style: "彩色图标 + 金色边框"
+          locked_style: "灰色图标 + 虚线边框 + 锁图标"
+          premium_style:
+            condition: "achievement.is_premium && !user.is_premium"
+            overlay: "半透明 + 皇冠图标"
+          on_tap: "弹出成就详情弹窗"
+
+      - id: achievement_detail_modal
+        type: bottom_sheet
+        trigger: grid_item_tap
+        fields:
+          icon: 120px
+          title: heading_2
+          description: "解锁条件说明"
+          unlocked_at:
+            condition: is_unlocked
+            format: "解锁于 M月D日"
+          share_button:
+            condition: is_unlocked
+            label: "分享成就"
+
+  # ─────────────────────────────────────────
+  # 组件：Premium 订阅弹窗
+  # ─────────────────────────────────────────
+  PremiumPaywallModal:
+    type: bottom_sheet
+    trigger: premium_feature_access
+    fields:
+      headline: "解锁 FitStreak Premium"
+      subtitle: "体验全部高级功能，让健身更有效"
+      feature_list:
+        items:
+          - icon: chart_line
+            text: "体重/体脂趋势图"
+          - icon: robot
+            text: "AI 个性化运动计划"
+          - icon: swords
+            text: "好友挑战赛"
+          - icon: star
+            text: "专属稀有徽章"
+          - icon: ban
+            text: "去除广告"
+      plan_selector:
+        options:
+          - plan_type: monthly
+            label: "月付"
+            price: "¥18/月"
+            badge: null
+          - plan_type: yearly
+            label: "年付"
+            price: "¥128/年"
+            badge: "省40%"
+            highlight: true
+      cta_button:
+        label: "立即订阅"
+        style: primary_button
+        loading_state: "支付中..."
+      restore_link: "恢复购买"
+      terms_text: "订阅后将自动续费，可在账户设置中随时取消"
+
+# ─────────────────────────────────────────
+# 通用 UI 状态规范
+# ─────────────────────────────────────────
+common_states:
+  loading:
+    style: skeleton_screen
+    duration_ms: 直到数据返回
+
+  empty:
+    style: illustration + text + optional_cta
+    illustration_size: 180px
+
+  error:
+    style: error_icon + text + retry_button
+    text: "加载失败，请检查网络"
+    retry_label: "重试"
+
+  network_offline:
+    style: full_screen_banner
+    text: "当前无网络连接"
+    icon: wifi_off
+
+# ─────────────────────────────────────────
+# 交互规范
+# ─────────────────────────────────────────
+interaction_rules:
+  haptic_feedback:
+    - trigger: checkin_success
+      type: heavy_impact
+    - trigger: achievement_unlock
+      type: notification_success
+    - trigger: button_tap
+      type: light_impact
+  animations:
+    - trigger: checkin_completion
+      type: confetti_explosion
+      duration_ms: 2000
+    - trigger: streak_increase
+      type: number_count_up
+      duration_ms: 800
+    - trigger: page_transition
+      type: slide_horizontal
+  pull_to_refresh:
+    enabled_screens: [HomeScreen, SocialScreen, ProfileScreen]
+  infinite_scroll:
+    enabled_screens: [SocialScreen.friends, SocialScreen.leaderboard]
+    page_size: 20

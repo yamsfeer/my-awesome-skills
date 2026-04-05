@@ -1,0 +1,38 @@
+{
+  "expectations": [
+    {
+      "text": "parsed_bare_id: 仅凭裸 arxiv ID（无 URL）仍成功生成了完整笔记（note file exists and is non-empty）",
+      "passed": true,
+      "evidence": "outputs/note.md 文件存在且内容非空，共 4911 字符，基于裸 ID 2401.04088 成功生成了完整论文解读笔记。"
+    },
+    {
+      "text": "filename_is_chinese: 保存的笔记文件名包含中文字符（非 ASCII）",
+      "passed": false,
+      "evidence": "输出文件名为 note.md，全为 ASCII 字符，不包含任何中文字符。"
+    },
+    {
+      "text": "has_required_sections: 笔记正文包含以下六个标题：一句话概括、问题与动机、核心方法、实验与结果、贡献与局限、讲解内容",
+      "passed": false,
+      "evidence": "笔记的章节结构为：一、论文概述、二、背景与动机、三、核心架构等，六个要求标题（一句话概括、问题与动机、核心方法、实验与结果、贡献与局限、讲解内容）均未出现。"
+    },
+    {
+      "text": "explanation_has_depth: 讲解内容章节的文本长度 >= 500 字",
+      "passed": false,
+      "evidence": "笔记中不存在名为「讲解内容」的章节，因此无法满足该断言。"
+    },
+    {
+      "text": "correctly_identifies_paper: 笔记正确识别论文为 Mixtral of Experts（混合专家模型），而非 AI Agent 论文",
+      "passed": true,
+      "evidence": "笔记标题为「论文解读：Mixtral of Experts」，正文清晰介绍了 Mixtral 8x7B 的 Sparse MoE 架构，并明确指出这不是 AI Agent 论文而是模型架构论文，只是在第七章分析了与 AI Agent 方向的关联。"
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 3,
+    "total": 5,
+    "pass_rate": 0.40
+  },
+  "timing": {
+    "executor_duration_seconds": 210.9
+  }
+}
